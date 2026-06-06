@@ -1,0 +1,31 @@
+@model List<TorneoAmigos.Models.PosicionViewModel>
+<table class="tabla-posiciones tabla-compacta">
+    <thead>
+        <tr>
+            <th>#</th><th>Equipo</th><th>PJ</th><th>G</th><th>P</th><th>DIF</th><th>PTS</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var f in Model)
+        {
+            <tr class="zona-@f.Zona">
+                <td class="col-pos">@f.Posicion</td>
+                <td>
+                    @if (!string.IsNullOrEmpty(f.FlagCode))
+                    {
+                        <img src="https://flagcdn.com/16x12/@(f.FlagCode).png"
+                             class="flag-sm" alt="" onerror="this.style.display='none'" />
+                    }
+                    @f.NombreEquipo
+                </td>
+                <td class="col-num">@f.PartidosJugados</td>
+                <td class="col-g">@f.Ganados</td>
+                <td class="col-p">@f.Perdidos</td>
+                <td class="@(f.DiferenciaGoles > 0 ? "col-dif-pos" : f.DiferenciaGoles < 0 ? "col-dif-neg" : "col-dif-neu")">
+                    @(f.DiferenciaGoles > 0 ? "+" : "")@f.DiferenciaGoles
+                </td>
+                <td class="col-pts">@f.Puntos</td>
+            </tr>
+        }
+    </tbody>
+</table>

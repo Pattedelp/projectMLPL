@@ -1,0 +1,36 @@
+@{
+    ViewBag.Title = "Copas";
+    ViewBag.ActivePage = "copas";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🏆</div>
+    <div class="page-hero-text">
+        <h1>Copas</h1>
+        <p>Torneo Chapitas · AAC</p>
+    </div>
+</div>
+
+<div class="copas-grid">
+    <a asp-controller="Copas" asp-action="CopaArgentina" class="copa-card copa-arg">
+        <div class="copa-card-header">
+            <div class="copa-card-icon">🏆</div>
+            <div>
+                <div class="copa-card-name">Copa Argentina</div>
+                <div class="copa-card-sub">Torneo eliminatorio · Todos los equipos</div>
+            </div>
+        </div>
+        <div class="copa-card-footer">Fase Previa → Cuartos → Semis → Final</div>
+    </a>
+
+    <a asp-controller="Copas" asp-action="SupercopaArgentina" class="copa-card supercopa">
+        <div class="copa-card-header">
+            <div class="copa-card-icon">⭐</div>
+            <div>
+                <div class="copa-card-name">Supercopa Argentina</div>
+                <div class="copa-card-sub">Campeón vs Mejor Nacional B</div>
+            </div>
+        </div>
+        <div class="copa-card-footer">Cuartos → Semis → Final</div>
+    </a>
+</div>

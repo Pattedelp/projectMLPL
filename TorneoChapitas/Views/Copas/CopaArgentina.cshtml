@@ -1,0 +1,74 @@
+@model CopaViewModel
+@{
+    ViewBag.Title = Model.NombreCopa;
+    ViewBag.ActivePage = "copas";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">@Model.Icono</div>
+    <div class="page-hero-text">
+        <h1>@Model.NombreCopa</h1>
+        <p>Torneo Chapitas · AAC</p>
+    </div>
+</div>
+
+<nav class="section-nav">
+    <a asp-controller="Copas" asp-action="CopaArgentina"
+       class="@(Model.NombreCopa == "Copa Argentina" ? "active" : "")">Copa Argentina</a>
+    <a asp-controller="Copas" asp-action="SupercopaArgentina"
+       class="@(Model.NombreCopa == "Supercopa Argentina" ? "active" : "")">Supercopa Argentina</a>
+</nav>
+
+<div class="bracket-container">
+    <div class="bracket">
+        @for (int ri = 0; ri < Model.Rondas.Count; ri++)
+        {
+            var ronda = Model.Rondas[ri];
+            <div class="bracket-round">
+                <div class="bracket-round-title">@ronda.Nombre</div>
+                <div class="bracket-matches">
+                    @foreach (var partido in ronda.Partidos)
+                    {
+                        <div class="bracket-match">
+                            <div class="bracket-team @(partido.Local.Ganador ? "winner" : "") @(partido.Local.TBD ? "tbd" : "")">
+                                @if (!string.IsNullOrEmpty(partido.Local.FlagCode))
+                                {
+                                    <img src="https://flagcdn.com/16x12/@(partido.Local.FlagCode).png"
+                                         class="flag-sm" alt="" onerror="this.style.display='none'" />
+                                }
+                                <span>@partido.Local.Nombre</span>
+                                @if (partido.Jugado)
+                                {
+                                    <span class="bracket-score">@partido.Local.Goles</span>
+                                }
+                            </div>
+                            <div class="bracket-team @(partido.Visitante.Ganador ? "winner" : "") @(partido.Visitante.TBD ? "tbd" : "")">
+                                @if (!string.IsNullOrEmpty(partido.Visitante.FlagCode))
+                                {
+                                    <img src="https://flagcdn.com/16x12/@(partido.Visitante.FlagCode).png"
+                                         class="flag-sm" alt="" onerror="this.style.display='none'" />
+                                }
+                                <span>@partido.Visitante.Nombre</span>
+                                @if (partido.Jugado)
+                                {
+                                    <span class="bracket-score">@partido.Visitante.Goles</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (ri < Model.Rondas.Count - 1)
+            {
+                <div class="bracket-connector">
+                    <div class="bracket-connector-line"></div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<div style="margin-top:24px;padding:16px 20px;background:var(--color-bg2);border:1px solid var(--color-border);border-radius:var(--radius);font-size:13px;color:var(--color-muted);">
+    ℹ️ El fixture de las Copas se cargará cuando arranque la fase. Podemos generarlo con sorteo automático usando los equipos de la BD.
+</div>

@@ -11,7 +11,7 @@
     <div class="page-hero-icon">@icono</div>
     <div class="page-hero-text">
         <h1>@Model.Division?.Nombre</h1>
-        <p>Tabla de posiciones</p>
+        <p>Torneo Chapitas · AAC</p>
     </div>
 </div>
 
@@ -25,21 +25,36 @@
     <table class="tabla-posiciones">
         <thead>
             <tr>
-                <th>#</th><th>Equipo</th><th title="Partidos Jugados">PJ</th>
-                <th title="Ganados">G</th><th title="Empatados">E</th><th title="Perdidos">P</th>
-                <th title="Goles a Favor">GF</th><th title="Goles en Contra">GC</th>
-                <th title="Diferencia">DIF</th><th title="Puntos">PTS</th>
+                <th>#</th><th>Equipo</th>
+                <th title="Partidos Jugados">PJ</th>
+                <th title="Ganados">G</th>
+                <th title="Perdidos">P</th>
+                <th title="Goles a Favor">GF</th>
+                <th title="Goles en Contra">GC</th>
+                <th title="Diferencia">DIF</th>
+                <th title="Puntos">PTS</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var f in Model.TablaPosiciones)
             {
-                <tr>
+                <tr class="zona-@f.Zona">
                     <td class="col-pos">@f.Posicion</td>
-                    <td class="zona-@f.Zona col-equipo">@f.NombreEquipo</td>
+                    <td class="col-equipo">
+                        @if (!string.IsNullOrEmpty(f.FlagCode))
+                        {
+                            <img src="https://flagcdn.com/20x15/@(f.FlagCode).png"
+                                 class="flag-img" alt="@f.NombreEquipo"
+                                 onerror="this.style.display='none'" />
+                        }
+                        @f.NombreEquipo
+                        @if (f.Zona == "campeon")
+                        {
+                            <span style="color:var(--color-gold);font-size:12px;margin-left:4px">👑</span>
+                        }
+                    </td>
                     <td class="col-num">@f.PartidosJugados</td>
                     <td class="col-g">@f.Ganados</td>
-                    <td class="col-e">@f.Empatados</td>
                     <td class="col-p">@f.Perdidos</td>
                     <td class="col-num">@f.GolesAFavor</td>
                     <td class="col-num">@f.GolesEnContra</td>
@@ -53,8 +68,17 @@
     </table>
 </div>
 
-<div class="tabla-leyenda">
-    <span><span class="leyenda-dot" style="background:#4caf82"></span> Zona campeonato</span>
-    <span><span class="leyenda-dot" style="background:#f0c040"></span> Zona promoción</span>
-    <span><span class="leyenda-dot" style="background:#e05555"></span> Zona descenso</span>
+<div class="tabla-leyenda" style="margin-top:16px">
+    @if (esPrimera)
+    {
+        <span><span class="leyenda-dot" style="background:var(--color-gold)"></span> Campeón</span>
+        <span><span class="leyenda-dot" style="background:var(--color-red)"></span> Desciende</span>
+    }
+    else
+    {
+        <span><span class="leyenda-dot" style="background:var(--color-green)"></span> Asciende</span>
+    }
+    <span style="margin-left:auto;font-size:11px;color:var(--color-muted)">
+        ⚡ Victoria 5-4 = 2pts ganador · 1pt perdedor &nbsp;|&nbsp; Victoria 5-0/1/2/3 = 3pts · 0pts
+    </span>
 </div>

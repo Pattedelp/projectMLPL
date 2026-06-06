@@ -4,33 +4,51 @@
     ViewBag.ActivePage = "home";
 }
 
-<div class="page-hero">
-    <div class="page-hero-icon">⚽</div>
-    <div class="page-hero-text">
-        <h1>Torneo de Fútbol</h1>
-        <p>Organización: AAC</p>
+<!-- HERO -->
+<div class="home-hero">
+    <div class="home-hero-content">
+        <div class="home-hero-badge">⚽</div>
+        <div class="home-hero-text">
+            <h1>TORNEO <span>CHAPITAS</span></h1>
+            <p>Organización: <span>AAC</span></p>
+        </div>
     </div>
+    <div class="home-hero-ball"></div>
 </div>
 
+<!-- STATS -->
 <div class="stats-bar">
     <div class="stat-card">
-        <div class="stat-label">Partidos jugados</div>
-        <div class="stat-value">@Model.TotalPartidosJugados</div>
+        <div class="stat-icon">📊</div>
+        <div class="stat-info">
+            <div class="stat-label">Partidos jugados</div>
+            <div class="stat-value">@Model.TotalPartidosJugados</div>
+        </div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Goles totales</div>
-        <div class="stat-value">@Model.TotalGoles</div>
+        <div class="stat-icon">⚽</div>
+        <div class="stat-info">
+            <div class="stat-label">Goles totales</div>
+            <div class="stat-value">@Model.TotalGoles</div>
+        </div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Equipos</div>
-        <div class="stat-value">@(Model.PrimeraDivision.Equipos.Count + Model.NacionalB.Equipos.Count)</div>
+        <div class="stat-icon">👥</div>
+        <div class="stat-info">
+            <div class="stat-label">Equipos</div>
+            <div class="stat-value">@(Model.PrimeraDivision.Equipos.Count + Model.NacionalB.Equipos.Count)</div>
+        </div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Divisiones</div>
-        <div class="stat-value">2</div>
+        <div class="stat-icon">🏆</div>
+        <div class="stat-info">
+            <div class="stat-label">Divisiones</div>
+            <div class="stat-value">2</div>
+        </div>
     </div>
 </div>
 
+<!-- MINI TABLAS -->
 <div class="home-sections">
     @await Html.PartialAsync("_MiniTabla", Model.PrimeraDivision)
     @await Html.PartialAsync("_MiniTabla", Model.NacionalB)

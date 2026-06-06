@@ -1,5 +1,5 @@
-[build]
-builder = "DOCKERFILE"
+[phases.build]
+cmds = ["dotnet publish TorneoChapitas/TorneoChapitas/TorneoChapitas.csproj -c Release -o /app"]
 
-[deploy]
-startCommand = "dotnet TorneoChapitas.dll"
+[start]
+cmd = "dotnet /app/TorneoChapitas.dll"

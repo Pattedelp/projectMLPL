@@ -19,6 +19,7 @@ namespace TorneoAmigos.Models
         public string? Escudo { get; set; }
         public string ColorPrincipal { get; set; } = "#003366";
         public string ColorSecundario { get; set; } = "#FFD700";
+        public string FlagCode { get; set; } = "";
         public bool Activo { get; set; } = true;
     }
 
@@ -46,27 +47,27 @@ namespace TorneoAmigos.Models
         public DateTime? FechaPartido { get; set; }
         public string? Lugar { get; set; }
         public string? Observaciones { get; set; }
-
         public Equipo? EquipoLocal { get; set; }
         public Equipo? EquipoVisitante { get; set; }
     }
-
-    // ---- ViewModels ----
 
     public class PosicionViewModel
     {
         public int Posicion { get; set; }
         public int EquipoId { get; set; }
         public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
         public string ColorPrincipal { get; set; } = "#003366";
         public int PartidosJugados { get; set; }
         public int Ganados { get; set; }
-        public int Empatados { get; set; }
         public int Perdidos { get; set; }
         public int GolesAFavor { get; set; }
         public int GolesEnContra { get; set; }
         public int DiferenciaGoles => GolesAFavor - GolesEnContra;
-        public int Puntos => (Ganados * 3) + Empatados;
+
+        // Puntos acumulados directamente (no se multiplican después)
+        public int Puntos { get; set; }
+
         public string? Zona { get; set; }
     }
 
@@ -96,16 +97,47 @@ namespace TorneoAmigos.Models
     {
         public int PartidoId { get; set; }
         public string EquipoLocal { get; set; } = "";
+        public string FlagLocal { get; set; } = "";
         public string EquipoVisitante { get; set; } = "";
+        public string FlagVisitante { get; set; } = "";
 
-        [Required(ErrorMessage = "Ingresá los goles del local")]
-        [Range(0, 99)]
+        [Required][Range(0, 99)]
         public int GolesLocal { get; set; }
 
-        [Required(ErrorMessage = "Ingresá los goles del visitante")]
-        [Range(0, 99)]
+        [Required][Range(0, 99)]
         public int GolesVisitante { get; set; }
 
         public string? Observaciones { get; set; }
+    }
+
+    // ── COPAS ──────────────────────────────────────
+    public class BracketTeam
+    {
+        public string Nombre { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int? Goles { get; set; }
+        public bool Ganador { get; set; }
+        public bool TBD { get; set; } = false;
+    }
+
+    public class BracketMatch
+    {
+        public int Id { get; set; }
+        public BracketTeam Local { get; set; } = new();
+        public BracketTeam Visitante { get; set; } = new();
+        public bool Jugado { get; set; }
+    }
+
+    public class BracketRound
+    {
+        public string Nombre { get; set; } = "";
+        public List<BracketMatch> Partidos { get; set; } = new();
+    }
+
+    public class CopaViewModel
+    {
+        public string NombreCopa { get; set; } = "";
+        public string Icono { get; set; } = "🏆";
+        public List<BracketRound> Rondas { get; set; } = new();
     }
 }

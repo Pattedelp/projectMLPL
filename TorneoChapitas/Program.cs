@@ -1,20 +1,34 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+using TorneoAmigos.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Agregar MVC con Razor Views
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<TorneoRepository>();
 
-// Registrar el repositorio para inyección de dependencias
-builder.Services.AddScoped<TorneoAmigos.Data.TorneoRepository>();
+// ── AUTENTICACIÓN CON COOKIES ──────────────────
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath    = "/Auth/Login";
+        options.LogoutPath   = "/Auth/Logout";
+        options.AccessDeniedPath = "/Auth/Login";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+    });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
-{
     app.UseExceptionHandler("/Home/Error");
-}
 
 app.UseStaticFiles();
 app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",

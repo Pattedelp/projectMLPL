@@ -5,13 +5,14 @@
     ViewBag.Title = Model.Division?.Nombre + " - Fixture";
     var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
     var icono = esPrimera ? "🏆" : "🥈";
+    var divisionId = Model.Division?.Id ?? 1;
 }
 
 <div class="page-hero">
     <div class="page-hero-icon">@icono</div>
     <div class="page-hero-text">
         <h1>@Model.Division?.Nombre</h1>
-        <p>Fixture y resultados</p>
+        <p>Torneo Chapitas · AAC</p>
     </div>
 </div>
 
@@ -21,49 +22,213 @@
     <a asp-controller="@controller" asp-action="Equipos">Equipos</a>
 </nav>
 
-@foreach (var grupo in Model.Fixture)
-{
-    <div class="fixture-seccion">
-        <div class="fixture-fecha-header">
-            <h3>@grupo.Fecha.Nombre</h3>
-            @if (grupo.Fecha.FechaInicio.HasValue)
-            {
-                <span class="fecha-sub">@grupo.Fecha.FechaInicio.Value.ToString("dd/MM/yyyy")</span>
-            }
-            <div class="fecha-line"></div>
-            <span style="font-size:12px;color:var(--color-muted)">
-                @grupo.Partidos.Count(p => p.Jugado) / @grupo.Partidos.Count jugados
-            </span>
-        </div>
+<div class="fixture-layout">
 
-        @foreach (var p in grupo.Partidos)
+    <!-- FIXTURE -->
+    <div class="fixture-col">
+        @foreach (var grupo in Model.Fixture)
         {
-            <div class="partido-card">
-                <div class="partido-equipos">
-                    <span class="partido-team right">@p.EquipoLocal?.Nombre</span>
-                    @if (p.Jugado)
-                    {
-                        <div class="partido-score">@p.GolesLocal - @p.GolesVisitante</div>
-                    }
-                    else
-                    {
-                        <div class="partido-score pendiente">vs</div>
-                    }
-                    <span class="partido-team">@p.EquipoVisitante?.Nombre</span>
+            <div class="fixture-seccion">
+                <div class="fixture-fecha-header">
+                    <h3>@grupo.Fecha.Nombre</h3>
+                    <div class="fecha-line"></div>
+                    <span style="font-size:12px;color:var(--color-muted)">
+                        @grupo.Partidos.Count(p => p.Jugado)/@grupo.Partidos.Count jugados
+                    </span>
                 </div>
-                <div class="partido-meta">
-                    @if (p.Jugado)
-                    {
-                        <span class="partido-estado-jugado">✓ jugado</span>
-                    }
-                    else
-                    {
-                        <span class="partido-estado-pendiente">Pendiente</span>
-                        <a asp-controller="@controller" asp-action="CargarResultado"
-                           asp-route-id="@p.Id" class="btn-cargar">Cargar resultado</a>
-                    }
-                </div>
+
+                @foreach (var p in grupo.Partidos)
+                {
+                    var flagL = p.EquipoLocal?.FlagCode ?? "";
+                    var flagV = p.EquipoVisitante?.FlagCode ?? "";
+                    var nomL  = p.EquipoLocal?.Nombre ?? "";
+                    var nomV  = p.EquipoVisitante?.Nombre ?? "";
+
+                    <div class="partido-card" id="partido-@p.Id">
+                        <div class="partido-equipos">
+                            <span class="partido-team right">
+                                @if (!string.IsNullOrEmpty(flagL))
+                                {
+                                    <img src="https://flagcdn.com/20x15/@(flagL).png" class="flag-img" alt=""
+                                         onerror="this.style.display='none'" />
+                                }
+                                @nomL
+                            </span>
+                            @if (p.Jugado)
+                            {
+                                <div class="partido-score" id="score-@p.Id">@p.GolesLocal - @p.GolesVisitante</div>
+                            }
+                            else
+                            {
+                                <div class="partido-score pendiente" id="score-@p.Id">vs</div>
+                            }
+                            <span class="partido-team">
+                                @nomV
+                                @if (!string.IsNullOrEmpty(flagV))
+                                {
+                                    <img src="https://flagcdn.com/20x15/@(flagV).png" class="flag-img" alt=""
+                                         onerror="this.style.display='none'" />
+                                }
+                            </span>
+                        </div>
+                        <div class="partido-meta" id="meta-@p.Id">
+                            @if (p.Jugado)
+                            {
+                                <span class="partido-estado-jugado">✓ jugado</span>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <a href="#" class="btn-editar"
+                                       onclick="abrirModal(@p.Id,'@nomL','@flagL','@nomV','@flagV',@(p.GolesLocal??0),@(p.GolesVisitante??0));return false;">
+                                        editar
+                                    </a>
+                                }
+                            }
+                            else
+                            {
+                                <span class="partido-estado-pendiente">Pendiente</span>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <a href="#" class="btn-cargar"
+                                       onclick="abrirModal(@p.Id,'@nomL','@flagL','@nomV','@flagV',0,0);return false;">
+                                        + resultado
+                                    </a>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
             </div>
         }
     </div>
+
+    <!-- TABLA EN VIVO -->
+    <div class="tabla-live-col">
+        <div class="tabla-live-header">📊 Tabla en vivo</div>
+        <div id="tabla-viva">
+            @await Html.PartialAsync("_TablaViva", Model.TablaPosiciones)
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="modal-overlay" onclick="cerrarModal()" style="display:none"></div>
+<div id="modal-resultado" class="modal-resultado" style="display:none">
+    <div class="modal-header">
+        <h3>Cargar Resultado</h3>
+        <button onclick="cerrarModal()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+        <div class="form-partido-header">
+            <div class="form-team-name">
+                <img id="modal-flag-local" src="" class="flag-modal" alt=""
+                     onerror="this.style.display='none'" style="display:none" />
+                <div id="modal-local"></div>
+            </div>
+            <div class="form-vs">vs</div>
+            <div class="form-team-name">
+                <div id="modal-visitante"></div>
+                <img id="modal-flag-visitante" src="" class="flag-modal" alt=""
+                     onerror="this.style.display='none'" style="display:none" />
+            </div>
+        </div>
+        <div class="score-inputs">
+            <input type="number" id="input-local" min="0" max="99" value="0" class="score-input" />
+            <div class="score-sep">-</div>
+            <input type="number" id="input-visitante" min="0" max="99" value="0" class="score-input" />
+        </div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;">
+            <button class="btn-primary" id="btn-guardar" onclick="guardarResultado()">Guardar</button>
+            <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+        </div>
+        <p id="modal-error" style="color:var(--color-red);font-size:13px;text-align:center;margin-top:8px;display:none"></p>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let partidoActual = null;
+    const divisionId  = @divisionId;
+
+    function abrirModal(id, local, flagLocal, visitante, flagVisitante, gl, gv) {
+        partidoActual = id;
+        document.getElementById('modal-local').textContent     = local;
+        document.getElementById('modal-visitante').textContent = visitante;
+
+        const fl = document.getElementById('modal-flag-local');
+        const fv = document.getElementById('modal-flag-visitante');
+        if (flagLocal) {
+            fl.src = `https://flagcdn.com/32x24/${flagLocal}.png`;
+            fl.style.display = 'inline';
+        } else { fl.style.display = 'none'; }
+        if (flagVisitante) {
+            fv.src = `https://flagcdn.com/32x24/${flagVisitante}.png`;
+            fv.style.display = 'inline';
+        } else { fv.style.display = 'none'; }
+
+        document.getElementById('input-local').value     = gl;
+        document.getElementById('input-visitante').value = gv;
+        document.getElementById('modal-error').style.display = 'none';
+        document.getElementById('modal-overlay').style.display  = 'block';
+        document.getElementById('modal-resultado').style.display = 'block';
+        document.getElementById('input-local').focus();
+        document.getElementById('input-local').select();
+    }
+
+    function cerrarModal() {
+        document.getElementById('modal-overlay').style.display   = 'none';
+        document.getElementById('modal-resultado').style.display = 'none';
+        partidoActual = null;
+    }
+
+    async function guardarResultado() {
+        const gl = parseInt(document.getElementById('input-local').value);
+        const gv = parseInt(document.getElementById('input-visitante').value);
+        if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) {
+            mostrarError('Ingresá valores válidos.'); return;
+        }
+        const btn = document.getElementById('btn-guardar');
+        btn.textContent = 'Guardando...'; btn.disabled = true;
+        try {
+            const resp = await fetch('/Resultado/Guardar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partidoId: partidoActual, golesLocal: gl, golesVisitante: gv })
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                // Actualizar marcador en pantalla
+                const scoreEl = document.getElementById('score-' + partidoActual);
+                scoreEl.className = 'partido-score';
+                scoreEl.textContent = gl + ' - ' + gv;
+                const metaEl  = document.getElementById('meta-' + partidoActual);
+                const nomL    = document.getElementById('modal-local').textContent;
+                const nomV    = document.getElementById('modal-visitante').textContent;
+                const flagLSrc = document.getElementById('modal-flag-local').src;
+                const flagVSrc = document.getElementById('modal-flag-visitante').src;
+                const flagL   = flagLSrc.match(/\/([^/]+)\.png/)?.[1] || '';
+                const flagV   = flagVSrc.match(/\/([^/]+)\.png/)?.[1] || '';
+                metaEl.innerHTML = `<span class="partido-estado-jugado">✓</span>
+                    <a href="#" class="btn-editar"
+                       onclick="abrirModal(${partidoActual},'${nomL}','${flagL}','${nomV}','${flagV}',${gl},${gv});return false;">
+                       editar</a>`;
+                // Actualizar tabla en vivo
+                const tablaResp = await fetch(`/Resultado/TablaViva?divisionId=${divisionId}`);
+                document.getElementById('tabla-viva').innerHTML = await tablaResp.text();
+                cerrarModal();
+            } else { mostrarError('Error al guardar.'); }
+        } catch { mostrarError('Error de conexión.'); }
+        btn.textContent = 'Guardar'; btn.disabled = false;
+    }
+
+    function mostrarError(msg) {
+        const el = document.getElementById('modal-error');
+        el.textContent = msg; el.style.display = 'block';
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && partidoActual) guardarResultado();
+        if (e.key === 'Escape') cerrarModal();
+    });
+</script>
 }

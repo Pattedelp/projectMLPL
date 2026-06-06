@@ -1,10 +1,9 @@
-@model DivisionViewModel
+@model TorneoAmigos.Models.DivisionViewModel
 @{
     var esPrimera = Model.Division?.Id == 1;
     var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
     var icono = esPrimera ? "🏆" : "🥈";
 }
-
 <div class="division-widget">
     <div class="widget-header">
         <span class="widget-title">@icono @Model.Division?.Nombre</span>
@@ -18,9 +17,16 @@
             <tbody>
                 @foreach (var f in Model.TablaPosiciones)
                 {
-                    <tr>
+                    <tr class="zona-@f.Zona">
                         <td class="col-pos">@f.Posicion</td>
-                        <td class="zona-@f.Zona">@f.NombreEquipo</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(f.FlagCode))
+                            {
+                                <img src="https://flagcdn.com/16x12/@(f.FlagCode).png"
+                                     class="flag-sm" alt="" onerror="this.style.display='none'" />
+                            }
+                            @f.NombreEquipo
+                        </td>
                         <td class="col-num">@f.PartidosJugados</td>
                         <td class="@(f.DiferenciaGoles > 0 ? "col-dif-pos" : f.DiferenciaGoles < 0 ? "col-dif-neg" : "col-dif-neu")">
                             @(f.DiferenciaGoles > 0 ? "+" : "")@f.DiferenciaGoles

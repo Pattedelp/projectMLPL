@@ -1,0 +1,34 @@
+@model DivisionViewModel
+@{
+    var esPrimera = Model.Division?.Id == 1;
+    var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
+    var icono = esPrimera ? "🏆" : "🥈";
+}
+
+<div class="division-widget">
+    <div class="widget-header">
+        <span class="widget-title">@icono @Model.Division?.Nombre</span>
+        <a asp-controller="@controller" asp-action="Posiciones" class="widget-link">Ver completa →</a>
+    </div>
+    <div class="tabla-wrapper">
+        <table class="tabla-posiciones">
+            <thead>
+                <tr><th>#</th><th>Equipo</th><th>PJ</th><th>DIF</th><th>PTS</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var f in Model.TablaPosiciones)
+                {
+                    <tr>
+                        <td class="col-pos">@f.Posicion</td>
+                        <td class="zona-@f.Zona">@f.NombreEquipo</td>
+                        <td class="col-num">@f.PartidosJugados</td>
+                        <td class="@(f.DiferenciaGoles > 0 ? "col-dif-pos" : f.DiferenciaGoles < 0 ? "col-dif-neg" : "col-dif-neu")">
+                            @(f.DiferenciaGoles > 0 ? "+" : "")@f.DiferenciaGoles
+                        </td>
+                        <td class="col-pts">@f.Puntos</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

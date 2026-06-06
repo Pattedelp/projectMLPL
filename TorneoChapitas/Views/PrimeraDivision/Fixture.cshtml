@@ -1,0 +1,69 @@
+@model DivisionViewModel
+@{
+    var esPrimera = Model.Division?.Id == 1;
+    ViewBag.ActivePage = esPrimera ? "primera" : "nacb";
+    ViewBag.Title = Model.Division?.Nombre + " - Fixture";
+    var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
+    var icono = esPrimera ? "🏆" : "🥈";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">@icono</div>
+    <div class="page-hero-text">
+        <h1>@Model.Division?.Nombre</h1>
+        <p>Fixture y resultados</p>
+    </div>
+</div>
+
+<nav class="section-nav">
+    <a asp-controller="@controller" asp-action="Posiciones">Posiciones</a>
+    <a asp-controller="@controller" asp-action="Fixture" class="active">Fixture</a>
+    <a asp-controller="@controller" asp-action="Equipos">Equipos</a>
+</nav>
+
+@foreach (var grupo in Model.Fixture)
+{
+    <div class="fixture-seccion">
+        <div class="fixture-fecha-header">
+            <h3>@grupo.Fecha.Nombre</h3>
+            @if (grupo.Fecha.FechaInicio.HasValue)
+            {
+                <span class="fecha-sub">@grupo.Fecha.FechaInicio.Value.ToString("dd/MM/yyyy")</span>
+            }
+            <div class="fecha-line"></div>
+            <span style="font-size:12px;color:var(--color-muted)">
+                @grupo.Partidos.Count(p => p.Jugado) / @grupo.Partidos.Count jugados
+            </span>
+        </div>
+
+        @foreach (var p in grupo.Partidos)
+        {
+            <div class="partido-card">
+                <div class="partido-equipos">
+                    <span class="partido-team right">@p.EquipoLocal?.Nombre</span>
+                    @if (p.Jugado)
+                    {
+                        <div class="partido-score">@p.GolesLocal - @p.GolesVisitante</div>
+                    }
+                    else
+                    {
+                        <div class="partido-score pendiente">vs</div>
+                    }
+                    <span class="partido-team">@p.EquipoVisitante?.Nombre</span>
+                </div>
+                <div class="partido-meta">
+                    @if (p.Jugado)
+                    {
+                        <span class="partido-estado-jugado">✓ jugado</span>
+                    }
+                    else
+                    {
+                        <span class="partido-estado-pendiente">Pendiente</span>
+                        <a asp-controller="@controller" asp-action="CargarResultado"
+                           asp-route-id="@p.Id" class="btn-cargar">Cargar resultado</a>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

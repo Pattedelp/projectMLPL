@@ -1,0 +1,55 @@
+@model CargarResultadoViewModel
+@{
+    ViewBag.Title = "Cargar Resultado";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">⚽</div>
+    <div class="page-hero-text">
+        <h1>Cargar Resultado</h1>
+        <p>Ingresá el marcador del partido</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <div class="form-partido-header">
+        <div class="form-team-name">@Model.EquipoLocal</div>
+        <div class="form-vs">vs</div>
+        <div class="form-team-name">@Model.EquipoVisitante</div>
+    </div>
+
+    <form asp-action="CargarResultado" method="post">
+        <input type="hidden" asp-for="PartidoId" />
+        <input type="hidden" asp-for="EquipoLocal" />
+        <input type="hidden" asp-for="EquipoVisitante" />
+
+        <div class="score-inputs">
+            <div>
+                <label style="display:block;text-align:center;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--color-muted);margin-bottom:8px;">
+                    @Model.EquipoLocal
+                </label>
+                <input asp-for="GolesLocal" type="number" min="0" max="99" class="score-input" />
+                <span asp-validation-for="GolesLocal" class="field-error"></span>
+            </div>
+            <div class="score-sep">-</div>
+            <div>
+                <label style="display:block;text-align:center;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--color-muted);margin-bottom:8px;">
+                    @Model.EquipoVisitante
+                </label>
+                <input asp-for="GolesVisitante" type="number" min="0" max="99" class="score-input" />
+                <span asp-validation-for="GolesVisitante" class="field-error"></span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Observaciones (opcional)</label>
+            <textarea asp-for="Observaciones" class="form-control" rows="2"
+                      placeholder="Ej: lluvia, partido intenso..."></textarea>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center;">
+            <button type="submit" class="btn-primary">Guardar Resultado</button>
+            <a href="javascript:history.back()" style="font-size:13px;color:var(--color-muted);">Cancelar</a>
+        </div>
+    </form>
+</div>

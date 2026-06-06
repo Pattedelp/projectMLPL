@@ -1,0 +1,60 @@
+@model DivisionViewModel
+@{
+    var esPrimera = Model.Division?.Id == 1;
+    ViewBag.ActivePage = esPrimera ? "primera" : "nacb";
+    ViewBag.Title = Model.Division?.Nombre + " - Posiciones";
+    var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
+    var icono = esPrimera ? "🏆" : "🥈";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">@icono</div>
+    <div class="page-hero-text">
+        <h1>@Model.Division?.Nombre</h1>
+        <p>Tabla de posiciones</p>
+    </div>
+</div>
+
+<nav class="section-nav">
+    <a asp-controller="@controller" asp-action="Posiciones" class="active">Posiciones</a>
+    <a asp-controller="@controller" asp-action="Fixture">Fixture</a>
+    <a asp-controller="@controller" asp-action="Equipos">Equipos</a>
+</nav>
+
+<div class="tabla-wrapper">
+    <table class="tabla-posiciones">
+        <thead>
+            <tr>
+                <th>#</th><th>Equipo</th><th title="Partidos Jugados">PJ</th>
+                <th title="Ganados">G</th><th title="Empatados">E</th><th title="Perdidos">P</th>
+                <th title="Goles a Favor">GF</th><th title="Goles en Contra">GC</th>
+                <th title="Diferencia">DIF</th><th title="Puntos">PTS</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var f in Model.TablaPosiciones)
+            {
+                <tr>
+                    <td class="col-pos">@f.Posicion</td>
+                    <td class="zona-@f.Zona col-equipo">@f.NombreEquipo</td>
+                    <td class="col-num">@f.PartidosJugados</td>
+                    <td class="col-g">@f.Ganados</td>
+                    <td class="col-e">@f.Empatados</td>
+                    <td class="col-p">@f.Perdidos</td>
+                    <td class="col-num">@f.GolesAFavor</td>
+                    <td class="col-num">@f.GolesEnContra</td>
+                    <td class="@(f.DiferenciaGoles > 0 ? "col-dif-pos" : f.DiferenciaGoles < 0 ? "col-dif-neg" : "col-dif-neu")">
+                        @(f.DiferenciaGoles > 0 ? "+" : "")@f.DiferenciaGoles
+                    </td>
+                    <td class="col-pts">@f.Puntos</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="tabla-leyenda">
+    <span><span class="leyenda-dot" style="background:#4caf82"></span> Zona campeonato</span>
+    <span><span class="leyenda-dot" style="background:#f0c040"></span> Zona promoción</span>
+    <span><span class="leyenda-dot" style="background:#e05555"></span> Zona descenso</span>
+</div>

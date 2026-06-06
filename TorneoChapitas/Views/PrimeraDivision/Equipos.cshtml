@@ -1,0 +1,54 @@
+@model DivisionViewModel
+@{
+    var esPrimera = Model.Division?.Id == 1;
+    ViewBag.ActivePage = esPrimera ? "primera" : "nacb";
+    ViewBag.Title = Model.Division?.Nombre + " - Equipos";
+    var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
+    var icono = esPrimera ? "🏆" : "🥈";
+
+    string Iniciales(string nombre)
+    {
+        var partes = nombre?.Split(' ') ?? Array.Empty<string>();
+        if (partes.Length == 0) return "??";
+        if (partes.Length == 1) return nombre!.Substring(0, Math.Min(2, nombre.Length)).ToUpper();
+        return (partes[0][0].ToString() + partes[1][0].ToString()).ToUpper();
+    }
+    int GetPts(int id) => Model.TablaPosiciones.FirstOrDefault(t => t.EquipoId == id)?.Puntos ?? 0;
+    int GetPos(int id) => Model.TablaPosiciones.FirstOrDefault(t => t.EquipoId == id)?.Posicion ?? 0;
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">@icono</div>
+    <div class="page-hero-text">
+        <h1>@Model.Division?.Nombre</h1>
+        <p>@Model.Equipos.Count equipos participantes</p>
+    </div>
+</div>
+
+<nav class="section-nav">
+    <a asp-controller="@controller" asp-action="Posiciones">Posiciones</a>
+    <a asp-controller="@controller" asp-action="Fixture">Fixture</a>
+    <a asp-controller="@controller" asp-action="Equipos" class="active">Equipos</a>
+</nav>
+
+<div class="equipos-grid">
+    @foreach (var e in Model.Equipos)
+    {
+        <div class="equipo-card">
+            <div class="equipo-escudo"
+                 style="background-color:@e.ColorPrincipal; color:@e.ColorSecundario;">
+                @Iniciales(e.Nombre)
+            </div>
+            <div class="equipo-nombre">@e.Nombre</div>
+            <div class="equipo-stats">
+                @{ var pos = GetPos(e.Id); var pts = GetPts(e.Id); }
+                @if (pos > 0)
+                {
+                    <span>Pos: <strong>@pos°</strong></span>
+                    <span> · </span>
+                    <span class="equipo-pts">@pts pts</span>
+                }
+            </div>
+        </div>
+    }
+</div>

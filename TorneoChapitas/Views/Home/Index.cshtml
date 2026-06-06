@@ -1,0 +1,37 @@
+@model HomeViewModel
+@{
+    ViewBag.Title = "Inicio";
+    ViewBag.ActivePage = "home";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">⚽</div>
+    <div class="page-hero-text">
+        <h1>Torneo de Fútbol</h1>
+        <p>Organización: AAC</p>
+    </div>
+</div>
+
+<div class="stats-bar">
+    <div class="stat-card">
+        <div class="stat-label">Partidos jugados</div>
+        <div class="stat-value">@Model.TotalPartidosJugados</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Goles totales</div>
+        <div class="stat-value">@Model.TotalGoles</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Equipos</div>
+        <div class="stat-value">@(Model.PrimeraDivision.Equipos.Count + Model.NacionalB.Equipos.Count)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Divisiones</div>
+        <div class="stat-value">2</div>
+    </div>
+</div>
+
+<div class="home-sections">
+    @await Html.PartialAsync("_MiniTabla", Model.PrimeraDivision)
+    @await Html.PartialAsync("_MiniTabla", Model.NacionalB)
+</div>

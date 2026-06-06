@@ -1,6 +1,5 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "./Dockerfile"
 
 [deploy]
 startCommand = "dotnet TorneoChapitas.dll"

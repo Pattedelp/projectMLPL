@@ -3,15 +3,29 @@ using TorneoAmigos.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Leer DATABASE_URL de Railway si existe (formato postgresql://user:pass@host:port/db)
-var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-if (!string.IsNullOrEmpty(databaseUrl))
+// Railway puede pasar la BD de varias formas, las leemos todas
+var pgHost     = Environment.GetEnvironmentVariable("PGHOST");
+var pgPort     = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
+var pgDb       = Environment.GetEnvironmentVariable("PGDATABASE") ?? "railway";
+var pgUser     = Environment.GetEnvironmentVariable("PGUSER") ?? "postgres";
+var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
+
+if (!string.IsNullOrEmpty(pgHost) && !string.IsNullOrEmpty(pgPassword))
 {
-    // Convertir formato postgresql:// a formato Npgsql
-    var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
-    var connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};Trust Server Certificate=true;SSL Mode=Require";
-    builder.Configuration["ConnectionStrings:TorneoAmigosDB"] = connectionString;
+    var cs = $"Host={pgHost};Port={pgPort};Database={pgDb};Username={pgUser};Password={pgPassword};Trust Server Certificate=true;SSL Mode=Require";
+    builder.Configuration["ConnectionStrings:TorneoAmigosDB"] = cs;
+}
+else
+{
+    // Intentar leer DATABASE_URL como fallback
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrEmpty(databaseUrl))
+    {
+        var uri      = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':');
+        var cs       = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};Trust Server Certificate=true;SSL Mode=Require";
+        builder.Configuration["ConnectionStrings:TorneoAmigosDB"] = cs;
+    }
 }
 
 builder.Services.AddControllersWithViews();

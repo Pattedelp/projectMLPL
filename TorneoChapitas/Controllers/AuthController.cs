@@ -36,13 +36,16 @@ namespace TorneoAmigos.Controllers
                 await HttpContext.SignInAsync(
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     principal,
-                    new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7) }
-                );
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = true,
+                        ExpiresUtc   = DateTimeOffset.UtcNow.AddDays(7)
+                    });
 
                 return Redirect(returnUrl ?? "/");
             }
 
-            ViewBag.Error = "Usuario o contraseña incorrectos.";
+            ViewBag.Error     = "Usuario o contraseña incorrectos.";
             ViewBag.ReturnUrl = returnUrl;
             return View();
         }

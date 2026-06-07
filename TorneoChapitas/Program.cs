@@ -6,14 +6,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<TorneoRepository>();
 
-// ── AUTENTICACIÓN CON COOKIES ──────────────────
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath    = "/Auth/Login";
-        options.LogoutPath   = "/Auth/Logout";
-        options.AccessDeniedPath = "/Auth/Login";
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.LoginPath         = "/Auth/Login";
+        options.LogoutPath        = "/Auth/Logout";
+        options.AccessDeniedPath  = "/Auth/Login";
+        options.ExpireTimeSpan    = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
     });
 
@@ -26,7 +25,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
 

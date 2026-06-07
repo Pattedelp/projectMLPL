@@ -10,19 +10,16 @@ namespace TorneoAmigos.Controllers
         private readonly TorneoRepository _repo;
         public ResultadoController(TorneoRepository repo) => _repo = repo;
 
-        // Solo admins pueden guardar resultados
         [Authorize(Roles = "Admin")]
         [HttpPost("Guardar")]
         public IActionResult Guardar([FromBody] GuardarResultadoDto dto)
         {
             if (dto == null || dto.GolesLocal < 0 || dto.GolesVisitante < 0)
-                return Json(new { ok = false, msg = "Datos inválidos" });
-
+                return Json(new { ok = false });
             var ok = _repo.CargarResultado(dto.PartidoId, dto.GolesLocal, dto.GolesVisitante);
             return Json(new { ok });
         }
 
-        // Devuelve HTML de la tabla actualizada (público)
         [HttpGet("TablaViva")]
         public IActionResult TablaViva(int divisionId)
         {

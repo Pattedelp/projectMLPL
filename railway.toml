@@ -1,5 +1,0 @@
-[phases.build]
-cmds = ["dotnet publish TorneoChapitas/TorneoChapitas/TorneoChapitas.csproj -c Release -o /app"]
-
-[start]
-cmd = "dotnet /app/TorneoChapitas.dll"

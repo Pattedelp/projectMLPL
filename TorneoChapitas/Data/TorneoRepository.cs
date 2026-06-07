@@ -192,7 +192,7 @@ namespace TorneoAmigos.Data
         public List<Fecha> GetFechasByDivision(int divisionId)
         {
             var lista = new List<Fecha>();
-            const string sql = @"SELECT id, divisionid, numero, nombre, fechainicio, fechafin, activa
+            const string sql = @"SELECT id, divisionid, numero, nombre, fechainicio, fechafin, activa, habilitada
                                  FROM fechas WHERE divisionid = @D ORDER BY numero";
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
@@ -220,6 +220,32 @@ namespace TorneoAmigos.Data
             return Convert.ToInt32(cmd.ExecuteScalar());
         }
 
+        // ── ADMIN ──────────────────────────────
+        public bool ToggleFechaHabilitada(int fechaId, bool habilitada)
+        {
+            const string sql = "UPDATE fechas SET habilitada = @H WHERE id = @Id";
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@H",   habilitada);
+            cmd.Parameters.AddWithValue("@Id",  fechaId);
+            conn.Open();
+            return cmd.ExecuteNonQuery() > 0;
+        }
+
+        public List<Fecha> GetTodasLasFechas(int divisionId)
+        {
+            var lista = new List<Fecha>();
+            const string sql = @"SELECT id, divisionid, numero, nombre, fechainicio, fechafin, activa, habilitada
+                                 FROM fechas WHERE divisionid = @D ORDER BY numero";
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@D", divisionId);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) lista.Add(MapFecha(r));
+            return lista;
+        }
+
         // ── MAPPERS ────────────────────────────
         private static Division MapDivision(IDataReader r) => new()
         {
@@ -244,7 +270,8 @@ namespace TorneoAmigos.Data
             Nombre = r.GetString(3),
             FechaInicio = r.IsDBNull(4) ? null : r.GetDateTime(4),
             FechaFin    = r.IsDBNull(5) ? null : r.GetDateTime(5),
-            Activa = r.GetBoolean(6)
+            Activa = r.GetBoolean(6),
+            Habilitada = r.FieldCount > 7 && !r.IsDBNull(7) && r.GetBoolean(7)
         };
 
         private static Partido MapPartido(IDataReader r) => new()

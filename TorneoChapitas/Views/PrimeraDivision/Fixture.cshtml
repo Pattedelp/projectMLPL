@@ -1,11 +1,12 @@
 @model DivisionViewModel
 @{
-    var esPrimera = Model.Division?.Id == 1;
+    var esPrimera  = Model.Division?.Id == 1;
     ViewBag.ActivePage = esPrimera ? "primera" : "nacb";
-    ViewBag.Title = Model.Division?.Nombre + " - Fixture";
+    ViewBag.Title  = Model.Division?.Nombre + " - Fixture";
     var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
-    var icono = esPrimera ? "🏆" : "🥈";
+    var icono      = esPrimera ? "🏆" : "🥈";
     var divisionId = Model.Division?.Id ?? 1;
+    var esAdmin    = User.IsInRole("Admin");
 }
 
 <div class="page-hero">
@@ -28,74 +29,113 @@
     <div class="fixture-col">
         @foreach (var grupo in Model.Fixture)
         {
-            <div class="fixture-seccion">
+            var bloqueada = !grupo.Fecha.Habilitada && !esAdmin;
+            <div class="fixture-seccion @(bloqueada ? "fecha-bloqueada" : "")">
                 <div class="fixture-fecha-header">
                     <h3>@grupo.Fecha.Nombre</h3>
+                    @if (esAdmin)
+                    {
+                        <label class="toggle-habilitada" title="Habilitar para usuarios">
+                            <input type="checkbox"
+                                   class="check-habilitada"
+                                   data-fecha-id="@grupo.Fecha.Id"
+                                   @(grupo.Fecha.Habilitada ? "checked" : "") />
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">@(grupo.Fecha.Habilitada ? "Visible" : "Oculta")</span>
+                        </label>
+                    }
+                    else if (grupo.Fecha.Habilitada)
+                    {
+                        <span class="fecha-badge-visible">● Disponible</span>
+                    }
                     <div class="fecha-line"></div>
                     <span style="font-size:12px;color:var(--color-muted)">
                         @grupo.Partidos.Count(p => p.Jugado)/@grupo.Partidos.Count jugados
                     </span>
                 </div>
 
-                @foreach (var p in grupo.Partidos)
+                @if (bloqueada)
                 {
-                    var flagL = p.EquipoLocal?.FlagCode ?? "";
-                    var flagV = p.EquipoVisitante?.FlagCode ?? "";
-                    var nomL  = p.EquipoLocal?.Nombre ?? "";
-                    var nomV  = p.EquipoVisitante?.Nombre ?? "";
-
-                    <div class="partido-card" id="partido-@p.Id">
-                        <div class="partido-equipos">
-                            <span class="partido-team right">
-                                @if (!string.IsNullOrEmpty(flagL))
-                                {
-                                    <img src="https://flagcdn.com/20x15/@(flagL).png" class="flag-img" alt=""
-                                         onerror="this.style.display='none'" />
-                                }
-                                @nomL
-                            </span>
-                            @if (p.Jugado)
-                            {
-                                <div class="partido-score" id="score-@p.Id">@p.GolesLocal - @p.GolesVisitante</div>
-                            }
-                            else
-                            {
-                                <div class="partido-score pendiente" id="score-@p.Id">vs</div>
-                            }
-                            <span class="partido-team">
-                                @nomV
-                                @if (!string.IsNullOrEmpty(flagV))
-                                {
-                                    <img src="https://flagcdn.com/20x15/@(flagV).png" class="flag-img" alt=""
-                                         onerror="this.style.display='none'" />
-                                }
-                            </span>
-                        </div>
-                        <div class="partido-meta" id="meta-@p.Id">
-                            @if (p.Jugado)
-                            {
-                                <span class="partido-estado-jugado">✓ jugado</span>
-                                @if (User.IsInRole("Admin"))
-                                {
-                                    <a href="#" class="btn-editar"
-                                       onclick="abrirModal(@p.Id,'@nomL','@flagL','@nomV','@flagV',@(p.GolesLocal??0),@(p.GolesVisitante??0));return false;">
-                                        editar
-                                    </a>
-                                }
-                            }
-                            else
-                            {
-                                <span class="partido-estado-pendiente">Pendiente</span>
-                                @if (User.IsInRole("Admin"))
-                                {
-                                    <a href="#" class="btn-cargar"
-                                       onclick="abrirModal(@p.Id,'@nomL','@flagL','@nomV','@flagV',0,0);return false;">
-                                        + resultado
-                                    </a>
-                                }
-                            }
+                    <!-- Vista bloqueada para no admins -->
+                    <div class="fecha-blur-wrapper">
+                        @foreach (var p in grupo.Partidos)
+                        {
+                            <div class="partido-card partido-blur">
+                                <div class="partido-equipos">
+                                    <span class="partido-team right">@p.EquipoLocal?.Nombre</span>
+                                    <div class="partido-score pendiente">vs</div>
+                                    <span class="partido-team">@p.EquipoVisitante?.Nombre</span>
+                                </div>
+                            </div>
+                        }
+                        <div class="fecha-lock-overlay">
+                            🔒 Esta fecha aún no está disponible
                         </div>
                     </div>
+                }
+                else
+                {
+                    <!-- Vista normal -->
+                    @foreach (var p in grupo.Partidos)
+                    {
+                        var flagL = p.EquipoLocal?.FlagCode ?? "";
+                        var flagV = p.EquipoVisitante?.FlagCode ?? "";
+                        var nomL  = p.EquipoLocal?.Nombre ?? "";
+                        var nomV  = p.EquipoVisitante?.Nombre ?? "";
+
+                        <div class="partido-card" id="partido-@p.Id">
+                            <div class="partido-equipos">
+                                <span class="partido-team right">
+                                    @if (!string.IsNullOrEmpty(flagL))
+                                    {
+                                        <img src="https://flagcdn.com/20x15/@(flagL).png" class="flag-img" alt=""
+                                             onerror="this.style.display='none'" />
+                                    }
+                                    @nomL
+                                </span>
+                                @if (p.Jugado)
+                                {
+                                    <div class="partido-score" id="score-@p.Id">@p.GolesLocal - @p.GolesVisitante</div>
+                                }
+                                else
+                                {
+                                    <div class="partido-score pendiente" id="score-@p.Id">vs</div>
+                                }
+                                <span class="partido-team">
+                                    @nomV
+                                    @if (!string.IsNullOrEmpty(flagV))
+                                    {
+                                        <img src="https://flagcdn.com/20x15/@(flagV).png" class="flag-img" alt=""
+                                             onerror="this.style.display='none'" />
+                                    }
+                                </span>
+                            </div>
+                            <div class="partido-meta" id="meta-@p.Id">
+                                @if (p.Jugado)
+                                {
+                                    <span class="partido-estado-jugado">✓ jugado</span>
+                                    @if (esAdmin)
+                                    {
+                                        <a href="#" class="btn-editar"
+                                           onclick="abrirModal(@p.Id,'@nomL','@flagL','@nomV','@flagV',@(p.GolesLocal??0),@(p.GolesVisitante??0));return false;">
+                                            editar
+                                        </a>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="partido-estado-pendiente">Pendiente</span>
+                                    @if (esAdmin)
+                                    {
+                                        <a href="#" class="btn-cargar"
+                                           onclick="abrirModal(@p.Id,'@nomL','@flagL','@nomV','@flagV',0,0);return false;">
+                                            + resultado
+                                        </a>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    }
                 }
             </div>
         }
@@ -111,7 +151,7 @@
 
 </div>
 
-<!-- MODAL -->
+<!-- MODAL resultado -->
 <div id="modal-overlay" class="modal-overlay" onclick="cerrarModal()" style="display:none"></div>
 <div id="modal-resultado" class="modal-resultado" style="display:none">
     <div class="modal-header">
@@ -121,15 +161,13 @@
     <div class="modal-body">
         <div class="form-partido-header">
             <div class="form-team-name">
-                <img id="modal-flag-local" src="" class="flag-modal" alt=""
-                     onerror="this.style.display='none'" style="display:none" />
+                <img id="modal-flag-local" src="" class="flag-modal" alt="" onerror="this.style.display='none'" style="display:none" />
                 <div id="modal-local"></div>
             </div>
             <div class="form-vs">vs</div>
             <div class="form-team-name">
                 <div id="modal-visitante"></div>
-                <img id="modal-flag-visitante" src="" class="flag-modal" alt=""
-                     onerror="this.style.display='none'" style="display:none" />
+                <img id="modal-flag-visitante" src="" class="flag-modal" alt="" onerror="this.style.display='none'" style="display:none" />
             </div>
         </div>
         <div class="score-inputs">
@@ -147,88 +185,100 @@
 
 @section Scripts {
 <script>
-    let partidoActual = null;
-    const divisionId  = @divisionId;
+let partidoActual = null;
+const divisionId  = @divisionId;
 
-    function abrirModal(id, local, flagLocal, visitante, flagVisitante, gl, gv) {
-        partidoActual = id;
-        document.getElementById('modal-local').textContent     = local;
-        document.getElementById('modal-visitante').textContent = visitante;
+function abrirModal(id, local, flagL, visitante, flagV, gl, gv) {
+    partidoActual = id;
+    document.getElementById('modal-local').textContent     = local;
+    document.getElementById('modal-visitante').textContent = visitante;
+    const fl = document.getElementById('modal-flag-local');
+    const fv = document.getElementById('modal-flag-visitante');
+    if (flagL) { fl.src = `https://flagcdn.com/32x24/${flagL}.png`; fl.style.display='inline'; } else fl.style.display='none';
+    if (flagV) { fv.src = `https://flagcdn.com/32x24/${flagV}.png`; fv.style.display='inline'; } else fv.style.display='none';
+    document.getElementById('input-local').value     = gl;
+    document.getElementById('input-visitante').value = gv;
+    document.getElementById('modal-error').style.display = 'none';
+    document.getElementById('modal-overlay').style.display  = 'block';
+    document.getElementById('modal-resultado').style.display = 'block';
+    document.getElementById('input-local').focus();
+    document.getElementById('input-local').select();
+}
 
-        const fl = document.getElementById('modal-flag-local');
-        const fv = document.getElementById('modal-flag-visitante');
-        if (flagLocal) {
-            fl.src = `https://flagcdn.com/32x24/${flagLocal}.png`;
-            fl.style.display = 'inline';
-        } else { fl.style.display = 'none'; }
-        if (flagVisitante) {
-            fv.src = `https://flagcdn.com/32x24/${flagVisitante}.png`;
-            fv.style.display = 'inline';
-        } else { fv.style.display = 'none'; }
+function cerrarModal() {
+    document.getElementById('modal-overlay').style.display   = 'none';
+    document.getElementById('modal-resultado').style.display = 'none';
+    partidoActual = null;
+}
 
-        document.getElementById('input-local').value     = gl;
-        document.getElementById('input-visitante').value = gv;
-        document.getElementById('modal-error').style.display = 'none';
-        document.getElementById('modal-overlay').style.display  = 'block';
-        document.getElementById('modal-resultado').style.display = 'block';
-        document.getElementById('input-local').focus();
-        document.getElementById('input-local').select();
-    }
+async function guardarResultado() {
+    const gl = parseInt(document.getElementById('input-local').value);
+    const gv = parseInt(document.getElementById('input-visitante').value);
+    if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) { mostrarError('Ingresá valores válidos.'); return; }
+    const btn = document.getElementById('btn-guardar');
+    btn.textContent = 'Guardando...'; btn.disabled = true;
+    try {
+        const resp = await fetch('/Resultado/Guardar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ partidoId: partidoActual, golesLocal: gl, golesVisitante: gv })
+        });
+        const data = await resp.json();
+        if (data.ok) {
+            const scoreEl = document.getElementById('score-' + partidoActual);
+            scoreEl.className = 'partido-score';
+            scoreEl.textContent = gl + ' - ' + gv;
+            const metaEl = document.getElementById('meta-' + partidoActual);
+            const nomL = document.getElementById('modal-local').textContent;
+            const nomV = document.getElementById('modal-visitante').textContent;
+            const fLS  = document.getElementById('modal-flag-local').src.match(/\/([^/]+)\.png/)?.[1]||'';
+            const fVS  = document.getElementById('modal-flag-visitante').src.match(/\/([^/]+)\.png/)?.[1]||'';
+            metaEl.innerHTML = `<span class="partido-estado-jugado">✓ jugado</span>
+                <a href="#" class="btn-editar"
+                   onclick="abrirModal(${partidoActual},'${nomL}','${fLS}','${nomV}','${fVS}',${gl},${gv});return false;">
+                   editar</a>`;
+            const tr = await fetch(`/Resultado/TablaViva?divisionId=${divisionId}`);
+            document.getElementById('tabla-viva').innerHTML = await tr.text();
+            cerrarModal();
+        } else { mostrarError('Error al guardar.'); }
+    } catch { mostrarError('Error de conexión.'); }
+    btn.textContent = 'Guardar'; btn.disabled = false;
+}
 
-    function cerrarModal() {
-        document.getElementById('modal-overlay').style.display   = 'none';
-        document.getElementById('modal-resultado').style.display = 'none';
-        partidoActual = null;
-    }
+function mostrarError(msg) {
+    const el = document.getElementById('modal-error');
+    el.textContent = msg; el.style.display = 'block';
+}
 
-    async function guardarResultado() {
-        const gl = parseInt(document.getElementById('input-local').value);
-        const gv = parseInt(document.getElementById('input-visitante').value);
-        if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) {
-            mostrarError('Ingresá valores válidos.'); return;
-        }
-        const btn = document.getElementById('btn-guardar');
-        btn.textContent = 'Guardando...'; btn.disabled = true;
+// Toggle habilitar fecha (solo admin)
+document.querySelectorAll('.check-habilitada').forEach(chk => {
+    chk.addEventListener('change', async function() {
+        const fechaId   = this.dataset.fechaId;
+        const habilitada = this.checked;
+        const label     = this.closest('.toggle-habilitada').querySelector('.toggle-label');
         try {
-            const resp = await fetch('/Resultado/Guardar', {
+            const resp = await fetch('/Resultado/ToggleFecha', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ partidoId: partidoActual, golesLocal: gl, golesVisitante: gv })
+                body: JSON.stringify({ fechaId: parseInt(fechaId), habilitada })
             });
             const data = await resp.json();
             if (data.ok) {
-                // Actualizar marcador en pantalla
-                const scoreEl = document.getElementById('score-' + partidoActual);
-                scoreEl.className = 'partido-score';
-                scoreEl.textContent = gl + ' - ' + gv;
-                const metaEl  = document.getElementById('meta-' + partidoActual);
-                const nomL    = document.getElementById('modal-local').textContent;
-                const nomV    = document.getElementById('modal-visitante').textContent;
-                const flagLSrc = document.getElementById('modal-flag-local').src;
-                const flagVSrc = document.getElementById('modal-flag-visitante').src;
-                const flagL   = flagLSrc.match(/\/([^/]+)\.png/)?.[1] || '';
-                const flagV   = flagVSrc.match(/\/([^/]+)\.png/)?.[1] || '';
-                metaEl.innerHTML = `<span class="partido-estado-jugado">✓</span>
-                    <a href="#" class="btn-editar"
-                       onclick="abrirModal(${partidoActual},'${nomL}','${flagL}','${nomV}','${flagV}',${gl},${gv});return false;">
-                       editar</a>`;
-                // Actualizar tabla en vivo
-                const tablaResp = await fetch(`/Resultado/TablaViva?divisionId=${divisionId}`);
-                document.getElementById('tabla-viva').innerHTML = await tablaResp.text();
-                cerrarModal();
-            } else { mostrarError('Error al guardar.'); }
-        } catch { mostrarError('Error de conexión.'); }
-        btn.textContent = 'Guardar'; btn.disabled = false;
-    }
-
-    function mostrarError(msg) {
-        const el = document.getElementById('modal-error');
-        el.textContent = msg; el.style.display = 'block';
-    }
-
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && partidoActual) guardarResultado();
-        if (e.key === 'Escape') cerrarModal();
+                label.textContent = habilitada ? 'Visible' : 'Oculta';
+                // Recargar la página para que se vea el blur/unblur
+                setTimeout(() => location.reload(), 400);
+            } else {
+                this.checked = !habilitada; // revertir
+            }
+        } catch {
+            this.checked = !habilitada;
+        }
     });
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && partidoActual) guardarResultado();
+    if (e.key === 'Escape') cerrarModal();
+});
 </script>
 }

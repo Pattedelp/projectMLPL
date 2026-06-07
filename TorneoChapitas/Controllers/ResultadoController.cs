@@ -26,6 +26,21 @@ namespace TorneoAmigos.Controllers
             var tabla = _repo.GetTablaPosiciones(divisionId);
             return PartialView("~/Views/Shared/_TablaViva.cshtml", tabla);
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("ToggleFecha")]
+        public IActionResult ToggleFecha([FromBody] ToggleFechaDto dto)
+        {
+            if (dto == null) return Json(new { ok = false });
+            var ok = _repo.ToggleFechaHabilitada(dto.FechaId, dto.Habilitada);
+            return Json(new { ok });
+        }
+    }
+
+    public class ToggleFechaDto
+    {
+        public int FechaId { get; set; }
+        public bool Habilitada { get; set; }
     }
 
     public class GuardarResultadoDto

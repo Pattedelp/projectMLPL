@@ -32,6 +32,7 @@ namespace TorneoAmigos.Models
         public DateTime? FechaInicio { get; set; }
         public DateTime? FechaFin { get; set; }
         public bool Activa { get; set; } = true;
+        public bool Habilitada { get; set; } = false;  // ← nueva
     }
 
     public class Partido
@@ -64,10 +65,7 @@ namespace TorneoAmigos.Models
         public int GolesAFavor { get; set; }
         public int GolesEnContra { get; set; }
         public int DiferenciaGoles => GolesAFavor - GolesEnContra;
-
-        // Puntos acumulados directamente (no se multiplican después)
         public int Puntos { get; set; }
-
         public string? Zona { get; set; }
     }
 
@@ -100,17 +98,11 @@ namespace TorneoAmigos.Models
         public string FlagLocal { get; set; } = "";
         public string EquipoVisitante { get; set; } = "";
         public string FlagVisitante { get; set; } = "";
-
-        [Required][Range(0, 99)]
-        public int GolesLocal { get; set; }
-
-        [Required][Range(0, 99)]
-        public int GolesVisitante { get; set; }
-
+        [Required][Range(0, 99)] public int GolesLocal { get; set; }
+        [Required][Range(0, 99)] public int GolesVisitante { get; set; }
         public string? Observaciones { get; set; }
     }
 
-    // ── COPAS ──────────────────────────────────────
     public class BracketTeam
     {
         public string Nombre { get; set; } = "";

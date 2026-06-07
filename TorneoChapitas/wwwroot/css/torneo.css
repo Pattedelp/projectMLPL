@@ -266,3 +266,82 @@ a:hover { color: #fff; }
 .form-control { width: 100%; background: var(--color-bg3); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 10px 14px; color: var(--color-text); font-family: var(--font-body); font-size: 15px; transition: border-color .2s; }
 .form-control:focus { outline: none; border-color: var(--color-gold); }
 .form-card { background: var(--color-bg2); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 32px; }
+
+/* ── FECHAS BLOQUEADAS / BLUR ────────────────── */
+.fecha-blur-wrapper {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.partido-blur {
+    filter: blur(8px);
+    user-select: none;
+    pointer-events: none;
+    opacity: 0.4;
+}
+.fecha-lock-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-family: var(--font-heading);
+    letter-spacing: 1px;
+    color: var(--color-muted);
+    background: rgba(7, 16, 32, 0.6);
+    backdrop-filter: blur(1px);
+    gap: 8px;
+}
+
+.fecha-badge-visible {
+    font-size: 11px;
+    color: var(--color-green);
+    letter-spacing: 1px;
+}
+
+/* ── TOGGLE HABILITAR FECHA (admin) ─────────── */
+.toggle-habilitada {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+.toggle-habilitada input[type="checkbox"] {
+    display: none;
+}
+.toggle-slider {
+    width: 36px;
+    height: 20px;
+    background: var(--color-border);
+    border-radius: 20px;
+    position: relative;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+.toggle-slider::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform .2s;
+}
+.toggle-habilitada input:checked + .toggle-slider {
+    background: var(--color-green);
+}
+.toggle-habilitada input:checked + .toggle-slider::after {
+    transform: translateX(16px);
+}
+.toggle-label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--color-muted);
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    min-width: 44px;
+}

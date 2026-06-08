@@ -3,7 +3,7 @@ using TorneoAmigos.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Railway puede pasar la BD de varias formas, las leemos todas
+// Railway PostgreSQL connection
 var pgHost     = Environment.GetEnvironmentVariable("PGHOST");
 var pgPort     = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
 var pgDb       = Environment.GetEnvironmentVariable("PGDATABASE") ?? "railway";
@@ -17,7 +17,6 @@ if (!string.IsNullOrEmpty(pgHost) && !string.IsNullOrEmpty(pgPassword))
 }
 else
 {
-    // Intentar leer DATABASE_URL como fallback
     var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
     if (!string.IsNullOrEmpty(databaseUrl))
     {
@@ -30,6 +29,8 @@ else
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<TorneoRepository>();
+builder.Services.AddScoped<TorneoAmigos.Data.TemporadaRepository>();
+builder.Services.AddScoped<TemporadaRepository>();  // ← nuevo
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

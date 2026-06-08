@@ -1,0 +1,102 @@
+@model NuevaTemporadaViewModel
+@{
+    ViewBag.Title = "Nueva Temporada";
+    ViewBag.ActivePage = "admin";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🔄</div>
+    <div class="page-hero-text">
+        <h1>Nueva Temporada</h1>
+        <p>Configurá los equipos y generá el fixture automáticamente</p>
+    </div>
+</div>
+
+<form method="post" asp-action="NuevaTemporada">
+    <div class="admin-form-card">
+        <div class="form-group">
+            <label>Nombre de la temporada</label>
+            <input type="text" name="nombreTemporada"
+                   value="Temporada @Model.NumeroTemporada"
+                   class="form-control" style="max-width:300px" required />
+        </div>
+    </div>
+
+    <!-- PRIMERA DIVISIÓN -->
+    <div class="admin-section">
+        <h2 class="admin-section-title">🏆 Primera División</h2>
+        <p style="color:var(--color-muted);font-size:13px;margin-bottom:16px;">
+            Destildá los equipos que no participen. Los tildados incluyen ascensos automáticos de la B.
+        </p>
+        <div class="equipos-check-grid">
+            @foreach (var e in Model.EquiposPrimera)
+            {
+                <label class="equipo-check-card @(e.EsNuevo ? "equipo-nuevo" : "")">
+                    <input type="checkbox" name="equiposPrimera" value="@e.Id" checked />
+                    @if (!string.IsNullOrEmpty(e.FlagCode))
+                    {
+                        <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" class="flag-img" alt="" />
+                    }
+                    <span>@e.Nombre</span>
+                    @if (e.EsNuevo) { <span class="badge-nuevo">NUEVO</span> }
+                </label>
+            }
+        </div>
+    </div>
+
+    <!-- NACIONAL B -->
+    <div class="admin-section">
+        <h2 class="admin-section-title">🥈 Nacional B</h2>
+        <div class="equipos-check-grid">
+            @foreach (var e in Model.EquiposNacionalB)
+            {
+                <label class="equipo-check-card @(e.EsNuevo ? "equipo-nuevo" : "")">
+                    <input type="checkbox" name="equiposB" value="@e.Id" checked />
+                    @if (!string.IsNullOrEmpty(e.FlagCode))
+                    {
+                        <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" class="flag-img" alt="" />
+                    }
+                    <span>@e.Nombre</span>
+                    @if (e.EsNuevo) { <span class="badge-nuevo">NUEVO</span> }
+                </label>
+            }
+        </div>
+    </div>
+
+    <!-- AGREGAR NUEVOS EQUIPOS -->
+    <div class="admin-section">
+        <h2 class="admin-section-title">➕ Agregar Equipos Nuevos</h2>
+        <p style="color:var(--color-muted);font-size:13px;margin-bottom:16px;">
+            Ingresá los nuevos participantes. Se agregarán a la base de datos y al fixture.
+        </p>
+        <div id="nuevos-container"></div>
+        <button type="button" class="btn-outline" onclick="agregarNuevo()">+ Agregar jugador</button>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:24px;">
+        <button type="submit" class="btn-primary" onclick="return confirm('¿Generar el fixture para esta temporada?')">
+            🎲 Generar Fixture
+        </button>
+        <a asp-action="Index" class="btn-cancelar">Cancelar</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+let contadorNuevos = 0;
+function agregarNuevo() {
+    const div = document.createElement('div');
+    div.className = 'nuevo-equipo-row';
+    div.innerHTML = `
+        <input type="text" name="nuevosNombres" placeholder="Nombre del jugador" class="form-control" style="width:220px" />
+        <select name="nuevasDivisiones" class="form-control" style="width:180px">
+            <option value="1">Primera División</option>
+            <option value="2">Nacional B</option>
+        </select>
+        <button type="button" onclick="this.parentElement.remove()" class="btn-cancelar" style="padding:8px 12px">✕</button>
+    `;
+    document.getElementById('nuevos-container').appendChild(div);
+    contadorNuevos++;
+}
+</script>
+}

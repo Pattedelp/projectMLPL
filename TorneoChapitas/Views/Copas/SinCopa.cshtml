@@ -1,0 +1,33 @@
+@model string
+@{
+    ViewBag.Title = Model;
+    ViewBag.ActivePage = "copas";
+}
+<div class="page-hero">
+    <div class="page-hero-icon">🏆</div>
+    <div class="page-hero-text">
+        <h1>@Model</h1>
+        <p>Torneo Chapitas · AAC</p>
+    </div>
+</div>
+<nav class="section-nav">
+    <a asp-controller="Copas" asp-action="CopaArgentina">Copa Argentina</a>
+    <a asp-controller="Copas" asp-action="SupercopaArgentina">Supercopa Argentina</a>
+</nav>
+<div style="text-align:center;padding:60px 24px;">
+    <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+    <h3 style="font-family:var(--font-heading);color:var(--color-gold);letter-spacing:2px;margin-bottom:8px;">
+        AÚN NO DISPONIBLE
+    </h3>
+    <p style="color:var(--color-muted);font-size:14px;">
+        Esta copa se sortea una vez finalizado el torneo regular.
+    </p>
+    @if (User.IsInRole("Admin"))
+    {
+        <div style="margin-top:24px;">
+            <a asp-controller="Admin" asp-action="Index" class="btn-primary">
+                Ir al Panel Admin
+            </a>
+        </div>
+    }
+</div>

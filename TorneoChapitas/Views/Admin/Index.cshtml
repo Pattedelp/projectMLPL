@@ -1,0 +1,117 @@
+@model HistorialViewModel
+@{
+    ViewBag.Title = "Panel Admin";
+    ViewBag.ActivePage = "admin";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">⚙️</div>
+    <div class="page-hero-text">
+        <h1>Panel de Administración</h1>
+        <p>Torneo Chapitas · AAC</p>
+    </div>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div style="background:rgba(224,85,85,.15);border-left:3px solid var(--color-red);color:var(--color-red);padding:12px 20px;border-radius:6px;margin-bottom:20px;">
+        ⚠️ @TempData["Error"]
+    </div>
+}
+
+<!-- TEMPORADA ACTIVA -->
+@if (Model.TemporadaActiva != null)
+{
+    <div class="admin-section">
+        <h2 class="admin-section-title">📅 Temporada Activa: @Model.TemporadaActiva.Nombre</h2>
+        <div class="admin-cards">
+            <div class="admin-card">
+                <div class="admin-card-icon" style="background:rgba(224,85,85,.2)">🏁</div>
+                <div>
+                    <div class="admin-card-title">Finalizar Temporada</div>
+                    <div class="admin-card-sub">Guarda el historial con campeón, ascensos y descensos</div>
+                </div>
+                <button class="btn-danger" onclick="confirmarFinalizar()">Finalizar</button>
+            </div>
+            <div class="admin-card">
+                <div class="admin-card-icon" style="background:rgba(240,192,64,.2)">🏆</div>
+                <div>
+                    <div class="admin-card-title">Sortear Copa Argentina</div>
+                    <div class="admin-card-sub">Genera el bracket con todos los equipos activos</div>
+                </div>
+                <button class="btn-gold" onclick="sortearCopa()">Sortear</button>
+            </div>
+            <div class="admin-card">
+                <div class="admin-card-icon" style="background:rgba(58,130,200,.2)">⭐</div>
+                <div>
+                    <div class="admin-card-title">Configurar Supercopa</div>
+                    <div class="admin-card-sub">Campeón vs Subcampeón → ganador vs Campeón Copa</div>
+                </div>
+                <a asp-action="ConfigurarSupercopa" class="btn-blue">Configurar</a>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="admin-section">
+        <h2 class="admin-section-title">⚠️ No hay temporada activa</h2>
+        <a asp-action="NuevaTemporada" class="btn-primary">+ Nueva Temporada</a>
+    </div>
+}
+
+<!-- NUEVA TEMPORADA -->
+<div class="admin-section">
+    <h2 class="admin-section-title">🔄 Nueva Temporada</h2>
+    <p style="color:var(--color-muted);font-size:14px;margin-bottom:16px;">
+        Disponible una vez finalizada la temporada actual. Podés seleccionar los equipos participantes y agregar nuevos.
+    </p>
+    <a asp-action="NuevaTemporada" class="btn-primary @(Model.TemporadaActiva != null ? "btn-disabled" : "")">
+        Iniciar Nueva Temporada
+    </a>
+</div>
+
+<!-- HISTORIAL -->
+<div class="admin-section">
+    <h2 class="admin-section-title">📚 Historial de Temporadas</h2>
+    @if (!Model.Temporadas.Any(t => t.Finalizada))
+    {
+        <p style="color:var(--color-muted);font-size:14px;">Aún no hay temporadas finalizadas.</p>
+    }
+    else
+    {
+        <div class="historial-grid">
+            @foreach (var t in Model.Temporadas.Where(t => t.Finalizada))
+            {
+                <a asp-action="TemporadaDetalle" asp-route-id="@t.Id" class="historial-card">
+                    <div class="historial-num">T@t.Numero</div>
+                    <div class="historial-nombre">@t.Nombre</div>
+                    <div class="historial-fecha">
+                        @t.FechaInicio?.ToString("MMM yyyy") — @t.FechaFin?.ToString("MMM yyyy")
+                    </div>
+                    <div class="historial-badge">Ver detalle →</div>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+async function confirmarFinalizar() {
+    if (!confirm('¿Estás seguro? Esto guardará la temporada y no se puede deshacer.')) return;
+    const r = await fetch('/Admin/FinalizarTemporada', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) { alert('Temporada finalizada. ¡Ahora podés iniciar una nueva!'); location.reload(); }
+    else alert('Error: ' + d.msg);
+}
+
+async function sortearCopa() {
+    if (!confirm('¿Sortear el bracket de la Copa Argentina con todos los equipos?')) return;
+    const r = await fetch('/Admin/SortearCopaArgentina', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) { alert('¡Copa Argentina sorteada!'); location.href = '/Copas/CopaArgentina'; }
+    else alert('Error: ' + d.msg);
+}
+</script>
+}

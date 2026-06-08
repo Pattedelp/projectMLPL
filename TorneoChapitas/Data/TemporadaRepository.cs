@@ -584,7 +584,7 @@ namespace TorneoAmigos.Data
             Id = r.GetInt32(0), TemporadaId = r.IsDBNull(1) ? null : r.GetInt32(1),
             Tipo = r.GetString(2), Nombre = r.GetString(3), Finalizada = r.GetBoolean(4)
         };
-    }
+
         // ── PALMARÉS ───────────────────────────────────
 
         public void AgregarTitulo(int equipoId, string tipoTitulo, string nombreTitulo, int? temporadaId, string temporadaNombre)
@@ -653,6 +653,5 @@ namespace TorneoAmigos.Data
                 UltimosTitulos = titulos.Take(10).ToList()
             };
         }
-
-
+    }
 }

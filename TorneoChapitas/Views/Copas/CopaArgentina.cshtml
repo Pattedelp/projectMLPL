@@ -182,6 +182,19 @@ document.querySelectorAll('.check-ronda').forEach(chk => {
     });
 });
 
+// Registrar título de copa (admin)
+async function registrarTituloCopa(equipoId, nombreEquipo, tipoTitulo, nombreTitulo) {
+    if (!confirm(`¿Registrar "${nombreTitulo}" para ${nombreEquipo} en el palmarés?`)) return;
+    const r = await fetch('/Admin/RegistrarTituloCopa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equipoId, tipoTitulo, nombreTitulo })
+    });
+    const d = await r.json();
+    if (d.ok) alert('✅ Título registrado en el palmarés.');
+    else alert('Error al registrar.');
+}
+
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') cerrarModalCopa();
     if (e.key === 'Enter' && copaPartidoActual) guardarResultadoCopa();

@@ -88,6 +88,15 @@ namespace TorneoAmigos.Data
                 cmd.Parameters.AddWithValue("@Id", temporadaId);
                 cmd.ExecuteNonQuery();
                 tx.Commit();
+
+                // Registrar títulos en el palmarés
+                var temporadaNombre = GetTodasLasTemporadas().FirstOrDefault(t => t.Id == temporadaId)?.Nombre ?? $"Temporada {temporadaId}";
+                if (tablaPrimera.Any())
+                {
+                    var campeon = tablaPrimera.First();
+                    AgregarTitulo(campeon.EquipoId, "campeon_torneo", "Campeón Primera División", temporadaId, temporadaNombre);
+                }
+
                 return true;
             }
             catch { tx.Rollback(); return false; }
@@ -576,4 +585,74 @@ namespace TorneoAmigos.Data
             Tipo = r.GetString(2), Nombre = r.GetString(3), Finalizada = r.GetBoolean(4)
         };
     }
+        // ── PALMARÉS ───────────────────────────────────
+
+        public void AgregarTitulo(int equipoId, string tipoTitulo, string nombreTitulo, int? temporadaId, string temporadaNombre)
+        {
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(@"
+                INSERT INTO palmares (equipo_id, tipo_titulo, nombre_titulo, temporada_id, temporada_nombre)
+                VALUES (@E, @T, @N, @TId, @TNom)", conn);
+            cmd.Parameters.AddWithValue("@E",    equipoId);
+            cmd.Parameters.AddWithValue("@T",    tipoTitulo);
+            cmd.Parameters.AddWithValue("@N",    nombreTitulo);
+            cmd.Parameters.AddWithValue("@TId",  (object?)temporadaId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@TNom", temporadaNombre);
+            conn.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        public PalmaresViewModel GetPalmares()
+        {
+            var titulos = new List<TorneoAmigos.Models.Titulo>();
+            const string sql = @"
+                SELECT p.id, p.equipo_id, e.nombre, p.tipo_titulo, p.nombre_titulo, p.temporada_id, p.temporada_nombre
+                FROM palmares p
+                INNER JOIN equipos e ON p.equipo_id = e.id
+                ORDER BY p.created_at DESC";
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(sql, conn);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                titulos.Add(new TorneoAmigos.Models.Titulo
+                {
+                    Id             = r.GetInt32(0),
+                    EquipoId       = r.GetInt32(1),
+                    NombreEquipo   = r.GetString(2),
+                    FlagCode       = BanderaMap.GetCode(r.GetString(2)),
+                    TipoTitulo     = r.GetString(3),
+                    NombreTitulo   = r.GetString(4),
+                    TemporadaId    = r.IsDBNull(5) ? null : r.GetInt32(5),
+                    TemporadaNombre = r.GetString(6)
+                });
+            }
+
+            // Agrupar por equipo
+            var equipos = titulos
+                .GroupBy(t => t.EquipoId)
+                .Select(g => new TorneoAmigos.Models.PalmaresEquipo
+                {
+                    EquipoId       = g.Key,
+                    NombreEquipo   = g.First().NombreEquipo,
+                    FlagCode       = g.First().FlagCode,
+                    TotalTitulos   = g.Count(),
+                    CampeonatosLiga = g.Count(t => t.TipoTitulo == "campeon_torneo"),
+                    CopaArgentina  = g.Count(t => t.TipoTitulo == "campeon_copa"),
+                    Supercopa      = g.Count(t => t.TipoTitulo == "campeon_supercopa"),
+                    Titulos        = g.ToList()
+                })
+                .OrderByDescending(e => e.TotalTitulos)
+                .ThenByDescending(e => e.CampeonatosLiga)
+                .ToList();
+
+            return new TorneoAmigos.Models.PalmaresViewModel
+            {
+                Equipos        = equipos,
+                UltimosTitulos = titulos.Take(10).ToList()
+            };
+        }
+
+
 }

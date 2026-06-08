@@ -41,6 +41,8 @@
 
             <a asp-controller="Historial" asp-action="Index"
                class="@(ViewBag.ActivePage=="historial"?"active":"")">Historial</a>
+            <a asp-controller="Estadisticas" asp-action="Index"
+               class="@(ViewBag.ActivePage=="estadisticas"?"active":"")">Estadísticas</a>
 
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="copas"?"active":"")">Copas ▾</span>
@@ -63,10 +65,6 @@
             {
                 <a asp-controller="Admin" asp-action="Index"
                    class="btn-login @(ViewBag.ActivePage == "admin" ? "active" : "")">⚙️ Admin</a>
-            }
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <span class="nav-admin-badge">👑 Admin</span>
                 <form method="post" asp-controller="Auth" asp-action="Logout" style="display:inline">
                     <button type="submit" class="btn-logout">Salir</button>
                 </form>
@@ -92,6 +90,7 @@
     <a asp-controller="NacionalB" asp-action="Fixture">→ Fixture</a>
     <a asp-controller="NacionalB" asp-action="Equipos">→ Equipos</a>
     <a asp-controller="Historial" asp-action="Index">Historial</a>
+    <a asp-controller="Estadisticas" asp-action="Index">Estadísticas</a>
     <p class="mobile-section-label">Copas</p>
     <a asp-controller="Copas" asp-action="CopaArgentina">→ Copa Argentina</a>
     <a asp-controller="Copas" asp-action="SupercopaArgentina">→ Supercopa Argentina</a>
@@ -109,10 +108,11 @@
 <footer class="site-footer">
     <div class="footer-inner">
         <div class="footer-left">
-            <span class="footer-logo-icon">⚽</span>
+            <img src="~/img/aac-logo.png" alt="AAC"
+                 style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
             <div class="footer-brand">
                 Torneo Chapitas
-                <span>Organización AAC</span>
+                <span>Asociación Argentina de Chapitas</span>
             </div>
         </div>
         <div class="footer-copy">© 2025 Torneo Chapitas. Todos los derechos reservados.</div>

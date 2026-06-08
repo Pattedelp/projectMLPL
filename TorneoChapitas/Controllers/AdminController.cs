@@ -159,6 +159,23 @@ namespace TorneoAmigos.Controllers
         }
 
         // ── API helpers para ConfigurarSupercopa ────────
+        // ── REGISTRAR TÍTULO COPA ───────────────────────
+        [HttpPost]
+        public IActionResult RegistrarTituloCopa([FromBody] RegistrarTituloDto dto)
+        {
+            var temporada = _tempRepo.GetTemporadaActiva()
+                ?? _tempRepo.GetTodasLasTemporadas().FirstOrDefault();
+            if (temporada == null) return Json(new { ok = false });
+
+            _tempRepo.AgregarTitulo(
+                dto.EquipoId,
+                dto.TipoTitulo,
+                dto.NombreTitulo,
+                temporada.Id,
+                temporada.Nombre);
+            return Json(new { ok = true });
+        }
+
         [HttpGet]
         public IActionResult GetEquiposPrimera()
         {
@@ -175,6 +192,13 @@ namespace TorneoAmigos.Controllers
                 .Select(e => new { id = e.Id, nombre = e.Nombre, flagCode = e.FlagCode });
             return Json(todos);
         }
+    }
+
+    public class RegistrarTituloDto
+    {
+        public int EquipoId { get; set; }
+        public string TipoTitulo { get; set; } = "";
+        public string NombreTitulo { get; set; } = "";
     }
 
     public class SortearCopaDto

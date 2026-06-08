@@ -107,3 +107,41 @@ namespace TorneoAmigos.Models
         public bool EsAdmin { get; set; }
     }
 }
+
+    // ── PALMARÉS ────────────────────────────────────
+
+    public class Titulo
+    {
+        public int Id { get; set; }
+        public int EquipoId { get; set; }
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public string TipoTitulo { get; set; } = "";
+        public string NombreTitulo { get; set; } = "";
+        public int? TemporadaId { get; set; }
+        public string TemporadaNombre { get; set; } = "";
+    }
+
+    public class PalmaresEquipo
+    {
+        public int EquipoId { get; set; }
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int TotalTitulos { get; set; }
+        public int CampeonatosLiga { get; set; }
+        public int CopaArgentina { get; set; }
+        public int Supercopa { get; set; }
+        public List<Titulo> Titulos { get; set; } = new();
+    }
+
+    public class PalmaresViewModel
+    {
+        public List<PalmaresEquipo> Equipos { get; set; } = new();
+        public List<Titulo> UltimosTitulos { get; set; } = new();
+    }
+
+    public class EstadisticasViewModel
+    {
+        public PalmaresViewModel Palmares { get; set; } = new();
+        public List<PosicionViewModel> MaxGoleadores { get; set; } = new();
+    }

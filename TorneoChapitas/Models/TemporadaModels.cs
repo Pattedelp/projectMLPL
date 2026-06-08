@@ -45,7 +45,6 @@ namespace TorneoAmigos.Models
         public List<TemporadaResultado> ResultadosNacionalB { get; set; } = new();
     }
 
-    // Panel nueva temporada
     public class NuevaTemporadaViewModel
     {
         public int NumeroTemporada { get; set; }
@@ -63,7 +62,6 @@ namespace TorneoAmigos.Models
         public bool EsNuevo { get; set; } = false;
     }
 
-    // Copa
     public class Copa
     {
         public int Id { get; set; }
@@ -106,7 +104,6 @@ namespace TorneoAmigos.Models
         public List<CopaRonda> Rondas { get; set; } = new();
         public bool EsAdmin { get; set; }
     }
-}
 
     // ── PALMARÉS ────────────────────────────────────
 
@@ -144,3 +141,4 @@ namespace TorneoAmigos.Models
     {
         public PalmaresViewModel Palmares { get; set; } = new();
     }
+}

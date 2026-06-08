@@ -143,5 +143,4 @@ namespace TorneoAmigos.Models
     public class EstadisticasViewModel
     {
         public PalmaresViewModel Palmares { get; set; } = new();
-        public List<PosicionViewModel> MaxGoleadores { get; set; } = new();
     }

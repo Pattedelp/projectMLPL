@@ -80,7 +80,7 @@ namespace TorneoAmigos.Data
             {
                 // Guardar resultados Primera División
                 GuardarResultados(conn, tx, temporadaId, 1, tablaPrimera);
-                // Guardar resultados Nacional B
+                // Guardar resultados Primera Nacional
                 GuardarResultados(conn, tx, temporadaId, 2, tablaB);
                 // Marcar temporada como finalizada
                 using var cmd = new NpgsqlCommand(
@@ -458,7 +458,7 @@ namespace TorneoAmigos.Data
             catch (Exception ex) { tx.Rollback(); throw new Exception("Error sorteando copa: " + ex.Message); }
         }
 
-        public int SortearSupercopa(int temporadaId, int campeonId, int subcampeonId, int campeonCopaId)
+        public int SortearSupercopa(int temporadaId, int campeonId, int subcampeonId, int campeonCopaId, bool conSemifinal = false)
         {
             using var conn = GetConnection();
             conn.Open();
@@ -473,25 +473,39 @@ namespace TorneoAmigos.Data
                     copaId = Convert.ToInt32(cmd.ExecuteScalar());
                 }
 
-                // Semifinal
-                int semifinalId;
-                using (var cmd = new NpgsqlCommand(
-                    "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, 'Semifinal', 1, true) RETURNING id", conn, tx))
+                if (conSemifinal)
                 {
-                    cmd.Parameters.AddWithValue("@C", copaId);
-                    semifinalId = Convert.ToInt32(cmd.ExecuteScalar());
-                }
-                InsertarPartidoCopa(conn, tx, semifinalId, copaId, campeonId, subcampeonId, 0);
+                    // Campeón del torneo == Campeón copa → Semifinal primero
+                    int semifinalId;
+                    using (var cmd = new NpgsqlCommand(
+                        "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, 'Semifinal', 1, true) RETURNING id", conn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@C", copaId);
+                        semifinalId = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+                    InsertarPartidoCopa(conn, tx, semifinalId, copaId, campeonId, subcampeonId, 0);
 
-                // Final
-                int finalId;
-                using (var cmd = new NpgsqlCommand(
-                    "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, 'Final', 2, false) RETURNING id", conn, tx))
-                {
-                    cmd.Parameters.AddWithValue("@C", copaId);
-                    finalId = Convert.ToInt32(cmd.ExecuteScalar());
+                    int finalId;
+                    using (var cmd = new NpgsqlCommand(
+                        "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, 'Final', 2, false) RETURNING id", conn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@C", copaId);
+                        finalId = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+                    InsertarPartidoCopaVacio(conn, tx, finalId, copaId, 0);
                 }
-                InsertarPartidoCopaVacio(conn, tx, finalId, copaId, 0);
+                else
+                {
+                    // Distinto campeón → Final directa
+                    int finalId;
+                    using (var cmd = new NpgsqlCommand(
+                        "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, 'Final', 1, true) RETURNING id", conn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@C", copaId);
+                        finalId = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+                    InsertarPartidoCopa(conn, tx, finalId, copaId, campeonId, campeonCopaId, 0);
+                }
 
                 tx.Commit();
                 return copaId;

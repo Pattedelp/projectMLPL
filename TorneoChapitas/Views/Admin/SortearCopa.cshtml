@@ -1,0 +1,74 @@
+@model List<TorneoAmigos.Models.EquipoCheckbox>
+@{
+    ViewBag.Title = "Sortear Copa Argentina";
+    ViewBag.ActivePage = "admin";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🏆</div>
+    <div class="page-hero-text">
+        <h1>Copa Argentina</h1>
+        <p>Confirmá los participantes antes de sortear</p>
+    </div>
+</div>
+
+<a asp-action="Index" style="display:inline-flex;align-items:center;gap:6px;color:var(--color-muted);font-size:13px;margin-bottom:24px;">
+    ← Volver al panel
+</a>
+
+<div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:28px;margin-bottom:24px;">
+    <h3 style="font-family:var(--font-heading);font-size:14px;letter-spacing:2px;color:var(--color-gold);margin-bottom:16px;">
+        PARTICIPANTES (@Model.Count equipos)
+    </h3>
+    <p style="color:var(--color-muted);font-size:13px;margin-bottom:16px;">
+        Destildá cualquier equipo que NO participe en esta Copa.
+    </p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;" id="lista-participantes">
+        @foreach (var e in Model)
+        {
+            <label style="display:flex;align-items:center;gap:8px;background:var(--color-bg3);border:1px solid var(--color-border);border-radius:8px;padding:10px 14px;cursor:pointer;font-size:13px;">
+                <input type="checkbox" class="check-participante" value="@e.Id" checked
+                       style="accent-color:var(--color-gold);width:16px;height:16px;" />
+                @if (!string.IsNullOrEmpty(e.FlagCode))
+                {
+                    <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" />
+                }
+                @e.Nombre
+                <span style="font-size:11px;color:var(--color-muted);">(@e.DivisionId == 1 ? "1ra" : "1ra Nac.")</span>
+            </label>
+        }
+    </div>
+
+    <div style="font-size:13px;color:var(--color-muted);margin-bottom:20px;">
+        Participantes seleccionados: <strong id="count-sel" style="color:var(--color-gold);">@Model.Count</strong>
+    </div>
+
+    <button class="btn-primary" onclick="confirmarSorteo()">🎲 Sortear Copa Argentina</button>
+</div>
+
+@section Scripts {
+<script>
+document.querySelectorAll('.check-participante').forEach(c => {
+    c.addEventListener('change', () => {
+        const total = document.querySelectorAll('.check-participante:checked').length;
+        document.getElementById('count-sel').textContent = total;
+    });
+});
+
+async function confirmarSorteo() {
+    const seleccionados = [...document.querySelectorAll('.check-participante:checked')].map(c => parseInt(c.value));
+    if (seleccionados.length < 2) { alert('Necesitás al menos 2 equipos.'); return; }
+    if (!confirm(`¿Sortear la Copa Argentina con ${seleccionados.length} equipos? Esto no se puede deshacer.`)) return;
+
+    const r = await fetch('/Admin/SortearCopaArgentina', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equipos: seleccionados })
+    });
+    const d = await r.json();
+    if (d.ok) { alert('¡Copa Argentina sorteada!'); location.href = '/Copas/CopaArgentina'; }
+    else alert('Error: ' + (d.msg || 'Intentá de nuevo'));
+}
+</script>
+}

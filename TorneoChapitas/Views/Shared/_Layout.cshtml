@@ -31,13 +31,16 @@
             </div>
 
             <div class="nav-dropdown">
-                <span class="@(ViewBag.ActivePage=="nacb"?"active":"")">Nacional B ▾</span>
+                <span class="@(ViewBag.ActivePage=="nacb"?"active":"")">Primera Nacional ▾</span>
                 <div class="dropdown-menu">
                     <a asp-controller="NacionalB" asp-action="Posiciones">Posiciones</a>
                     <a asp-controller="NacionalB" asp-action="Fixture">Fixture</a>
                     <a asp-controller="NacionalB" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
+
+            <a asp-controller="Historial" asp-action="Index"
+               class="@(ViewBag.ActivePage=="historial"?"active":"")">Historial</a>
 
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="copas"?"active":"")">Copas ▾</span>
@@ -48,6 +51,12 @@
             </div>
         </nav>
 
+        <!-- Admin panel link -->
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-controller="Admin" asp-action="Index"
+               class="nav-admin-link @(ViewBag.ActivePage == "admin" ? "active" : "")">⚙️ Admin</a>
+        }
         <!-- Login/Logout en la derecha -->
         <div class="nav-auth">
             @if (User.IsInRole("Admin"))
@@ -78,10 +87,11 @@
     <a asp-controller="PrimeraDivision" asp-action="Posiciones">→ Posiciones</a>
     <a asp-controller="PrimeraDivision" asp-action="Fixture">→ Fixture</a>
     <a asp-controller="PrimeraDivision" asp-action="Equipos">→ Equipos</a>
-    <p class="mobile-section-label">Nacional B</p>
+    <p class="mobile-section-label">Primera Nacional</p>
     <a asp-controller="NacionalB" asp-action="Posiciones">→ Posiciones</a>
     <a asp-controller="NacionalB" asp-action="Fixture">→ Fixture</a>
     <a asp-controller="NacionalB" asp-action="Equipos">→ Equipos</a>
+    <a asp-controller="Historial" asp-action="Index">Historial</a>
     <p class="mobile-section-label">Copas</p>
     <a asp-controller="Copas" asp-action="CopaArgentina">→ Copa Argentina</a>
     <a asp-controller="Copas" asp-action="SupercopaArgentina">→ Supercopa Argentina</a>

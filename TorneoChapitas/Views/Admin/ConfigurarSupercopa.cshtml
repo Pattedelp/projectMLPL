@@ -1,0 +1,144 @@
+@{
+    ViewBag.Title = "Configurar Supercopa";
+    ViewBag.ActivePage = "admin";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">⭐</div>
+    <div class="page-hero-text">
+        <h1>Supercopa Argentina</h1>
+        <p>Configurar participantes</p>
+    </div>
+</div>
+
+<a asp-action="Index" style="display:inline-flex;align-items:center;gap:6px;color:var(--color-muted);font-size:13px;margin-bottom:24px;">
+    ← Volver al panel
+</a>
+
+<div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:28px;max-width:560px;">
+
+    <div style="background:var(--color-bg3);border-radius:8px;padding:16px;margin-bottom:24px;font-size:13px;color:var(--color-muted);line-height:1.8;">
+        <strong style="color:var(--color-gold);">Formato:</strong><br/>
+        • Si el Campeón del Torneo ≠ Campeón de la Copa → <strong style="color:var(--color-text)">Final directa</strong><br/>
+        • Si son el mismo → <strong style="color:var(--color-text)">Semifinal</strong> (Campeón vs Subcampeón) + <strong style="color:var(--color-text)">Final</strong>
+    </div>
+
+    <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--color-muted);margin-bottom:8px;">
+            👑 Campeón del Torneo (1° en Primera División)
+        </label>
+        <select id="sel-campeon" class="form-control" style="max-width:280px;">
+            <option value="">-- Seleccioná --</option>
+        </select>
+    </div>
+
+    <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--color-muted);margin-bottom:8px;">
+            🥈 Subcampeón del Torneo (2° en Primera División)
+        </label>
+        <select id="sel-subcampeon" class="form-control" style="max-width:280px;">
+            <option value="">-- Seleccioná --</option>
+        </select>
+    </div>
+
+    <div style="margin-bottom:28px;">
+        <label style="display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--color-muted);margin-bottom:8px;">
+            🏆 Campeón Copa Argentina
+        </label>
+        <select id="sel-campeoncopa" class="form-control" style="max-width:280px;">
+            <option value="">-- Seleccioná --</option>
+        </select>
+    </div>
+
+    <div id="preview-formato" style="display:none;background:var(--color-bg3);border-radius:8px;padding:14px;margin-bottom:24px;font-size:13px;"></div>
+
+    <button class="btn-primary" onclick="sortearSupercopa()">⭐ Generar Supercopa</button>
+</div>
+
+@section Scripts {
+<script>
+// Cargar equipos de Primera División
+fetch('/Admin/GetEquiposPrimera')
+    .then(r => r.json())
+    .then(equipos => {
+        const sels = ['sel-campeon', 'sel-subcampeon', 'sel-campeoncopa'];
+        equipos.forEach(e => {
+            sels.forEach(id => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = e.nombre;
+                document.getElementById(id).appendChild(opt.cloneNode(true));
+            });
+        });
+        // También cargar equipos de Copa para campeón copa
+        fetch('/Admin/GetEquiposTodos')
+            .then(r => r.json())
+            .then(todos => {
+                const sel = document.getElementById('sel-campeoncopa');
+                sel.innerHTML = '<option value="">-- Seleccioná --</option>';
+                todos.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = e.nombre;
+                    sel.appendChild(opt);
+                });
+            });
+    });
+
+// Preview del formato
+['sel-campeon','sel-subcampeon','sel-campeoncopa'].forEach(id => {
+    document.getElementById(id).addEventListener('change', actualizarPreview);
+});
+
+function actualizarPreview() {
+    const campeonId      = document.getElementById('sel-campeon').value;
+    const campeonCopaId  = document.getElementById('sel-campeoncopa').value;
+    const subcampeonId   = document.getElementById('sel-subcampeon').value;
+    const campeonNom     = document.getElementById('sel-campeon').options[document.getElementById('sel-campeon').selectedIndex]?.text;
+    const subcampeonNom  = document.getElementById('sel-subcampeon').options[document.getElementById('sel-subcampeon').selectedIndex]?.text;
+    const campeonCopaNom = document.getElementById('sel-campeoncopa').options[document.getElementById('sel-campeoncopa').selectedIndex]?.text;
+
+    if (!campeonId || !campeonCopaId) return;
+
+    const div = document.getElementById('preview-formato');
+    div.style.display = 'block';
+
+    if (campeonId === campeonCopaId) {
+        div.innerHTML = `<strong style="color:var(--color-gold)">Formato con Semifinal:</strong><br/>
+            🥊 Semifinal: <strong>${campeonNom}</strong> vs <strong>${subcampeonNom || '?'}</strong><br/>
+            🏆 Final: Ganador vs <strong>${campeonCopaNom}</strong> (mismo campeón)`;
+    } else {
+        div.innerHTML = `<strong style="color:var(--color-gold)">Final directa:</strong><br/>
+            🏆 Final: <strong>${campeonNom}</strong> vs <strong>${campeonCopaNom}</strong>`;
+    }
+}
+
+async function sortearSupercopa() {
+    const campeonId     = document.getElementById('sel-campeon').value;
+    const subcampeonId  = document.getElementById('sel-subcampeon').value;
+    const campeonCopaId = document.getElementById('sel-campeoncopa').value;
+
+    if (!campeonId || !campeonCopaId) {
+        alert('Seleccioná el campeón del torneo y el campeón de la Copa.'); return;
+    }
+    if (campeonId === campeonCopaId && !subcampeonId) {
+        alert('Como el campeón es el mismo, necesitás seleccionar el subcampeón.'); return;
+    }
+
+    if (!confirm('¿Generar la Supercopa con estos participantes?')) return;
+
+    const r = await fetch('/Admin/SortearSupercopa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            campeonId:     parseInt(campeonId),
+            subcampeonId:  parseInt(subcampeonId || 0),
+            campeonCopaId: parseInt(campeonCopaId)
+        })
+    });
+    const d = await r.json();
+    if (d.ok) { alert('¡Supercopa generada!'); location.href = '/Copas/SupercopaArgentina'; }
+    else alert('Error: ' + (d.msg || 'Intentá de nuevo'));
+}
+</script>
+}

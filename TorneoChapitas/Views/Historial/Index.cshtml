@@ -1,0 +1,41 @@
+@model HistorialViewModel
+@{
+    ViewBag.Title = "Historial de Temporadas";
+    ViewBag.ActivePage = "historial";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">📚</div>
+    <div class="page-hero-text">
+        <h1>Historial de Temporadas</h1>
+        <p>Torneo Chapitas · AAC</p>
+    </div>
+</div>
+
+@if (!Model.Temporadas.Any(t => t.Finalizada))
+{
+    <div style="text-align:center;padding:60px 24px;">
+        <div style="font-size:48px;margin-bottom:16px;">📖</div>
+        <h3 style="font-family:var(--font-heading);color:var(--color-gold);letter-spacing:2px;margin-bottom:8px;">
+            AÚN NO HAY HISTORIAL
+        </h3>
+        <p style="color:var(--color-muted);font-size:14px;">Las temporadas finalizadas aparecerán acá.</p>
+    </div>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">
+        @foreach (var t in Model.Temporadas.Where(t => t.Finalizada).OrderByDescending(t => t.Numero))
+        {
+            <a asp-action="Detalle" asp-route-id="@t.Id"
+               style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:24px;text-decoration:none;display:block;transition:all .2s;">
+                <div style="font-family:var(--font-heading);font-size:32px;font-weight:700;color:var(--color-gold);">T@t.Numero</div>
+                <div style="font-size:15px;font-weight:500;color:var(--color-text);margin:6px 0;">@t.Nombre</div>
+                <div style="font-size:12px;color:var(--color-muted);">
+                    @t.FechaInicio?.ToString("MMM yyyy") — @t.FechaFin?.ToString("MMM yyyy")
+                </div>
+                <div style="font-size:12px;color:var(--color-gold);margin-top:14px;">Ver resultados →</div>
+            </a>
+        }
+    </div>
+}

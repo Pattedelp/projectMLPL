@@ -12,7 +12,7 @@ namespace TorneoAmigos.Data
             {"Nahuel","us"},{"Nacho G","ir"},{"Matic","gb-wls"},{"Lucas M","be"},
             {"Tiago S","ua"},{"Enzo","de"},
             {"Joan","kr"},{"Pocho","ec"},{"Jere","br"},{"Fede O","es"},
-            {"Tomás","vn"},{"Carlos","co"},{"Sebas C","ar"},{"Santino","ch"},{"Lucas G","ph"}
+            {"Tomás","vn"},{"Carlos","co"},{"Sebas C","ar"},{"Santino","uy"},{"Lucas G","ph"}
         };
         public static string GetCode(string nombre) =>
             _codes.TryGetValue(nombre, out var c) ? c : "";

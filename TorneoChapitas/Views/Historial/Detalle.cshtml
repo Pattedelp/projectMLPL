@@ -1,0 +1,70 @@
+@model TemporadaDetalleViewModel
+@{
+    ViewBag.Title = Model.Temporada.Nombre;
+    ViewBag.ActivePage = "historial";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🏆</div>
+    <div class="page-hero-text">
+        <h1>@Model.Temporada.Nombre</h1>
+        <p>Historial · Torneo Chapitas</p>
+    </div>
+</div>
+
+<a href="/Historial" style="display:inline-flex;align-items:center;gap:6px;color:var(--color-muted);font-size:13px;margin-bottom:24px;">
+    ← Volver al historial
+</a>
+
+@{
+    var secciones = new[] {
+        (Model.ResultadosPrimera, "Primera División", "🏆"),
+        (Model.ResultadosNacionalB, "Primera Nacional", "🥈")
+    };
+}
+
+@foreach (var (resultados, titulo, icono) in secciones)
+{
+    if (!resultados.Any()) continue;
+    <div style="margin-bottom:32px;">
+        <h2 style="font-family:var(--font-heading);font-size:16px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
+            @icono @titulo
+        </h2>
+        <div class="tabla-wrapper">
+            <table class="tabla-posiciones">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Equipo</th><th>PJ</th><th>G</th>
+                        <th>P</th><th>GF</th><th>GC</th><th>PTS</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in resultados)
+                    {
+                        <tr class="@(r.Campeon ? "zona-campeon" : r.Descendio ? "zona-descenso" : r.Ascendio ? "zona-ascenso" : "")">
+                            <td class="col-pos">@r.Posicion</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(r.FlagCode))
+                                {
+                                    <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" />
+                                }
+                                @r.NombreEquipo
+                            </td>
+                            <td class="col-num">@r.PartidosJugados</td>
+                            <td class="col-g">@r.Ganados</td>
+                            <td class="col-p">@r.Perdidos</td>
+                            <td class="col-num">@r.GolesFavor</td>
+                            <td class="col-num">@r.GolesContra</td>
+                            <td class="col-pts">@r.Puntos</td>
+                            <td style="font-size:12px;">
+                                @if (r.Campeon)   { <span style="color:var(--color-gold)">👑 Campeón</span> }
+                                @if (r.Ascendio)  { <span style="color:var(--color-green)">⬆ Ascendió</span> }
+                                @if (r.Descendio) { <span style="color:var(--color-red)">⬇ Descendió</span> }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

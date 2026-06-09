@@ -101,62 +101,83 @@
 
 @section Scripts {
 <script>
-let currentSlide = 0;
-const track = document.getElementById('carruselTrack');
-if (track) {
+(function() {
+    const track = document.getElementById('carruselTrack');
+    if (!track) return;
+
     const slides        = Array.from(track.querySelectorAll('.carrusel-slide'));
     const dotsContainer = document.getElementById('carruselDots');
+    const totalSlides   = slides.length;
+    let current  = 0;
     let autoTimer;
 
-    function getSlidesVisible() {
+    function getSV() {
         return window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3;
     }
 
-    function getTotal() {
-        return Math.max(1, Math.ceil(slides.length / getSlidesVisible()));
+    function getMaxSlide() {
+        return Math.max(0, totalSlides - getSV());
     }
 
     function buildDots() {
+        const pages = Math.ceil(totalSlides / getSV());
         dotsContainer.innerHTML = '';
-        for (let i = 0; i < getTotal(); i++) {
+        for (let i = 0; i < pages; i++) {
             const d = document.createElement('span');
             d.className = 'carrusel-dot' + (i === 0 ? ' active' : '');
-            d.onclick   = () => goTo(i);
+            d.onclick = () => goTo(i * getSV());
             dotsContainer.appendChild(d);
         }
     }
 
-    function goTo(idx) {
-        const sv    = getSlidesVisible();
-        const total = getTotal();
-        currentSlide = ((idx % total) + total) % total;
-
-        // Mover el track: cada slide ocupa 100/sv %
-        const slideW = 100 / sv;
-        track.style.transform = `translateX(-${currentSlide * slideW}%)`;
-
+    function updateDots() {
+        const sv    = getSV();
+        const page  = Math.floor(current / sv);
         document.querySelectorAll('.carrusel-dot').forEach((d, i) =>
-            d.classList.toggle('active', i === currentSlide));
+            d.classList.toggle('active', i === page));
     }
+
+    function goTo(idx) {
+        const max = getMaxSlide();
+        // Clamp — no ir más allá del último slide
+        current = Math.max(0, Math.min(idx, max));
+        // Cada slide ocupa 100/sv % del contenedor visible
+        const sv       = getSV();
+        const pctPerSlide = 100 / sv;
+        track.style.transform = `translateX(-${current * pctPerSlide}%)`;
+        updateDots();
+    }
+
+    function next() { goTo(current + 1); }
+    function prev() { goTo(current - 1); }
 
     function resetTimer() {
         clearInterval(autoTimer);
-        autoTimer = setInterval(() => goTo(currentSlide + 1), 5000);
+        autoTimer = setInterval(() => {
+            if (current >= getMaxSlide()) goTo(0); else next();
+        }, 5000);
     }
 
-    window.moverCarrusel = function(dir) { goTo(currentSlide + dir); resetTimer(); };
+    window.moverCarrusel = function(dir) {
+        if (dir > 0) next(); else prev();
+        resetTimer();
+    };
 
-    // Touch swipe para mobile
-    let touchStartX = 0;
-    track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    // Touch swipe
+    let txStart = 0;
+    track.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
     track.addEventListener('touchend', e => {
-        const diff = touchStartX - e.changedTouches[0].clientX;
-        if (Math.abs(diff) > 50) { goTo(currentSlide + (diff > 0 ? 1 : -1)); resetTimer(); }
+        const diff = txStart - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 40) {
+            if (diff > 0) next(); else prev();
+            resetTimer();
+        }
     });
 
     window.addEventListener('resize', () => { buildDots(); goTo(0); });
+
     buildDots();
     resetTimer();
-}
+})();
 </script>
 }

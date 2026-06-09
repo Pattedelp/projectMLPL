@@ -144,12 +144,17 @@ namespace TorneoAmigos.Controllers
                 var ext     = Path.GetExtension(imagenArchivo.FileName).ToLower();
                 var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
                 if (!allowed.Contains(ext)) { ViewBag.Error = "Formato no permitido. Usá JPG, PNG o WebP."; return View(vm); }
-                var fileName = $"noticia_{DateTime.Now.Ticks}{ext}";
-                var folder   = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "img", "noticias");
-                Directory.CreateDirectory(folder);
-                using var stream = new FileStream(Path.Combine(folder, fileName), FileMode.Create);
-                await imagenArchivo.CopyToAsync(stream);
-                imagenUrl = $"/img/noticias/{fileName}";
+                if (imagenArchivo.Length > 5 * 1024 * 1024) { ViewBag.Error = "La imagen no puede superar 5MB."; return View(vm); }
+                // Guardar como Base64 en la BD — persiste entre deploys
+                var mimeType = ext switch {
+                    ".png"  => "image/png",
+                    ".webp" => "image/webp",
+                    ".gif"  => "image/gif",
+                    _       => "image/jpeg"
+                };
+                using var ms = new MemoryStream();
+                await imagenArchivo.CopyToAsync(ms);
+                imagenUrl = $"data:{mimeType};base64,{Convert.ToBase64String(ms.ToArray())}";
             }
             else if (vm.GenerarImagen)
             {
@@ -224,20 +229,19 @@ namespace TorneoAmigos.Controllers
             // Si subió un archivo
             if (imagenArchivo != null && imagenArchivo.Length > 0)
             {
-                var ext      = Path.GetExtension(imagenArchivo.FileName).ToLower();
-                var allowed  = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
-                if (!allowed.Contains(ext))
-                {
-                    ViewBag.Error = "Formato de imagen no permitido. Usá JPG, PNG o WebP.";
-                    return View(vm);
-                }
-                var fileName = $"noticia_{id}_{DateTime.Now.Ticks}{ext}";
-                var folder   = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "img", "noticias");
-                Directory.CreateDirectory(folder);
-                var path = Path.Combine(folder, fileName);
-                using var stream = new FileStream(path, FileMode.Create);
-                await imagenArchivo.CopyToAsync(stream);
-                imagenUrl = $"/img/noticias/{fileName}";
+                var ext     = Path.GetExtension(imagenArchivo.FileName).ToLower();
+                var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+                if (!allowed.Contains(ext)) { ViewBag.Error = "Formato no permitido. Usá JPG, PNG o WebP."; return View(vm); }
+                if (imagenArchivo.Length > 5 * 1024 * 1024) { ViewBag.Error = "La imagen no puede superar 5MB."; return View(vm); }
+                var mimeType = ext switch {
+                    ".png"  => "image/png",
+                    ".webp" => "image/webp",
+                    ".gif"  => "image/gif",
+                    _       => "image/jpeg"
+                };
+                using var ms = new MemoryStream();
+                await imagenArchivo.CopyToAsync(ms);
+                imagenUrl = $"data:{mimeType};base64,{Convert.ToBase64String(ms.ToArray())}";
             }
             else if (vm.GenerarImagen && string.IsNullOrEmpty(imagenArchivo?.FileName))
             {

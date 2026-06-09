@@ -14,14 +14,13 @@ namespace TorneoAmigos.Data
             {"Tiago S","ua"},{"Enzo","de"},
             {"Joan","kr"},{"Pocho","ec"},{"Jere","br"},{"Fede O","es"},
             {"Tomás","vn"},{"Carlos","co"},{"Sebas C","ar"},{"Santino","uy"},{"Lucas G","ph"},
-            // Jugadores históricos del palmarés
+            // Jugadores históricos activos
             {"Pato L","nl"},{"Nahuel G","us"},{"Juani S","cr"},
-            {"Nacho G","ir"},{"Nacho M","ar"},{"Valen M","ar"},
-            {"Monti","dk"},{"Pipe","ar"},{"Enzo","de"},{"Juanma","ar"},
-            {"Ponti","dk"},{"Tiago RC","it"},{"Sebas C","ar"},
-            {"Fede O","es"},{"Juli V","ar"},{"Bauti","ar"},{"Santi DM","ar"},
-            {"Tomi V","ar"},{"Lucas M","be"},{"Juanchi C","ar"},
-            {"Nico M","ar"},{"Juani","cr"}
+            // Jugadores retirados
+            {"Monti","retired"},{"Pipe","retired"},{"Nacho M","retired"},
+            {"Valen M","retired"},{"Juanma","retired"},{"Bauti","retired"},
+            {"Juli V","retired"},{"Santi DM","retired"},{"Tomi V","retired"},
+            {"Juanchi C","retired"},{"Nico M","retired"}
         };
         public static string GetCode(string nombre) =>
             _codes.TryGetValue(nombre, out var c) ? c : "";

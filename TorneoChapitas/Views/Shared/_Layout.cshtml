@@ -59,12 +59,6 @@
             </div>
         </nav>
 
-        <!-- Admin panel link -->
-        @if (User.IsInRole("Admin"))
-        {
-            <a asp-controller="Admin" asp-action="Index"
-               class="nav-admin-link @(ViewBag.ActivePage == "admin" ? "active" : "")">⚙️ Admin</a>
-        }
         <!-- Login/Logout en la derecha -->
         <div class="nav-auth">
             @if (User.IsInRole("Admin"))

@@ -22,7 +22,7 @@
                class="@(ViewBag.ActivePage=="home"?"active":"")">Inicio</a>
 
             <div class="nav-dropdown">
-                <span class="@(ViewBag.ActivePage=="primera"?"active":"")">Primera División ▾</span>
+                <span class="@(ViewBag.ActivePage=="primera"?"active":"")">1ra División ▾</span>
                 <div class="dropdown-menu">
                     <a asp-controller="PrimeraDivision" asp-action="Posiciones">Posiciones</a>
                     <a asp-controller="PrimeraDivision" asp-action="Fixture">Fixture</a>
@@ -31,21 +31,13 @@
             </div>
 
             <div class="nav-dropdown">
-                <span class="@(ViewBag.ActivePage=="nacb"?"active":"")">Primera Nacional ▾</span>
+                <span class="@(ViewBag.ActivePage=="nacb"?"active":"")">1ra Nacional ▾</span>
                 <div class="dropdown-menu">
                     <a asp-controller="NacionalB" asp-action="Posiciones">Posiciones</a>
                     <a asp-controller="NacionalB" asp-action="Fixture">Fixture</a>
                     <a asp-controller="NacionalB" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
-
-            <a asp-controller="Historial" asp-action="Index"
-               class="@(ViewBag.ActivePage=="historial"?"active":"")">Historial</a>
-            <a asp-controller="Estadisticas" asp-action="Index"
-               class="@(ViewBag.ActivePage=="estadisticas"?"active":"")">Estadísticas</a>
-
-            <a asp-controller="Noticias" asp-action="Index"
-               class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
 
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="copas"?"active":"")">Copas ▾</span>
@@ -54,8 +46,25 @@
                     <a asp-controller="Copas" asp-action="SupercopaArgentina">Supercopa Argentina</a>
                 </div>
             </div>
+
+            <a asp-controller="Noticias" asp-action="Index"
+               class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
+
+            <div class="nav-dropdown">
+                <span class="@(ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"?"active":"")">Más ▾</span>
+                <div class="dropdown-menu">
+                    <a asp-controller="Historial" asp-action="Index">📚 Historial</a>
+                    <a asp-controller="Estadisticas" asp-action="Index">📈 Estadísticas</a>
+                </div>
+            </div>
         </nav>
 
+        <!-- Admin panel link -->
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-controller="Admin" asp-action="Index"
+               class="nav-admin-link @(ViewBag.ActivePage == "admin" ? "active" : "")">⚙️ Admin</a>
+        }
         <!-- Login/Logout en la derecha -->
         <div class="nav-auth">
             @if (User.IsInRole("Admin"))

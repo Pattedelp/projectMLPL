@@ -14,7 +14,7 @@
 
 @if (Model.EsRedactor)
 {
-    <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+    <div style="display:flex;gap:10px;margin-bottom:24px;">
         <a asp-action="Redaccion" class="btn-primary" style="font-size:13px;padding:8px 16px;">
             ✏️ Sala de Redacción
         </a>
@@ -39,25 +39,32 @@ else
 }
 else
 {
-    <!-- Noticia destacada (la más reciente) -->
     var primera = Model.Noticias.First();
+
+    <!-- Noticia destacada -->
     <a asp-action="Detalle" asp-route-id="@primera.Id" class="noticia-destacada">
         @if (!string.IsNullOrEmpty(primera.ImagenUrl))
         {
-            <div class="noticia-destacada-img"
-                 style="background-image:url('@primera.ImagenUrl')"></div>
+            <div class="noticia-destacada-img noticia-img-lazy"
+                 data-src="@primera.ImagenUrl"
+                 style="background-color:var(--color-bg3);">
+                <div class="img-placeholder-text">⚽ Cargando imagen...</div>
+            </div>
         }
         <div class="noticia-destacada-body">
             <span class="noticia-badge @(primera.Tipo == "automatica" ? "badge-auto" : "badge-manual")">
                 @(primera.Tipo == "automatica" ? "⚡ Automática" : "✍️ Redacción")
             </span>
             <h2 class="noticia-titulo-grande">@primera.Titulo</h2>
-            <p class="noticia-preview">@(primera.Contenido.Length > 200 ? primera.Contenido[..200] + "..." : primera.Contenido)</p>
-            <span class="noticia-fecha">@primera.CreatedAt.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-AR")) · @primera.Autor</span>
+            <p class="noticia-preview">
+                @(primera.Contenido.Length > 200 ? primera.Contenido[..200] + "..." : primera.Contenido)
+            </p>
+            <span class="noticia-fecha">
+                @primera.CreatedAt.ToString("dd/MM/yyyy") · @primera.Autor
+            </span>
         </div>
     </a>
 
-    <!-- Resto de noticias -->
     @if (Model.Noticias.Count > 1)
     {
         <div class="noticias-grid">
@@ -66,8 +73,11 @@ else
                 <a asp-action="Detalle" asp-route-id="@n.Id" class="noticia-card">
                     @if (!string.IsNullOrEmpty(n.ImagenUrl))
                     {
-                        <div class="noticia-card-img"
-                             style="background-image:url('@n.ImagenUrl')"></div>
+                        <div class="noticia-card-img noticia-img-lazy"
+                             data-src="@n.ImagenUrl"
+                             style="background-color:var(--color-bg3);">
+                            <div class="img-placeholder-text" style="font-size:20px;">⚽</div>
+                        </div>
                     }
                     else
                     {
@@ -87,4 +97,27 @@ else
             }
         </div>
     }
+}
+
+@section Scripts {
+<script>
+// Carga lazy de imágenes de Pollinations
+document.querySelectorAll('.noticia-img-lazy').forEach(div => {
+    const src = div.dataset.src;
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => {
+        div.style.backgroundImage = `url('${src}')`;
+        div.style.backgroundSize  = 'cover';
+        div.style.backgroundPosition = 'center';
+        const placeholder = div.querySelector('.img-placeholder-text');
+        if (placeholder) placeholder.style.display = 'none';
+    };
+    img.onerror = () => {
+        const placeholder = div.querySelector('.img-placeholder-text');
+        if (placeholder) placeholder.textContent = '📰';
+    };
+    img.src = src;
+});
+</script>
 }

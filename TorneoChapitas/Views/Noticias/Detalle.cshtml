@@ -5,11 +5,12 @@
 }
 
 <div style="max-width:760px;margin:0 auto;">
-    <a asp-action="Index" style="display:inline-flex;align-items:center;gap:6px;color:var(--color-muted);font-size:13px;margin:24px 0 20px;display:block;">
+    <a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin:24px 0 20px;">
         ← Volver a noticias
     </a>
 
-    <span class="noticia-badge @(Model.Tipo == "automatica" ? "badge-auto" : "badge-manual")" style="margin-bottom:16px;display:inline-block;">
+    <span class="noticia-badge @(Model.Tipo == "automatica" ? "badge-auto" : "badge-manual")"
+          style="margin-bottom:16px;display:inline-block;">
         @(Model.Tipo == "automatica" ? "⚡ Generada automáticamente" : "✍️ Redacción")
     </span>
 
@@ -24,10 +25,19 @@
 
     @if (!string.IsNullOrEmpty(Model.ImagenUrl))
     {
-        <div style="margin-bottom:28px;border-radius:12px;overflow:hidden;max-height:420px;">
-            <img src="@Model.ImagenUrl" alt="@Model.Titulo"
-                 style="width:100%;height:420px;object-fit:cover;"
-                 onerror="this.parentElement.style.display='none'" />
+        <!-- Imagen con loader — Pollinations puede tardar hasta 30s -->
+        <div id="img-wrapper" style="margin-bottom:28px;border-radius:12px;overflow:hidden;background:var(--color-bg2);border:1px solid var(--color-border);min-height:200px;display:flex;align-items:center;justify-content:center;position:relative;">
+            <div id="img-loader" style="text-align:center;padding:40px;color:var(--color-muted);">
+                <div style="font-size:32px;margin-bottom:12px;animation:spin 2s linear infinite;display:inline-block;">⚽</div>
+                <p style="font-size:13px;letter-spacing:1px;">Generando imagen con IA...</p>
+                <p style="font-size:11px;margin-top:6px;opacity:.6;">Puede tardar hasta 30 segundos</p>
+            </div>
+            <img id="noticia-img"
+                 src="@Model.ImagenUrl"
+                 alt="@Model.Titulo"
+                 style="display:none;width:100%;max-height:420px;object-fit:cover;"
+                 onload="imagenCargada()"
+                 onerror="imagenError()" />
         </div>
     }
 
@@ -35,3 +45,29 @@
         @Model.Contenido
     </div>
 </div>
+
+@section Scripts {
+<style>
+@@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+<script>
+function imagenCargada() {
+    document.getElementById('img-loader').style.display = 'none';
+    const img = document.getElementById('noticia-img');
+    img.style.display = 'block';
+    document.getElementById('img-wrapper').style.minHeight = 'auto';
+    document.getElementById('img-wrapper').style.alignItems = 'stretch';
+}
+
+function imagenError() {
+    const loader = document.getElementById('img-loader');
+    loader.innerHTML = '<p style="font-size:13px;color:var(--color-muted);">⚠️ No se pudo cargar la imagen.</p>';
+}
+
+// Si después de 45 segundos no cargó, mostrar error
+setTimeout(() => {
+    const img = document.getElementById('noticia-img');
+    if (img && img.style.display === 'none') imagenError();
+}, 45000);
+</script>
+}

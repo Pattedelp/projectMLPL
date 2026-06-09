@@ -178,3 +178,23 @@ namespace TorneoAmigos.Models
         public string Rol { get; set; } = "redactor";
         public bool Activo { get; set; } = true;
     }
+
+    // ── COMENTARIOS ──────────────────────────────────
+
+    public class Comentario
+    {
+        public int Id { get; set; }
+        public int NoticiaId { get; set; }
+        public string Autor { get; set; } = "";
+        public string? PaisFlag { get; set; }
+        public string Contenido { get; set; } = "";
+        public bool Aprobado { get; set; } = true;
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class ComentarioViewModel
+    {
+        public string Autor { get; set; } = "";
+        public string? PaisFlag { get; set; }
+        public string Contenido { get; set; } = "";
+    }

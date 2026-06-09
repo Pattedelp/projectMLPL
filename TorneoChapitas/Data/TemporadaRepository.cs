@@ -605,10 +605,15 @@ namespace TorneoAmigos.Data
         public PalmaresViewModel GetPalmares()
         {
             var titulos = new List<TorneoAmigos.Models.Titulo>();
+            // nombre_equipo puede venir directo de la tabla (histórico) o de JOIN con equipos
             const string sql = @"
-                SELECT p.id, p.equipo_id, e.nombre, p.tipo_titulo, p.nombre_titulo, p.temporada_id, p.temporada_nombre
+                SELECT p.id,
+                       COALESCE(p.equipo_id, 0),
+                       COALESCE(p.nombre_equipo, e.nombre, 'Desconocido'),
+                       p.tipo_titulo, p.nombre_titulo,
+                       p.temporada_id, p.temporada_nombre
                 FROM palmares p
-                INNER JOIN equipos e ON p.equipo_id = e.id
+                LEFT JOIN equipos e ON p.equipo_id = e.id
                 ORDER BY p.created_at DESC";
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
@@ -616,15 +621,16 @@ namespace TorneoAmigos.Data
             using var r = cmd.ExecuteReader();
             while (r.Read())
             {
+                var nombre = r.GetString(2);
                 titulos.Add(new TorneoAmigos.Models.Titulo
                 {
-                    Id             = r.GetInt32(0),
-                    EquipoId       = r.GetInt32(1),
-                    NombreEquipo   = r.GetString(2),
-                    FlagCode       = BanderaMap.GetCode(r.GetString(2)),
-                    TipoTitulo     = r.GetString(3),
-                    NombreTitulo   = r.GetString(4),
-                    TemporadaId    = r.IsDBNull(5) ? null : r.GetInt32(5),
+                    Id              = r.GetInt32(0),
+                    EquipoId        = r.GetInt32(1),
+                    NombreEquipo    = nombre,
+                    FlagCode        = BanderaMap.GetCode(nombre),
+                    TipoTitulo      = r.GetString(3),
+                    NombreTitulo    = r.GetString(4),
+                    TemporadaId     = r.IsDBNull(5) ? null : r.GetInt32(5),
                     TemporadaNombre = r.GetString(6)
                 });
             }

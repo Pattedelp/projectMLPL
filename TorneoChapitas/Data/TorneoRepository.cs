@@ -8,14 +8,26 @@ namespace TorneoAmigos.Data
     {
         private static readonly Dictionary<string, string> _codes = new()
         {
+            // Jugadores actuales
             {"Pato","nl"},{"Ponti","dk"},{"Juani","cr"},{"Tiago RC","it"},
             {"Nahuel","us"},{"Nacho G","ir"},{"Matic","gb-wls"},{"Lucas M","be"},
             {"Tiago S","ua"},{"Enzo","de"},
             {"Joan","kr"},{"Pocho","ec"},{"Jere","br"},{"Fede O","es"},
-            {"Tomás","vn"},{"Carlos","co"},{"Sebas C","ar"},{"Santino","uy"},{"Lucas G","ph"}
+            {"Tomás","vn"},{"Carlos","co"},{"Sebas C","ar"},{"Santino","uy"},{"Lucas G","ph"},
+            // Jugadores históricos del palmarés
+            {"Pato L","nl"},{"Nahuel G","us"},{"Juani S","cr"},
+            {"Nacho G","ir"},{"Nacho M","ar"},{"Valen M","ar"},
+            {"Monti","dk"},{"Pipe","ar"},{"Enzo","de"},{"Juanma","ar"},
+            {"Ponti","dk"},{"Tiago RC","it"},{"Sebas C","ar"},
+            {"Fede O","es"},{"Juli V","ar"},{"Bauti","ar"},{"Santi DM","ar"},
+            {"Tomi V","ar"},{"Lucas M","be"},{"Juanchi C","ar"},
+            {"Nico M","ar"},{"Juani","cr"}
         };
         public static string GetCode(string nombre) =>
             _codes.TryGetValue(nombre, out var c) ? c : "";
+
+        public static bool IsRetired(string nombre) =>
+            _codes.TryGetValue(nombre, out var c) && c == "retired";
     }
 
     public class TorneoRepository

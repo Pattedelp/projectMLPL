@@ -90,7 +90,11 @@
                     <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;overflow:hidden;">
                         <!-- Header equipo -->
                         <div style="background:var(--color-bg3);padding:14px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);">
-                            @if (!string.IsNullOrEmpty(e.FlagCode))
+                            @if (e.FlagCode == "retired")
+                            {
+                                <span style="font-size:16px;color:var(--color-muted);" title="Jugador retirado">✝</span>
+                            }
+                            else if (!string.IsNullOrEmpty(e.FlagCode))
                             {
                                 <img src="https://flagcdn.com/24x18/@(e.FlagCode).png"
                                      style="border-radius:2px;" alt="" onerror="this.style.display='none'" />

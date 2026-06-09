@@ -164,7 +164,10 @@
                 <span>Asociación Argentina de Chapitas</span>
             </div>
         </div>
-        <div class="footer-copy">© 2025 Torneo Chapitas. Todos los derechos reservados.</div>
+        <div class="footer-copy">
+            © 2025 Torneo Chapitas. Todos los derechos reservados.
+            <span id="online-count" style="color:var(--color-green);font-size:12px;margin-left:12px;">● <span id="online-num">0</span> en línea</span>
+        </div>
         <div class="footer-social">
             <a href="#">📘</a><a href="#">📷</a><a href="#">▶️</a>
         </div>
@@ -172,6 +175,18 @@
 </footer>
 
 <script>
+// ── USUARIOS ONLINE ─────────────────────────────
+async function pingOnline() {
+    try {
+        const r = await fetch('/api/online');
+        const d = await r.json();
+        const el = document.getElementById('online-num');
+        if (el) el.textContent = d.count;
+    } catch {}
+}
+pingOnline();
+setInterval(pingOnline, 30000); // ping cada 30 segundos
+
 // ── DRAWER MOBILE ──────────────────────────────
 const drawer        = document.getElementById('drawer');
 const drawerOverlay = document.getElementById('drawerOverlay');

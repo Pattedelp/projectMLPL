@@ -31,6 +31,13 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<TorneoRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.TemporadaRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.NoticiasRepository>();
+builder.Services.AddScoped<TorneoAmigos.Data.ComentariosRepository>();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options => {
+    options.IdleTimeout = TimeSpan.FromHours(2);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 builder.Services.AddScoped<TemporadaRepository>();  // ← nuevo
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -69,6 +76,7 @@ app.UseExceptionHandler(appBuilder =>
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 

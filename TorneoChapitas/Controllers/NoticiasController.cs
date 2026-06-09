@@ -10,15 +10,18 @@ namespace TorneoAmigos.Controllers
 {
     public class NoticiasController : Controller
     {
-        private readonly NoticiasRepository _repo;
-        private readonly TorneoRepository   _torneo;
-        private readonly IConfiguration     _config;
+        private readonly NoticiasRepository    _repo;
+        private readonly TorneoRepository      _torneo;
+        private readonly ComentariosRepository _comentarios;
+        private readonly IConfiguration        _config;
 
-        public NoticiasController(NoticiasRepository repo, TorneoRepository torneo, IConfiguration config)
+        public NoticiasController(NoticiasRepository repo, TorneoRepository torneo,
+            ComentariosRepository comentarios, IConfiguration config)
         {
-            _repo   = repo;
-            _torneo = torneo;
-            _config = config;
+            _repo        = repo;
+            _torneo      = torneo;
+            _comentarios = comentarios;
+            _config      = config;
         }
 
         // ── PÚBLICO ─────────────────────────────────────
@@ -39,7 +42,24 @@ namespace TorneoAmigos.Controllers
             ViewBag.ActivePage = "noticias";
             var noticia = _repo.GetNoticiaById(id);
             if (noticia == null) return NotFound();
+            ViewBag.Comentarios = _comentarios.GetComentarios(id);
             return View(noticia);
+        }
+
+        [HttpPost]
+        public IActionResult AgregarComentario(int id, string autor, string? paisFlag, string contenido)
+        {
+            if (!string.IsNullOrWhiteSpace(autor) && !string.IsNullOrWhiteSpace(contenido))
+                _comentarios.AgregarComentario(id, autor, paisFlag, contenido);
+            return RedirectToAction("Detalle", new { id });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public IActionResult EliminarComentario(int comentarioId, int noticiaId)
+        {
+            _comentarios.EliminarComentario(comentarioId);
+            return RedirectToAction("Detalle", new { id = noticiaId });
         }
 
         // ── LOGIN REDACTOR ───────────────────────────────
@@ -284,5 +304,23 @@ namespace TorneoAmigos.Controllers
     public class GenerarNoticiaDto
     {
         public string Tipo { get; set; } = "tabla";
+    }
+}
+
+// ── API USUARIOS ONLINE ──────────────────────────────────────────────────────
+[Route("api")]
+public class ApiController : Controller
+{
+    private readonly ComentariosRepository _repo;
+    public ApiController(ComentariosRepository repo) => _repo = repo;
+
+    [HttpGet("online")]
+    public IActionResult Online()
+    {
+        var sessionId = HttpContext.Session.GetString("sid")
+            ?? Guid.NewGuid().ToString();
+        HttpContext.Session.SetString("sid", sessionId);
+        _repo.PingUsuario(sessionId);
+        return Json(new { count = _repo.GetUsuariosOnline() });
     }
 }

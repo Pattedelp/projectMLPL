@@ -1,7 +1,17 @@
 @model Noticia
+@using TorneoAmigos.Models
 @{
     ViewBag.Title = Model.Titulo;
     ViewBag.ActivePage = "noticias";
+    var comentarios = ViewBag.Comentarios as List<Comentario> ?? new List<Comentario>();
+    var esAdmin = User.IsInRole("Admin");
+
+    var banderas = new Dictionary<string,string> {
+        {"nl","🇳🇱"},{"dk","🇩🇰"},{"cr","🇨🇷"},{"it","🇮🇹"},{"us","🇺🇲"},
+        {"ir","🇮🇷"},{"gb-wls","🏴"},{"be","🇧🇪"},{"ua","🇺🇦"},{"de","🇩🇪"},
+        {"kr","🇰🇷"},{"ec","🇪🇨"},{"br","🇧🇷"},{"es","🇪🇸"},{"vn","🇻🇳"},
+        {"co","🇨🇴"},{"ar","🇦🇷"},{"uy","🇺🇾"},{"ph","🇵🇭"}
+    };
 }
 
 <div style="max-width:760px;margin:0 auto;">
@@ -25,46 +35,126 @@
 
     @if (!string.IsNullOrEmpty(Model.ImagenUrl))
     {
-        <!-- Imagen con loader — Pollinations puede tardar hasta 30s -->
-        <div id="img-wrapper" style="margin-bottom:28px;border-radius:12px;overflow:hidden;background:var(--color-bg2);border:1px solid var(--color-border);min-height:200px;display:flex;align-items:center;justify-content:center;position:relative;">
-            <div id="img-loader" style="text-align:center;padding:40px;color:var(--color-muted);">
-                <div style="font-size:32px;margin-bottom:12px;animation:spin 2s linear infinite;display:inline-block;">⚽</div>
-                <p style="font-size:13px;letter-spacing:1px;">Generando imagen con IA...</p>
-                <p style="font-size:11px;margin-top:6px;opacity:.6;">Puede tardar hasta 30 segundos</p>
+        <div id="img-wrapper" style="margin-bottom:28px;border-radius:12px;overflow:hidden;background:var(--color-bg2);border:1px solid var(--color-border);min-height:160px;display:flex;align-items:center;justify-content:center;">
+            <div id="img-loader" style="text-align:center;padding:32px;color:var(--color-muted);">
+                <div style="font-size:28px;margin-bottom:8px;">⚽</div>
+                <p style="font-size:12px;">Cargando imagen...</p>
             </div>
-            <img id="noticia-img"
-                 src="@Model.ImagenUrl"
-                 alt="@Model.Titulo"
+            <img id="noticia-img" src="@Model.ImagenUrl" alt="@Model.Titulo"
                  style="display:none;width:100%;max-height:420px;object-fit:cover;"
-                 onload="imagenCargada()"
-                 onerror="imagenError()" />
+                 onload="imagenCargada()" onerror="imagenError()" />
         </div>
     }
 
-    <div style="font-size:16px;line-height:1.9;color:var(--color-text);white-space:pre-line;">
+    <div style="font-size:16px;line-height:1.9;color:var(--color-text);white-space:pre-line;margin-bottom:40px;">
         @Model.Contenido
+    </div>
+
+    <!-- ── COMENTARIOS ── -->
+    <div style="border-top:1px solid var(--color-border);padding-top:28px;">
+        <h3 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:20px;">
+            💬 Comentarios (@comentarios.Count)
+        </h3>
+
+        @if (!comentarios.Any())
+        {
+            <p style="color:var(--color-muted);font-size:14px;margin-bottom:24px;">
+                Sé el primero en comentar.
+            </p>
+        }
+        else
+        {
+            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:28px;">
+                @foreach (var c in comentarios)
+                {
+                    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:10px;padding:14px 18px;position:relative;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            @if (!string.IsNullOrEmpty(c.PaisFlag) && banderas.ContainsKey(c.PaisFlag))
+                            {
+                                <img src="https://flagcdn.com/20x15/@(c.PaisFlag).png"
+                                     class="flag-img" alt="" onerror="this.style.display='none'" />
+                            }
+                            <strong style="font-size:14px;color:var(--color-text);">@c.Autor</strong>
+                            <span style="font-size:11px;color:var(--color-muted);margin-left:auto;">
+                                @c.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </span>
+                            @if (esAdmin)
+                            {
+                                <form method="post" asp-action="EliminarComentario" style="display:inline;margin-left:4px;">
+                                    <input type="hidden" name="comentarioId" value="@c.Id" />
+                                    <input type="hidden" name="noticiaId" value="@Model.Id" />
+                                    <button type="submit" style="background:none;border:none;color:var(--color-red);cursor:pointer;font-size:13px;padding:0;" onclick="return confirm('¿Eliminar?')">✕</button>
+                                </form>
+                            }
+                        </div>
+                        <p style="font-size:14px;color:var(--color-text);line-height:1.6;margin:0;">@c.Contenido</p>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Formulario de comentario -->
+        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;">
+            <h4 style="font-family:var(--font-heading);font-size:13px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;margin-bottom:16px;">
+                Dejá tu comentario
+            </h4>
+            <form method="post" asp-action="AgregarComentario" asp-route-id="@Model.Id">
+                <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:150px;">
+                        <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:4px;">Tu nombre</label>
+                        <input type="text" name="autor" required maxlength="50"
+                               class="form-control" placeholder="Ej: Nahuel" />
+                    </div>
+                    <div style="width:160px;">
+                        <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:4px;">Tu país</label>
+                        <select name="paisFlag" class="form-control">
+                            <option value="">-- Sin bandera --</option>
+                            <option value="nl">🇳🇱 Países Bajos</option>
+                            <option value="dk">🇩🇰 Dinamarca</option>
+                            <option value="cr">🇨🇷 Costa Rica</option>
+                            <option value="it">🇮🇹 Italia</option>
+                            <option value="us">🇺🇲 USA</option>
+                            <option value="ir">🇮🇷 Irán</option>
+                            <option value="gb-wls">🏴 Gales</option>
+                            <option value="be">🇧🇪 Bélgica</option>
+                            <option value="ua">🇺🇦 Ucrania</option>
+                            <option value="de">🇩🇪 Alemania</option>
+                            <option value="kr">🇰🇷 Corea</option>
+                            <option value="ec">🇪🇨 Ecuador</option>
+                            <option value="br">🇧🇷 Brasil</option>
+                            <option value="es">🇪🇸 España</option>
+                            <option value="vn">🇻🇳 Vietnam</option>
+                            <option value="co">🇨🇴 Colombia</option>
+                            <option value="ar">🇦🇷 Argentina</option>
+                            <option value="uy">🇺🇾 Uruguay</option>
+                            <option value="ph">🇵🇭 Filipinas</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:4px;">Comentario</label>
+                    <textarea name="contenido" required maxlength="500" rows="3"
+                              class="form-control" placeholder="Máx. 500 caracteres..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="font-size:13px;padding:10px 20px;">
+                    Publicar comentario
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
-<style>
-@@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-</style>
 <script>
 function imagenCargada() {
     document.getElementById('img-loader').style.display = 'none';
     const img = document.getElementById('noticia-img');
     img.style.display = 'block';
     document.getElementById('img-wrapper').style.minHeight = 'auto';
-    document.getElementById('img-wrapper').style.alignItems = 'stretch';
 }
-
 function imagenError() {
-    const loader = document.getElementById('img-loader');
-    loader.innerHTML = '<p style="font-size:13px;color:var(--color-muted);">⚠️ No se pudo cargar la imagen.</p>';
+    document.getElementById('img-loader').innerHTML = '<p style="font-size:12px;color:var(--color-muted);">No se pudo cargar la imagen.</p>';
 }
-
-// Si después de 45 segundos no cargó, mostrar error
 setTimeout(() => {
     const img = document.getElementById('noticia-img');
     if (img && img.style.display === 'none') imagenError();

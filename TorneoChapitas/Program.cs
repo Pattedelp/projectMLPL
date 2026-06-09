@@ -30,9 +30,16 @@ else
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<TorneoRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.TemporadaRepository>();
+builder.Services.AddScoped<TorneoAmigos.Data.NoticiasRepository>();
 builder.Services.AddScoped<TemporadaRepository>();  // ← nuevo
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie("RedactorCookie", options =>
+    {
+        options.LoginPath         = "/Noticias/Login";
+        options.ExpireTimeSpan    = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+    })
     .AddCookie(options =>
     {
         options.LoginPath         = "/Auth/Login";

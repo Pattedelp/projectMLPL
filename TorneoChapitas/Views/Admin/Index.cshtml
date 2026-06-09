@@ -19,56 +19,89 @@
     </div>
 }
 
-<!-- TEMPORADA ACTIVA -->
 @if (Model.TemporadaActiva != null)
 {
     <div class="admin-section">
         <h2 class="admin-section-title">📅 Temporada Activa: @Model.TemporadaActiva.Nombre</h2>
-        <div class="admin-cards">
-            <div class="admin-card">
-                <div class="admin-card-icon" style="background:rgba(224,85,85,.2)">🏁</div>
-                    <div style="flex:1">
-                    <div class="admin-card-title">Finalizar Temporada</div>
-                    <div class="admin-card-sub">Guarda el historial con campeón, ascensos y descensos</div>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+
+            <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(224,85,85,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🏁</div>
+                <div style="flex:1;">
+                    <div style="font-family:var(--font-heading);font-size:14px;letter-spacing:1px;color:var(--color-text);">Finalizar Temporada</div>
+                    <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Guarda el historial con campeón, ascensos y descensos</div>
                 </div>
-                <button class="btn-danger" onclick="confirmarFinalizar()">Finalizar</button>
+                <button onclick="confirmarFinalizar()" style="background:var(--color-red);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:var(--font-heading);font-size:13px;letter-spacing:1px;cursor:pointer;flex-shrink:0;">
+                    Finalizar
+                </button>
             </div>
-            <div class="admin-card">
-                <div class="admin-card-icon" style="background:rgba(240,192,64,.2)">🏆</div>
-                    <div style="flex:1">
-                    <div class="admin-card-title">Sortear Copa Argentina</div>
-                    <div class="admin-card-sub">Genera el bracket con todos los equipos activos</div>
+
+            <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(240,192,64,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🏆</div>
+                <div style="flex:1;">
+                    <div style="font-family:var(--font-heading);font-size:14px;letter-spacing:1px;color:var(--color-text);">Sortear Copa Argentina</div>
+                    <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Genera el bracket con todos los equipos activos</div>
                 </div>
-                <button class="btn-gold" onclick="sortearCopa()">Sortear</button>
+                <button onclick="sortearCopa()" style="background:var(--color-gold);color:var(--color-bg);border:none;border-radius:8px;padding:10px 20px;font-family:var(--font-heading);font-size:13px;letter-spacing:1px;cursor:pointer;flex-shrink:0;">
+                    Sortear
+                </button>
             </div>
-            <div class="admin-card">
-                <div class="admin-card-icon" style="background:rgba(58,130,200,.2)">⭐</div>
-                    <div style="flex:1">
-                    <div class="admin-card-title">Configurar Supercopa</div>
-                    <div class="admin-card-sub">Campeón vs Subcampeón → ganador vs Campeón Copa</div>
+
+            <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(58,130,200,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">⭐</div>
+                <div style="flex:1;">
+                    <div style="font-family:var(--font-heading);font-size:14px;letter-spacing:1px;color:var(--color-text);">Configurar Supercopa</div>
+                    <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Campeón vs Subcampeón → ganador vs Campeón Copa</div>
                 </div>
-                <a asp-action="ConfigurarSupercopa" class="btn-blue">Configurar</a>
+                <a asp-controller="Admin" asp-action="ConfigurarSupercopa" style="background:#3a82c8;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:var(--font-heading);font-size:13px;letter-spacing:1px;cursor:pointer;text-decoration:none;flex-shrink:0;">
+                    Configurar
+                </a>
             </div>
+
         </div>
     </div>
 }
 else
 {
     <div class="admin-section">
-        <h2 class="admin-section-title">⚠️ No hay temporada activa</h2>
-        <a asp-action="NuevaTemporada" class="btn-primary">+ Nueva Temporada</a>
+        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:24px;text-align:center;">
+            <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+            <h3 style="font-family:var(--font-heading);color:var(--color-gold);margin-bottom:8px;">No hay temporada activa</h3>
+            <p style="color:var(--color-muted);font-size:14px;margin-bottom:20px;">Iniciá una nueva temporada para comenzar.</p>
+            <a asp-action="NuevaTemporada" class="btn-primary">+ Nueva Temporada</a>
+        </div>
     </div>
 }
+
+<!-- REDACTORES -->
+<div class="admin-section">
+    <h2 class="admin-section-title">✏️ Redactores de Noticias</h2>
+    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(76,175,130,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">✏️</div>
+        <div style="flex:1;">
+            <div style="font-family:var(--font-heading);font-size:14px;letter-spacing:1px;color:var(--color-text);">Gestionar Redactores</div>
+            <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Crear usuarios con acceso a la sala de noticias</div>
+        </div>
+        <a asp-controller="Redactores" asp-action="Index" style="background:var(--color-green);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:var(--font-heading);font-size:13px;letter-spacing:1px;cursor:pointer;text-decoration:none;flex-shrink:0;">
+            Gestionar
+        </a>
+    </div>
+</div>
 
 <!-- NUEVA TEMPORADA -->
 <div class="admin-section">
     <h2 class="admin-section-title">🔄 Nueva Temporada</h2>
-    <p style="color:var(--color-muted);font-size:14px;margin-bottom:16px;">
-        Disponible una vez finalizada la temporada actual. Podés seleccionar los equipos participantes y agregar nuevos.
-    </p>
-    <a asp-action="NuevaTemporada" class="btn-primary @(Model.TemporadaActiva != null ? "btn-disabled" : "")">
-        Iniciar Nueva Temporada
-    </a>
+    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:24px;">
+        <p style="color:var(--color-muted);font-size:14px;margin-bottom:16px;">
+            Disponible una vez finalizada la temporada actual. Podés seleccionar los equipos participantes y agregar nuevos.
+        </p>
+        <a asp-action="NuevaTemporada"
+           style="@(Model.TemporadaActiva != null ? "opacity:0.4;pointer-events:none;" : "")"
+           class="btn-primary">
+            Iniciar Nueva Temporada
+        </a>
+    </div>
 </div>
 
 <!-- HISTORIAL -->
@@ -76,20 +109,23 @@ else
     <h2 class="admin-section-title">📚 Historial de Temporadas</h2>
     @if (!Model.Temporadas.Any(t => t.Finalizada))
     {
-        <p style="color:var(--color-muted);font-size:14px;">Aún no hay temporadas finalizadas.</p>
+        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:24px;text-align:center;">
+            <p style="color:var(--color-muted);font-size:14px;">Aún no hay temporadas finalizadas.</p>
+        </div>
     }
     else
     {
-        <div class="historial-grid">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
             @foreach (var t in Model.Temporadas.Where(t => t.Finalizada))
             {
-                <a asp-action="TemporadaDetalle" asp-route-id="@t.Id" class="historial-card">
-                    <div class="historial-num">T@t.Numero</div>
-                    <div class="historial-nombre">@t.Nombre</div>
-                    <div class="historial-fecha">
+                <a asp-action="TemporadaDetalle" asp-route-id="@t.Id"
+                   style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;text-decoration:none;display:block;transition:all .2s;">
+                    <div style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-gold);">T@t.Numero</div>
+                    <div style="font-size:14px;font-weight:500;color:var(--color-text);margin:4px 0;">@t.Nombre</div>
+                    <div style="font-size:12px;color:var(--color-muted);">
                         @t.FechaInicio?.ToString("MMM yyyy") — @t.FechaFin?.ToString("MMM yyyy")
                     </div>
-                    <div class="historial-badge">Ver detalle →</div>
+                    <div style="font-size:12px;color:var(--color-gold);margin-top:12px;">Ver detalle →</div>
                 </a>
             }
         </div>
@@ -102,7 +138,7 @@ async function confirmarFinalizar() {
     if (!confirm('¿Estás seguro? Esto guardará la temporada y no se puede deshacer.')) return;
     const r = await fetch('/Admin/FinalizarTemporada', { method: 'POST' });
     const d = await r.json();
-    if (d.ok) { alert('Temporada finalizada. ¡Ahora podés iniciar una nueva!'); location.reload(); }
+    if (d.ok) { alert('¡Temporada finalizada! Ahora podés iniciar una nueva.'); location.reload(); }
     else alert('Error: ' + d.msg);
 }
 

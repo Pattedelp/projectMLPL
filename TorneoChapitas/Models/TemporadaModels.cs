@@ -142,3 +142,39 @@ namespace TorneoAmigos.Models
         public PalmaresViewModel Palmares { get; set; } = new();
     }
 }
+
+    // ── NOTICIAS ─────────────────────────────────────
+
+    public class Noticia
+    {
+        public int Id { get; set; }
+        public string Titulo { get; set; } = "";
+        public string Contenido { get; set; } = "";
+        public string? ImagenUrl { get; set; }
+        public string Tipo { get; set; } = "manual";
+        public string Autor { get; set; } = "Admin";
+        public bool Publicada { get; set; } = true;
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class NoticiasViewModel
+    {
+        public List<Noticia> Noticias { get; set; } = new();
+        public bool EsRedactor { get; set; }
+    }
+
+    public class NuevaNoticiaViewModel
+    {
+        public string Titulo { get; set; } = "";
+        public string Contenido { get; set; } = "";
+        public string? ImagenPrompt { get; set; }
+        public bool GenerarImagen { get; set; } = true;
+    }
+
+    public class UsuarioRedactor
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = "";
+        public string Rol { get; set; } = "redactor";
+        public bool Activo { get; set; } = true;
+    }

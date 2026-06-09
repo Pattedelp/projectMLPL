@@ -1,0 +1,90 @@
+@model NoticiasViewModel
+@{
+    ViewBag.Title = "Noticias";
+    ViewBag.ActivePage = "noticias";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">📰</div>
+    <div class="page-hero-text">
+        <h1>Noticias</h1>
+        <p>Torneo Chapitas · AAC</p>
+    </div>
+</div>
+
+@if (Model.EsRedactor)
+{
+    <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+        <a asp-action="Redaccion" class="btn-primary" style="font-size:13px;padding:8px 16px;">
+            ✏️ Sala de Redacción
+        </a>
+    </div>
+}
+else
+{
+    <div style="text-align:right;margin-bottom:16px;">
+        <a asp-action="Login" style="font-size:12px;color:var(--color-muted);">🔐 Acceso redactores</a>
+    </div>
+}
+
+@if (!Model.Noticias.Any())
+{
+    <div style="text-align:center;padding:60px 24px;">
+        <div style="font-size:48px;margin-bottom:16px;">📭</div>
+        <h3 style="font-family:var(--font-heading);color:var(--color-gold);letter-spacing:2px;margin-bottom:8px;">
+            SIN NOTICIAS AÚN
+        </h3>
+        <p style="color:var(--color-muted);font-size:14px;">Las novedades del torneo aparecerán acá.</p>
+    </div>
+}
+else
+{
+    <!-- Noticia destacada (la más reciente) -->
+    @{ var primera = Model.Noticias.First(); }
+    <a asp-action="Detalle" asp-route-id="@primera.Id" class="noticia-destacada">
+        @if (!string.IsNullOrEmpty(primera.ImagenUrl))
+        {
+            <div class="noticia-destacada-img"
+                 style="background-image:url('@primera.ImagenUrl')"></div>
+        }
+        <div class="noticia-destacada-body">
+            <span class="noticia-badge @(primera.Tipo == "automatica" ? "badge-auto" : "badge-manual")">
+                @(primera.Tipo == "automatica" ? "⚡ Automática" : "✍️ Redacción")
+            </span>
+            <h2 class="noticia-titulo-grande">@primera.Titulo</h2>
+            <p class="noticia-preview">@(primera.Contenido.Length > 200 ? primera.Contenido[..200] + "..." : primera.Contenido)</p>
+            <span class="noticia-fecha">@primera.CreatedAt.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-AR")) · @primera.Autor</span>
+        </div>
+    </a>
+
+    <!-- Resto de noticias -->
+    @if (Model.Noticias.Count > 1)
+    {
+        <div class="noticias-grid">
+            @foreach (var n in Model.Noticias.Skip(1))
+            {
+                <a asp-action="Detalle" asp-route-id="@n.Id" class="noticia-card">
+                    @if (!string.IsNullOrEmpty(n.ImagenUrl))
+                    {
+                        <div class="noticia-card-img"
+                             style="background-image:url('@n.ImagenUrl')"></div>
+                    }
+                    else
+                    {
+                        <div class="noticia-card-img noticia-card-img-placeholder">📰</div>
+                    }
+                    <div class="noticia-card-body">
+                        <span class="noticia-badge @(n.Tipo == "automatica" ? "badge-auto" : "badge-manual")">
+                            @(n.Tipo == "automatica" ? "⚡" : "✍️")
+                        </span>
+                        <h3 class="noticia-card-titulo">@n.Titulo</h3>
+                        <p class="noticia-card-preview">
+                            @(n.Contenido.Length > 100 ? n.Contenido[..100] + "..." : n.Contenido)
+                        </p>
+                        <span class="noticia-fecha">@n.CreatedAt.ToString("dd/MM/yyyy")</span>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+}

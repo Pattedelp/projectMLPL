@@ -1,0 +1,106 @@
+@model NoticiasViewModel
+@{
+    ViewBag.Title = "Sala de Redacción";
+    ViewBag.ActivePage = "noticias";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">✏️</div>
+    <div class="page-hero-text">
+        <h1>Sala de Redacción</h1>
+        <p>Gestión de noticias · Torneo Chapitas</p>
+    </div>
+</div>
+
+<!-- Botones acción -->
+<div style="display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap;">
+    <a asp-action="Nueva" class="btn-primary">✍️ Nueva noticia manual</a>
+    <button onclick="generarAutomatica('tabla')" class="btn-gold">⚡ Generar: Tabla actual</button>
+    <button onclick="generarAutomatica('lider')"    class="btn-gold" style="background:rgba(240,192,64,.15);color:var(--color-gold);border:1px solid var(--color-gold);">⚡ Generar: Líder</button>
+    <button onclick="generarAutomatica('descenso')" class="btn-gold" style="background:rgba(224,85,85,.15);color:var(--color-red);border:1px solid var(--color-red);">⚡ Generar: Zona baja</button>
+    <form method="post" asp-action="Logout" style="margin-left:auto;">
+        <button type="submit" class="btn-cancelar" style="font-size:12px;padding:8px 14px;">Cerrar sesión</button>
+    </form>
+</div>
+
+<div id="msg-generando" style="display:none;background:rgba(240,192,64,.1);border:1px solid var(--color-gold);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--color-gold);">
+    ⚡ Generando noticia automática...
+</div>
+
+<!-- Lista de noticias -->
+@if (!Model.Noticias.Any())
+{
+    <p style="color:var(--color-muted);text-align:center;padding:40px;">No hay noticias todavía.</p>
+}
+else
+{
+    <div style="display:flex;flex-direction:column;gap:10px;">
+        @foreach (var n in Model.Noticias)
+        {
+            <div style="background:var(--color-bg2);border:1px solid @(n.Publicada ? "var(--color-border)" : "var(--color-red)");border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:16px;">
+                @if (!string.IsNullOrEmpty(n.ImagenUrl))
+                {
+                    <img src="@n.ImagenUrl" style="width:70px;height:50px;object-fit:cover;border-radius:6px;flex-shrink:0;"
+                         onerror="this.style.display='none'" />
+                }
+                <div style="flex:1;min-width:0;">
+                    <div style="font-family:var(--font-heading);font-size:14px;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        @n.Titulo
+                    </div>
+                    <div style="font-size:11px;color:var(--color-muted);margin-top:3px;">
+                        @n.CreatedAt.ToString("dd/MM/yyyy HH:mm") · @n.Autor ·
+                        <span class="noticia-badge @(n.Tipo == "automatica" ? "badge-auto" : "badge-manual")" style="font-size:10px;padding:1px 6px;">
+                            @(n.Tipo == "automatica" ? "⚡ Auto" : "✍️ Manual")
+                        </span>
+                        @if (!n.Publicada)
+                        {
+                            <span style="color:var(--color-red);margin-left:4px;">● Oculta</span>
+                        }
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;flex-shrink:0;">
+                    <a asp-action="Detalle" asp-route-id="@n.Id"
+                       style="font-size:11px;padding:5px 10px;border:1px solid var(--color-border);border-radius:6px;color:var(--color-muted);text-decoration:none;">
+                        Ver
+                    </a>
+                    <form method="post" asp-action="TogglePublicada" asp-route-id="@n.Id" style="display:inline;">
+                        <button type="submit" style="font-size:11px;padding:5px 10px;border:1px solid var(--color-border);border-radius:6px;background:none;color:@(n.Publicada ? "var(--color-muted)" : "var(--color-green)");cursor:pointer;">
+                            @(n.Publicada ? "Ocultar" : "Publicar")
+                        </button>
+                    </form>
+                    <form method="post" asp-action="Eliminar" asp-route-id="@n.Id" style="display:inline;"
+                          onsubmit="return confirm('¿Eliminar esta noticia?')">
+                        <button type="submit" style="font-size:11px;padding:5px 10px;border:1px solid var(--color-red);border-radius:6px;background:none;color:var(--color-red);cursor:pointer;">
+                            Borrar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+async function generarAutomatica(tipo) {
+    document.getElementById('msg-generando').style.display = 'block';
+    try {
+        const r = await fetch('/Noticias/GenerarAutomatica', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo })
+        });
+        const d = await r.json();
+        if (d.ok) {
+            alert(`✅ Noticia generada: "${d.titulo}"\n\nSe publicó automáticamente.`);
+            location.reload();
+        } else {
+            alert('Error al generar la noticia.');
+        }
+    } catch {
+        alert('Error de conexión.');
+    }
+    document.getElementById('msg-generando').style.display = 'none';
+}
+</script>
+}

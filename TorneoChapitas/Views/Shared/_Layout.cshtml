@@ -44,6 +44,9 @@
             <a asp-controller="Estadisticas" asp-action="Index"
                class="@(ViewBag.ActivePage=="estadisticas"?"active":"")">Estadísticas</a>
 
+            <a asp-controller="Noticias" asp-action="Index"
+               class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
+
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="copas"?"active":"")">Copas ▾</span>
                 <div class="dropdown-menu">
@@ -74,20 +77,22 @@
 </header>
 
 <div class="mobile-nav" id="mobileNav">
-    <a asp-controller="Home" asp-action="Index">Inicio</a>
-    <p class="mobile-section-label">Primera División</p>
+    <a asp-controller="Home" asp-action="Index" class="mobile-nav-item-main">🏠 Inicio</a>
+    <p class="mobile-section-label">🏆 Primera División</p>
     <a asp-controller="PrimeraDivision" asp-action="Posiciones">→ Posiciones</a>
     <a asp-controller="PrimeraDivision" asp-action="Fixture">→ Fixture</a>
     <a asp-controller="PrimeraDivision" asp-action="Equipos">→ Equipos</a>
-    <p class="mobile-section-label">Primera Nacional</p>
+    <p class="mobile-section-label">🥈 Primera Nacional</p>
     <a asp-controller="NacionalB" asp-action="Posiciones">→ Posiciones</a>
     <a asp-controller="NacionalB" asp-action="Fixture">→ Fixture</a>
     <a asp-controller="NacionalB" asp-action="Equipos">→ Equipos</a>
-    <a asp-controller="Historial" asp-action="Index">Historial</a>
-    <a asp-controller="Estadisticas" asp-action="Index">Estadísticas</a>
-    <p class="mobile-section-label">Copas</p>
+    <p class="mobile-section-label">🏅 Copas</p>
     <a asp-controller="Copas" asp-action="CopaArgentina">→ Copa Argentina</a>
     <a asp-controller="Copas" asp-action="SupercopaArgentina">→ Supercopa Argentina</a>
+    <p class="mobile-section-label">📊 Más</p>
+    <a asp-controller="Noticias" asp-action="Index">📰 Noticias</a>
+    <a asp-controller="Historial" asp-action="Index">📚 Historial de Temporadas</a>
+    <a asp-controller="Estadisticas" asp-action="Index">📈 Estadísticas y Palmarés</a>
 </div>
 
 @if (TempData["Mensaje"] != null)

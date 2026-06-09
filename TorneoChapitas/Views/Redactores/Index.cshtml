@@ -1,0 +1,55 @@
+@model List<UsuarioRedactor>
+@{
+    ViewBag.Title = "Gestión de Redactores";
+    ViewBag.ActivePage = "admin";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">👥</div>
+    <div class="page-hero-text">
+        <h1>Redactores</h1>
+        <p>Gestión de acceso a noticias</p>
+    </div>
+</div>
+
+<a asp-controller="Admin" asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:24px;">
+    ← Volver al panel admin
+</a>
+
+<!-- Crear nuevo -->
+<div class="form-card" style="max-width:500px;margin-bottom:28px;">
+    <h3 style="font-family:var(--font-heading);font-size:14px;letter-spacing:2px;color:var(--color-gold);margin-bottom:16px;">
+        ➕ Nuevo Redactor
+    </h3>
+    <form method="post" asp-action="Crear">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" name="username" placeholder="Usuario" class="form-control" style="flex:1;min-width:140px;" />
+            <input type="password" name="password" placeholder="Contraseña" class="form-control" style="flex:1;min-width:140px;" />
+            <button type="submit" class="btn-primary" style="padding:10px 16px;white-space:nowrap;">Crear</button>
+        </div>
+    </form>
+</div>
+
+<!-- Lista de redactores -->
+<div style="display:flex;flex-direction:column;gap:10px;max-width:600px;">
+    @foreach (var u in Model)
+    {
+        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:14px;">
+            <div style="font-size:24px;">✏️</div>
+            <div style="flex:1;">
+                <div style="font-family:var(--font-heading);font-size:14px;letter-spacing:1px;color:var(--color-text);">
+                    @u.Username
+                </div>
+                <div style="font-size:11px;color:var(--color-muted);">Rol: @u.Rol</div>
+            </div>
+            <form method="post" asp-action="CambiarPassword" style="display:flex;gap:8px;align-items:center;">
+                <input type="hidden" name="username" value="@u.Username" />
+                <input type="password" name="password" placeholder="Nueva contraseña"
+                       class="form-control" style="width:160px;padding:6px 10px;font-size:13px;" />
+                <button type="submit" style="font-size:11px;padding:6px 12px;border:1px solid var(--color-border);border-radius:6px;background:none;color:var(--color-muted);cursor:pointer;white-space:nowrap;">
+                    Cambiar
+                </button>
+            </form>
+        </div>
+    }
+</div>

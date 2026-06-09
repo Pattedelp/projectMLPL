@@ -1,0 +1,74 @@
+@model NuevaNoticiaViewModel
+@{
+    ViewBag.Title = "Nueva Noticia";
+    ViewBag.ActivePage = "noticias";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">✍️</div>
+    <div class="page-hero-text">
+        <h1>Nueva Noticia</h1>
+        <p>Sala de redacción · Torneo Chapitas</p>
+    </div>
+</div>
+
+<a asp-action="Redaccion" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:24px;">
+    ← Volver a redacción
+</a>
+
+@if (ViewBag.Error != null)
+{
+    <div style="background:rgba(224,85,85,.15);border-left:3px solid var(--color-red);color:var(--color-red);padding:10px 14px;border-radius:6px;margin-bottom:20px;">
+        ⚠️ @ViewBag.Error
+    </div>
+}
+
+<div class="form-card" style="max-width:700px;">
+    <form method="post" asp-action="Nueva">
+        <div class="form-group">
+            <label>Título *</label>
+            <input type="text" name="Titulo" value="@Model.Titulo"
+                   class="form-control" placeholder="Ej: Nahuel se consolida en lo alto de la tabla" required />
+        </div>
+
+        <div class="form-group">
+            <label>Contenido *</label>
+            <textarea name="Contenido" class="form-control" rows="8"
+                      placeholder="Escribí la noticia acá..." required>@Model.Contenido</textarea>
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                <input type="checkbox" name="GenerarImagen" value="true"
+                       @(Model.GenerarImagen ? "checked" : "")
+                       style="accent-color:var(--color-gold);width:16px;height:16px;" />
+                <span>Generar imagen con IA (Pollinations.ai)</span>
+            </label>
+        </div>
+
+        <div class="form-group" id="prompt-group">
+            <label>Descripción para la imagen (opcional)</label>
+            <input type="text" name="ImagenPrompt" value="@Model.ImagenPrompt"
+                   class="form-control"
+                   placeholder="Ej: celebration victory football night stadium" />
+            <p style="font-size:11px;color:var(--color-muted);margin-top:4px;">
+                En inglés da mejores resultados. Si lo dejás vacío usa el título.
+            </p>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:8px;">
+            <button type="submit" class="btn-primary">Publicar Noticia</button>
+            <a asp-action="Redaccion" class="btn-cancelar">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+const chk = document.querySelector('input[name="GenerarImagen"]');
+const grp = document.getElementById('prompt-group');
+function togglePrompt() { grp.style.display = chk.checked ? 'block' : 'none'; }
+chk.addEventListener('change', togglePrompt);
+togglePrompt();
+</script>
+}

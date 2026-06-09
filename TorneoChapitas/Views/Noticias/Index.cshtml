@@ -40,7 +40,7 @@ else
 else
 {
     <!-- Noticia destacada (la más reciente) -->
-    @{ var primera = Model.Noticias.First(); }
+    var primera = Model.Noticias.First();
     <a asp-action="Detalle" asp-route-id="@primera.Id" class="noticia-destacada">
         @if (!string.IsNullOrEmpty(primera.ImagenUrl))
         {

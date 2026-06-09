@@ -635,19 +635,19 @@ namespace TorneoAmigos.Data
                 });
             }
 
-            // Agrupar por equipo
+            // Agrupar por nombre (los históricos tienen equipo_id = 0)
             var equipos = titulos
-                .GroupBy(t => t.EquipoId)
+                .GroupBy(t => t.NombreEquipo.Trim().ToLower())
                 .Select(g => new TorneoAmigos.Models.PalmaresEquipo
                 {
-                    EquipoId       = g.Key,
-                    NombreEquipo   = g.First().NombreEquipo,
-                    FlagCode       = g.First().FlagCode,
-                    TotalTitulos   = g.Count(),
+                    EquipoId        = g.First().EquipoId,
+                    NombreEquipo    = g.First().NombreEquipo,
+                    FlagCode        = g.First().FlagCode,
+                    TotalTitulos    = g.Count(),
                     CampeonatosLiga = g.Count(t => t.TipoTitulo == "campeon_torneo"),
-                    CopaArgentina  = g.Count(t => t.TipoTitulo == "campeon_copa"),
-                    Supercopa      = g.Count(t => t.TipoTitulo == "campeon_supercopa"),
-                    Titulos        = g.ToList()
+                    CopaArgentina   = g.Count(t => t.TipoTitulo == "campeon_copa"),
+                    Supercopa       = g.Count(t => t.TipoTitulo == "campeon_supercopa"),
+                    Titulos         = g.ToList()
                 })
                 .OrderByDescending(e => e.TotalTitulos)
                 .ThenByDescending(e => e.CampeonatosLiga)

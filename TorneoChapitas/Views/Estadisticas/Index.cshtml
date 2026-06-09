@@ -10,159 +10,153 @@
              style="width:56px;height:56px;border-radius:50%;object-fit:cover;" />
     </div>
     <div class="page-hero-text">
-        <h1>Estadísticas</h1>
-        <p>Torneo Chapitas · AAC</p>
+        <h1>Palmarés</h1>
+        <p>Historial de campeones · Torneo Chapitas AAC</p>
     </div>
 </div>
 
-<nav class="section-nav">
-    <a href="#palmares" class="active">Palmarés</a>
-</nav>
-
-<!-- ── PALMARÉS ── -->
-<div id="palmares">
-
-    @if (!Model.Palmares.Equipos.Any())
-    {
-        <div style="text-align:center;padding:60px 24px;">
-            <div style="font-size:48px;margin-bottom:16px;">🏆</div>
-            <h3 style="font-family:var(--font-heading);color:var(--color-gold);letter-spacing:2px;margin-bottom:8px;">
-                AÚN NO HAY TÍTULOS
-            </h3>
-            <p style="color:var(--color-muted);font-size:14px;">
-                Los títulos se registran automáticamente al finalizar cada torneo o copa.
-            </p>
-        </div>
-    }
-    else
-    {
-        <!-- TABLA GENERAL DE TÍTULOS -->
-        <div style="margin-bottom:40px;">
-            <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
-                🏆 Tabla de Títulos
-            </h2>
-            <div class="tabla-wrapper">
-                <table class="tabla-posiciones">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Equipo</th>
-                            <th title="Total de títulos">Total</th>
-                            <th title="Campeonatos de Liga">🏆 Liga</th>
-                            <th title="Copa Argentina">🥇 Copa Arg.</th>
-                            <th title="Supercopa Argentina">⭐ Supercopa</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @{ int posicion = 1; }
-                        @foreach (var e in Model.Palmares.Equipos)
-                        {
-                            <tr>
-                                <td class="col-pos">@posicion</td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(e.FlagCode))
-                                    {
-                                        <img src="https://flagcdn.com/20x15/@(e.FlagCode).png"
-                                             class="flag-img" alt="" onerror="this.style.display='none'" />
-                                    }
-                                    @e.NombreEquipo
-                                </td>
-                                <td class="col-pts">@e.TotalTitulos</td>
-                                <td class="col-num">@(e.CampeonatosLiga > 0 ? e.CampeonatosLiga.ToString() : "-")</td>
-                                <td class="col-num">@(e.CopaArgentina > 0 ? e.CopaArgentina.ToString() : "-")</td>
-                                <td class="col-num">@(e.Supercopa > 0 ? e.Supercopa.ToString() : "-")</td>
-                            </tr>
-                            posicion++;
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- DETALLE POR EQUIPO -->
-        <div>
-            <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
-                📋 Detalle por Equipo
-            </h2>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+@if (!Model.Palmares.Equipos.Any())
+{
+    <div style="text-align:center;padding:60px 24px;">
+        <div style="font-size:48px;margin-bottom:16px;">🏆</div>
+        <h3 style="font-family:var(--font-heading);color:var(--color-gold);letter-spacing:2px;">
+            AÚN NO HAY TÍTULOS
+        </h3>
+        <p style="color:var(--color-muted);font-size:14px;margin-top:8px;">
+            Los títulos se registran al finalizar cada torneo o copa.
+        </p>
+    </div>
+}
+else
+{
+    <!-- TABLA GENERAL -->
+    <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
+        🏆 Tabla de Títulos
+    </h2>
+    <div class="tabla-wrapper" style="margin-bottom:40px;">
+        <table class="tabla-posiciones">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Jugador</th>
+                    <th title="Total títulos">Total</th>
+                    <th title="Campeonatos de Liga">🏆 Liga</th>
+                    <th title="Copa Argentina">🥇 Copa Arg.</th>
+                    <th title="Supercopa">⭐ Supercopa</th>
+                    <th title="Otros títulos">🎖 Otros</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int pos = 1; }
                 @foreach (var e in Model.Palmares.Equipos)
                 {
-                    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;overflow:hidden;">
-                        <!-- Header equipo -->
-                        <div style="background:var(--color-bg3);padding:14px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);">
+                    var otros = e.TotalTitulos - e.CampeonatosLiga - e.CopaArgentina - e.Supercopa;
+                    <tr style="cursor:pointer;" onclick="toggleDetalle('@e.NombreEquipo.ToLower().Replace(" ","_")')">
+                        <td class="col-pos">@pos</td>
+                        <td class="col-equipo">
                             @if (e.FlagCode == "retired")
                             {
-                                <span style="font-size:16px;color:var(--color-muted);" title="Jugador retirado">✝</span>
+                                <span style="font-size:14px;margin-right:6px;color:var(--color-muted);" title="Jugador retirado">✝</span>
                             }
                             else if (!string.IsNullOrEmpty(e.FlagCode))
                             {
-                                <img src="https://flagcdn.com/24x18/@(e.FlagCode).png"
-                                     style="border-radius:2px;" alt="" onerror="this.style.display='none'" />
+                                <img src="https://flagcdn.com/20x15/@(e.FlagCode).png"
+                                     class="flag-img" alt="" onerror="this.style.display='none'" />
                             }
-                            <span style="font-family:var(--font-heading);font-size:15px;letter-spacing:1px;color:var(--color-text);">
-                                @e.NombreEquipo
-                            </span>
-                            <span style="margin-left:auto;font-family:var(--font-heading);font-size:18px;font-weight:700;color:var(--color-gold);">
-                                @e.TotalTitulos 🏆
-                            </span>
-                        </div>
-                        <!-- Títulos -->
-                        <div style="padding:0;">
-                            @foreach (var t in e.Titulos.OrderByDescending(x => x.TemporadaNombre))
+                            <strong>@e.NombreEquipo</strong>
+                            @if (e.FlagCode == "retired")
                             {
-                                var (icono, color) = t.TipoTitulo switch {
-                                    "campeon_torneo"     => ("🏆", "var(--color-gold)"),
-                                    "campeon_copa"       => ("🥇", "#c0c0c0"),
-                                    "campeon_supercopa"  => ("⭐", "#3a82c8"),
-                                    _                    => ("🎖", "var(--color-muted)")
-                                };
-                                <div style="padding:10px 18px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid var(--color-border);">
-                                    <span style="font-size:18px;">@icono</span>
-                                    <div>
-                                        <div style="font-size:13px;color:var(--color-text);font-weight:500;">@t.NombreTitulo</div>
-                                        <div style="font-size:11px;color:var(--color-muted);">@t.TemporadaNombre</div>
-                                    </div>
-                                </div>
+                                <span style="font-size:11px;color:var(--color-muted);margin-left:6px;">retirado</span>
                             }
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- ÚLTIMOS TÍTULOS -->
-        @if (Model.Palmares.UltimosTitulos.Any())
-        {
-            <div style="margin-top:40px;">
-                <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
-                    🕐 Últimos Títulos
-                </h2>
-                <div style="display:flex;flex-direction:column;gap:8px;">
-                    @foreach (var t in Model.Palmares.UltimosTitulos)
-                    {
-                        var icono = t.TipoTitulo switch {
-                            "campeon_torneo"    => "🏆",
-                            "campeon_copa"      => "🥇",
-                            "campeon_supercopa" => "⭐",
-                            _ => "🎖"
-                        };
-                        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:12px 18px;display:flex;align-items:center;gap:14px;">
-                            <span style="font-size:22px;">@icono</span>
-                            <div>
-                                <div style="font-size:14px;font-weight:500;color:var(--color-text);">
-                                    @if (!string.IsNullOrEmpty(t.FlagCode))
+                        </td>
+                        <td class="col-pts">@e.TotalTitulos</td>
+                        <td class="col-num">@(e.CampeonatosLiga > 0 ? e.CampeonatosLiga.ToString() : "-")</td>
+                        <td class="col-num">@(e.CopaArgentina > 0 ? e.CopaArgentina.ToString() : "-")</td>
+                        <td class="col-num">@(e.Supercopa > 0 ? e.Supercopa.ToString() : "-")</td>
+                        <td class="col-num">@(otros > 0 ? otros.ToString() : "-")</td>
+                        <td style="color:var(--color-muted);font-size:12px;">ver ▾</td>
+                    </tr>
+                    <!-- Fila de detalle expandible -->
+                    <tr id="detalle-@e.NombreEquipo.ToLower().Replace(" ","_")" style="display:none;">
+                        <td colspan="8" style="padding:0;background:var(--color-bg3);">
+                            <div style="padding:16px 24px;">
+                                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                    @foreach (var t in e.Titulos.OrderBy(x => x.TemporadaNombre))
                                     {
-                                        <img src="https://flagcdn.com/16x12/@(t.FlagCode).png"
-                                             style="border-radius:1px;margin-right:6px;" alt="" onerror="this.style.display='none'" />
+                                        var (icono, color) = t.TipoTitulo switch {
+                                            "campeon_torneo"     => ("🏆", "#f0c040"),
+                                            "campeon_copa"       => ("🥇", "#c0c0c0"),
+                                            "campeon_supercopa"  => ("⭐", "#3a82c8"),
+                                            "campeon_primera_b"  => ("🥈", "#8aabcc"),
+                                            "campeon_primera_c"  => ("🎖", "#8aabcc"),
+                                            "campeon_especial"   => ("🎪", "#9b59b6"),
+                                            _                    => ("🏅", "#8aabcc")
+                                        };
+                                        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:8px;min-width:200px;">
+                                            <span style="font-size:18px;">@icono</span>
+                                            <div>
+                                                <div style="font-size:13px;color:var(--color-text);font-weight:500;">@t.NombreTitulo</div>
+                                                <div style="font-size:11px;color:var(--color-muted);">@t.TemporadaNombre</div>
+                                            </div>
+                                        </div>
                                     }
-                                    @t.NombreEquipo
                                 </div>
-                                <div style="font-size:12px;color:var(--color-muted);">@t.NombreTitulo · @t.TemporadaNombre</div>
                             </div>
+                        </td>
+                    </tr>
+                    pos++;
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ÚLTIMOS TÍTULOS -->
+    @if (Model.Palmares.UltimosTitulos.Any())
+    {
+        <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
+            🕐 Últimos Campeones
+        </h2>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            @foreach (var t in Model.Palmares.UltimosTitulos.Take(8))
+            {
+                var icono = t.TipoTitulo switch {
+                    "campeon_torneo"    => "🏆",
+                    "campeon_copa"      => "🥇",
+                    "campeon_supercopa" => "⭐",
+                    "campeon_primera_b" => "🥈",
+                    _ => "🎖"
+                };
+                <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:12px 18px;display:flex;align-items:center;gap:14px;">
+                    <span style="font-size:22px;flex-shrink:0;">@icono</span>
+                    <div>
+                        <div style="font-size:14px;font-weight:500;color:var(--color-text);display:flex;align-items:center;gap:8px;">
+                            @if (t.FlagCode == "retired")
+                            {
+                                <span style="font-size:13px;color:var(--color-muted);">✝</span>
+                            }
+                            else if (!string.IsNullOrEmpty(t.FlagCode))
+                            {
+                                <img src="https://flagcdn.com/16x12/@(t.FlagCode).png"
+                                     style="border-radius:1px;" alt="" onerror="this.style.display='none'" />
+                            }
+                            @t.NombreEquipo
                         </div>
-                    }
+                        <div style="font-size:12px;color:var(--color-muted);">@t.NombreTitulo · @t.TemporadaNombre</div>
+                    </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
     }
-</div>
+}
+
+@section Scripts {
+<script>
+function toggleDetalle(id) {
+    const row = document.getElementById('detalle-' + id);
+    if (!row) return;
+    const isOpen = row.style.display !== 'none';
+    row.style.display = isOpen ? 'none' : 'table-row';
+}
+</script>
+}

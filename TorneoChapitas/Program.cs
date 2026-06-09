@@ -51,6 +51,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+// Leer STABILITY_API_KEY desde variable de entorno de Railway
+var stabilityKey = Environment.GetEnvironmentVariable("STABILITY_API_KEY");
+if (!string.IsNullOrEmpty(stabilityKey))
+    builder.Configuration["STABILITY_API_KEY"] = stabilityKey;
+
 var app = builder.Build();
 
 app.UseExceptionHandler(appBuilder =>

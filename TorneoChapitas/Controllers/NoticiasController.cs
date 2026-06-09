@@ -134,8 +134,9 @@ namespace TorneoAmigos.Controllers
             else if (vm.GenerarImagen)
             {
                 var contexto     = string.IsNullOrEmpty(vm.ImagenPrompt) ? vm.Titulo : vm.ImagenPrompt;
-                var stabilityKey = _config["STABILITY_API_KEY"];
-                imagenUrl        = await _repo.GenerarImagenUrlIA(contexto, stabilityKey);
+                var stabilityKey = _config["STABILITY_API_KEY"]
+                    ?? Environment.GetEnvironmentVariable("STABILITY_API_KEY");
+                imagenUrl = await _repo.GenerarImagenUrlIA(contexto, stabilityKey);
             }
 
             var autor = User.Identity?.Name ?? "Redactor";
@@ -161,8 +162,9 @@ namespace TorneoAmigos.Controllers
                 : tipo == "descenso" ? "relegation battle tension" : "standings table update";
 
             // Intentar con Stability AI, fallback a Unsplash
-            var stabilityKey = _config["STABILITY_API_KEY"];
-            var imagenUrl    = await _repo.GenerarImagenUrlIA(contexto, stabilityKey);
+            var stabilityKey = _config["STABILITY_API_KEY"]
+                ?? Environment.GetEnvironmentVariable("STABILITY_API_KEY");
+            var imagenUrl = await _repo.GenerarImagenUrlIA(contexto, stabilityKey);
 
             var autor = User.Identity?.Name ?? "Redactor";
             var id    = _repo.CrearNoticia(titulo, contenido, imagenUrl, "automatica", autor);

@@ -269,14 +269,20 @@ namespace TorneoAmigos.Data
 
         public async Task<string> GenerarImagenUrlIA(string contexto, string? stabilityKey)
         {
+            // Si no hay key, usar Unsplash directamente
             if (string.IsNullOrEmpty(stabilityKey))
+            {
+                Console.WriteLine("[Noticias] No hay STABILITY_API_KEY, usando Unsplash");
                 return GenerarImagenUrl(contexto);
+            }
+
+            Console.WriteLine($"[Noticias] Intentando Stability AI para: {contexto}");
 
             try
             {
                 using var http = new System.Net.Http.HttpClient();
                 http.DefaultRequestHeaders.Add("Authorization", $"Bearer {stabilityKey}");
-                http.Timeout = TimeSpan.FromSeconds(30);
+                http.Timeout = TimeSpan.FromSeconds(45);
 
                 var prompt = $"dramatic soccer football match, {contexto}, stadium lights, cinematic, dark blue and gold colors, argentina football atmosphere, high quality";
 
@@ -315,9 +321,10 @@ namespace TorneoAmigos.Data
                 await File.WriteAllBytesAsync(Path.Combine(folder, fileName), bytes);
                 return $"/img/noticias/{fileName}";
             }
-            catch
+            catch (Exception ex)
             {
-                return GenerarImagenUrl(contexto); // fallback a Unsplash si falla
+                Console.WriteLine($"[Noticias] Error Stability AI: {ex.Message} - usando Unsplash como fallback");
+                return GenerarImagenUrl(contexto);
             }
         }
 

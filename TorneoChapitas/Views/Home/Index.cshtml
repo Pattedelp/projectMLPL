@@ -65,23 +65,25 @@
                 <div class="carrusel-track" id="carruselTrack">
                     @foreach (var n in Model.UltimasNoticias)
                     {
-                        <a asp-controller="Noticias" asp-action="Detalle" asp-route-id="@n.Id"
-                           class="carrusel-slide">
-                            <div class="carrusel-img"
-                                 style="@(!string.IsNullOrEmpty(n.ImagenUrl) ? $"background-image:url('{n.ImagenUrl}')" : "")">
-                                @if (string.IsNullOrEmpty(n.ImagenUrl))
-                                {
-                                    <span style="font-size:32px;">📰</span>
-                                }
-                            </div>
-                            <div class="carrusel-body">
-                                <span class="noticia-badge @(n.Tipo == "automatica" ? "badge-auto" : "badge-manual")" style="font-size:10px;">
-                                    @(n.Tipo == "automatica" ? "⚡ Auto" : "✍️")
-                                </span>
-                                <h3 class="carrusel-noticia-titulo">@n.Titulo</h3>
-                                <p class="carrusel-noticia-fecha">@n.CreatedAt.ToString("dd/MM/yyyy")</p>
-                            </div>
-                        </a>
+                        <div class="carrusel-slide">
+                            <a asp-controller="Noticias" asp-action="Detalle" asp-route-id="@n.Id"
+                               class="carrusel-slide-inner">
+                                <div class="carrusel-img"
+                                     style="@(!string.IsNullOrEmpty(n.ImagenUrl) ? $"background-image:url('{n.ImagenUrl}')" : "")">
+                                    @if (string.IsNullOrEmpty(n.ImagenUrl))
+                                    {
+                                        <span style="font-size:32px;">📰</span>
+                                    }
+                                </div>
+                                <div class="carrusel-body">
+                                    <span class="noticia-badge @(n.Tipo == "automatica" ? "badge-auto" : "badge-manual")" style="font-size:10px;">
+                                        @(n.Tipo == "automatica" ? "⚡ Auto" : "✍️")
+                                    </span>
+                                    <h3 class="carrusel-noticia-titulo">@n.Titulo</h3>
+                                    <p class="carrusel-noticia-fecha">@n.CreatedAt.ToString("dd/MM/yyyy")</p>
+                                </div>
+                            </a>
+                        </div>
                     }
                 </div>
             </div>
@@ -100,46 +102,61 @@
 @section Scripts {
 <script>
 let currentSlide = 0;
-const track  = document.getElementById('carruselTrack');
+const track = document.getElementById('carruselTrack');
 if (track) {
-    const slides     = track.querySelectorAll('.carrusel-slide');
+    const slides        = Array.from(track.querySelectorAll('.carrusel-slide'));
     const dotsContainer = document.getElementById('carruselDots');
-    let slidesVisible = getSlidesVisible();
-    let total = Math.ceil(slides.length / slidesVisible);
+    let autoTimer;
 
     function getSlidesVisible() {
         return window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3;
     }
 
+    function getTotal() {
+        return Math.max(1, Math.ceil(slides.length / getSlidesVisible()));
+    }
+
     function buildDots() {
-        slidesVisible = getSlidesVisible();
-        total = Math.ceil(slides.length / slidesVisible);
         dotsContainer.innerHTML = '';
-        for (let i = 0; i < total; i++) {
+        for (let i = 0; i < getTotal(); i++) {
             const d = document.createElement('span');
             d.className = 'carrusel-dot' + (i === 0 ? ' active' : '');
-            d.onclick = () => goTo(i);
+            d.onclick   = () => goTo(i);
             dotsContainer.appendChild(d);
         }
     }
 
     function goTo(idx) {
-        slidesVisible = getSlidesVisible();
-        total = Math.ceil(slides.length / slidesVisible);
-        currentSlide = Math.max(0, Math.min(idx, total - 1));
-        const pct = currentSlide * (100 / total);
-        track.style.transform = `translateX(-${pct * total / slides.length * slidesVisible}%)`;
-        document.querySelectorAll('.carrusel-dot').forEach((d, i) => {
-            d.classList.toggle('active', i === currentSlide);
-        });
+        const sv    = getSlidesVisible();
+        const total = getTotal();
+        currentSlide = ((idx % total) + total) % total;
+
+        // Mover el track: cada slide ocupa 100/sv %
+        const slideW = 100 / sv;
+        track.style.transform = `translateX(-${currentSlide * slideW}%)`;
+
+        document.querySelectorAll('.carrusel-dot').forEach((d, i) =>
+            d.classList.toggle('active', i === currentSlide));
     }
 
-    window.moverCarrusel = (dir) => goTo(currentSlide + dir);
+    function resetTimer() {
+        clearInterval(autoTimer);
+        autoTimer = setInterval(() => goTo(currentSlide + 1), 5000);
+    }
+
+    window.moverCarrusel = function(dir) { goTo(currentSlide + dir); resetTimer(); };
+
+    // Touch swipe para mobile
+    let touchStartX = 0;
+    track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    track.addEventListener('touchend', e => {
+        const diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) { goTo(currentSlide + (diff > 0 ? 1 : -1)); resetTimer(); }
+    });
+
     window.addEventListener('resize', () => { buildDots(); goTo(0); });
     buildDots();
-
-    // Auto-avance cada 5 segundos
-    setInterval(() => goTo((currentSlide + 1) % total), 5000);
+    resetTimer();
 }
 </script>
 }

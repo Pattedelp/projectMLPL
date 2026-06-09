@@ -59,6 +59,12 @@
             </div>
         </nav>
 
+        <!-- Admin panel link -->
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-controller="Admin" asp-action="Index"
+               class="nav-admin-link @(ViewBag.ActivePage == "admin" ? "active" : "")">⚙️ Admin</a>
+        }
         <!-- Login/Logout en la derecha -->
         <div class="nav-auth">
             @if (User.IsInRole("Admin"))
@@ -125,8 +131,53 @@
 </footer>
 
 <script>
+    // Mobile nav toggle
     document.getElementById('navToggle').addEventListener('click', function () {
         document.getElementById('mobileNav').classList.toggle('open');
+    });
+
+    // Desktop dropdowns - posicionados con fixed para evitar clipping
+    document.querySelectorAll('.nav-dropdown > span').forEach(function(span) {
+        span.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var menu = this.nextElementSibling;
+            var isOpen = menu.classList.contains('open');
+
+            // Cerrar todos
+            document.querySelectorAll('.nav-dropdown .dropdown-menu').forEach(function(m) {
+                m.classList.remove('open');
+                m.style.display = 'none';
+            });
+
+            if (!isOpen) {
+                // Posicionar con fixed basado en la posición del span
+                var rect = this.getBoundingClientRect();
+                menu.style.position   = 'fixed';
+                menu.style.top        = rect.bottom + 'px';
+                menu.style.left       = rect.left + 'px';
+                menu.style.zIndex     = '99999';
+                menu.style.display    = 'block';
+                menu.classList.add('open');
+            }
+        });
+    });
+
+    // Reposicionar si hay scroll
+    window.addEventListener('scroll', function() {
+        document.querySelectorAll('.nav-dropdown .dropdown-menu.open').forEach(function(menu) {
+            var span = menu.previousElementSibling;
+            var rect = span.getBoundingClientRect();
+            menu.style.top  = rect.bottom + 'px';
+            menu.style.left = rect.left + 'px';
+        });
+    });
+
+    // Cerrar al clickear fuera
+    document.addEventListener('click', function() {
+        document.querySelectorAll('.nav-dropdown .dropdown-menu').forEach(function(m) {
+            m.classList.remove('open');
+            m.style.display = 'none';
+        });
     });
 </script>
 @await RenderSectionAsync("Scripts", required: false)

@@ -20,7 +20,6 @@
         <nav class="main-nav">
             <a asp-controller="Home" asp-action="Index"
                class="@(ViewBag.ActivePage=="home"?"active":"")">Inicio</a>
-
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="primera"?"active":"")">1ra División ▾</span>
                 <div class="dropdown-menu">
@@ -29,7 +28,6 @@
                     <a asp-controller="PrimeraDivision" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
-
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="nacb"?"active":"")">1ra Nacional ▾</span>
                 <div class="dropdown-menu">
@@ -38,7 +36,6 @@
                     <a asp-controller="NacionalB" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
-
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="copas"?"active":"")">Copas ▾</span>
                 <div class="dropdown-menu">
@@ -46,10 +43,8 @@
                     <a asp-controller="Copas" asp-action="SupercopaArgentina">Supercopa Argentina</a>
                 </div>
             </div>
-
             <a asp-controller="Noticias" asp-action="Index"
                class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
-
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"?"active":"")">Más ▾</span>
                 <div class="dropdown-menu">
@@ -58,14 +53,6 @@
                 </div>
             </div>
         </nav>
-
-        <!-- Admin panel link -->
-        @if (User.IsInRole("Admin"))
-        {
-            <a asp-controller="Admin" asp-action="Index"
-               class="nav-admin-link @(ViewBag.ActivePage == "admin" ? "active" : "")">⚙️ Admin</a>
-        }
-        <!-- Login/Logout en la derecha -->
         <div class="nav-auth">
             @if (User.IsInRole("Admin"))
             {
@@ -80,29 +67,52 @@
                 <a asp-controller="Auth" asp-action="Login" class="btn-login">🔐 Admin</a>
             }
         </div>
-
-        <button class="nav-toggle" id="navToggle">☰</button>
+        <!-- Hamburger siempre visible en mobile -->
+        <button class="nav-toggle" id="navToggle" aria-label="Menú">
+            <span></span><span></span><span></span>
+        </button>
     </div>
 </header>
 
-<div class="mobile-nav" id="mobileNav">
-    <a asp-controller="Home" asp-action="Index" class="mobile-nav-item-main">🏠 Inicio</a>
-    <p class="mobile-section-label">🏆 Primera División</p>
-    <a asp-controller="PrimeraDivision" asp-action="Posiciones">→ Posiciones</a>
-    <a asp-controller="PrimeraDivision" asp-action="Fixture">→ Fixture</a>
-    <a asp-controller="PrimeraDivision" asp-action="Equipos">→ Equipos</a>
-    <p class="mobile-section-label">🥈 Primera Nacional</p>
-    <a asp-controller="NacionalB" asp-action="Posiciones">→ Posiciones</a>
-    <a asp-controller="NacionalB" asp-action="Fixture">→ Fixture</a>
-    <a asp-controller="NacionalB" asp-action="Equipos">→ Equipos</a>
-    <p class="mobile-section-label">🏅 Copas</p>
-    <a asp-controller="Copas" asp-action="CopaArgentina">→ Copa Argentina</a>
-    <a asp-controller="Copas" asp-action="SupercopaArgentina">→ Supercopa Argentina</a>
-    <p class="mobile-section-label">📊 Más</p>
-    <a asp-controller="Noticias" asp-action="Index">📰 Noticias</a>
-    <a asp-controller="Historial" asp-action="Index">📚 Historial de Temporadas</a>
-    <a asp-controller="Estadisticas" asp-action="Index">📈 Estadísticas y Palmarés</a>
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+
+<!-- DRAWER LATERAL -->
+<div class="drawer" id="drawer">
+    <div class="drawer-header">
+        <span class="drawer-logo">🏆 Torneo Chapitas</span>
+        <button class="drawer-close" id="drawerClose">✕</button>
+    </div>
+    <div class="drawer-body">
+        <a asp-controller="Home" asp-action="Index" class="drawer-item">🏠 Inicio</a>
+
+        <div class="drawer-section-label">🏆 Primera División</div>
+        <a asp-controller="PrimeraDivision" asp-action="Posiciones" class="drawer-item drawer-sub">Posiciones</a>
+        <a asp-controller="PrimeraDivision" asp-action="Fixture" class="drawer-item drawer-sub">Fixture</a>
+        <a asp-controller="PrimeraDivision" asp-action="Equipos" class="drawer-item drawer-sub">Equipos</a>
+
+        <div class="drawer-section-label">🥈 Primera Nacional</div>
+        <a asp-controller="NacionalB" asp-action="Posiciones" class="drawer-item drawer-sub">Posiciones</a>
+        <a asp-controller="NacionalB" asp-action="Fixture" class="drawer-item drawer-sub">Fixture</a>
+        <a asp-controller="NacionalB" asp-action="Equipos" class="drawer-item drawer-sub">Equipos</a>
+
+        <div class="drawer-section-label">🏅 Copas</div>
+        <a asp-controller="Copas" asp-action="CopaArgentina" class="drawer-item drawer-sub">Copa Argentina</a>
+        <a asp-controller="Copas" asp-action="SupercopaArgentina" class="drawer-item drawer-sub">Supercopa Argentina</a>
+
+        <div class="drawer-divider"></div>
+        <a asp-controller="Noticias" asp-action="Index" class="drawer-item">📰 Noticias</a>
+        <a asp-controller="Historial" asp-action="Index" class="drawer-item">📚 Historial</a>
+        <a asp-controller="Estadisticas" asp-action="Index" class="drawer-item">📈 Estadísticas</a>
+
+        
+    </div>
 </div>
+
+@if (TempData["Mensaje"] != null)
+{
+    <div class="alert-success"><span>✓</span> @TempData["Mensaje"]</div>
+}
 
 @if (TempData["Mensaje"] != null)
 {
@@ -131,48 +141,58 @@
 </footer>
 
 <script>
-    // Mobile nav toggle
-    document.getElementById('navToggle').addEventListener('click', function () {
-        document.getElementById('mobileNav').classList.toggle('open');
+    // ── DRAWER MOBILE ──────────────────────────────
+    const drawer        = document.getElementById('drawer');
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const navToggle     = document.getElementById('navToggle');
+    const drawerClose   = document.getElementById('drawerClose');
+
+    function openDrawer() {
+        drawer.classList.add('open');
+        drawerOverlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+        drawer.classList.remove('open');
+        drawerOverlay.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    navToggle.addEventListener('click', openDrawer);
+    drawerClose.addEventListener('click', closeDrawer);
+    drawerOverlay.addEventListener('click', closeDrawer);
+
+    // Swipe para cerrar
+    let touchStartX = 0;
+    drawer.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    drawer.addEventListener('touchend', e => {
+        if (e.changedTouches[0].clientX - touchStartX > 60) closeDrawer();
     });
 
-    // Desktop dropdowns - posicionados con fixed para evitar clipping
+    // ── DROPDOWN DESKTOP (position fixed) ──────────
     document.querySelectorAll('.nav-dropdown > span').forEach(function(span) {
         span.addEventListener('click', function(e) {
             e.stopPropagation();
-            var menu = this.nextElementSibling;
+            var menu   = this.nextElementSibling;
             var isOpen = menu.classList.contains('open');
 
-            // Cerrar todos
             document.querySelectorAll('.nav-dropdown .dropdown-menu').forEach(function(m) {
                 m.classList.remove('open');
                 m.style.display = 'none';
             });
 
             if (!isOpen) {
-                // Posicionar con fixed basado en la posición del span
-                var rect = this.getBoundingClientRect();
-                menu.style.position   = 'fixed';
-                menu.style.top        = rect.bottom + 'px';
-                menu.style.left       = rect.left + 'px';
-                menu.style.zIndex     = '99999';
-                menu.style.display    = 'block';
+                var rect          = this.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top      = rect.bottom + 'px';
+                menu.style.left     = rect.left + 'px';
+                menu.style.zIndex   = '99999';
+                menu.style.display  = 'block';
                 menu.classList.add('open');
             }
         });
     });
 
-    // Reposicionar si hay scroll
-    window.addEventListener('scroll', function() {
-        document.querySelectorAll('.nav-dropdown .dropdown-menu.open').forEach(function(menu) {
-            var span = menu.previousElementSibling;
-            var rect = span.getBoundingClientRect();
-            menu.style.top  = rect.bottom + 'px';
-            menu.style.left = rect.left + 'px';
-        });
-    });
-
-    // Cerrar al clickear fuera
     document.addEventListener('click', function() {
         document.querySelectorAll('.nav-dropdown .dropdown-menu').forEach(function(m) {
             m.classList.remove('open');

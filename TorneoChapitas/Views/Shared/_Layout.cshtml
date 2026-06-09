@@ -11,15 +11,19 @@
 </head>
 <body>
 
+<!-- TOPBAR -->
 <header class="topbar">
     <div class="topbar-inner">
         <a asp-controller="Home" asp-action="Index" class="logo">
             <span class="logo-icon">🏆</span>
             <span class="logo-text">Torneo Chapitas <em>AAC</em></span>
         </a>
+
+        <!-- NAV DESKTOP -->
         <nav class="main-nav">
             <a asp-controller="Home" asp-action="Index"
                class="@(ViewBag.ActivePage=="home"?"active":"")">Inicio</a>
+
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="primera"?"active":"")">1ra División ▾</span>
                 <div class="dropdown-menu">
@@ -28,6 +32,7 @@
                     <a asp-controller="PrimeraDivision" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
+
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="nacb"?"active":"")">1ra Nacional ▾</span>
                 <div class="dropdown-menu">
@@ -36,6 +41,7 @@
                     <a asp-controller="NacionalB" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
+
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="copas"?"active":"")">Copas ▾</span>
                 <div class="dropdown-menu">
@@ -43,16 +49,20 @@
                     <a asp-controller="Copas" asp-action="SupercopaArgentina">Supercopa Argentina</a>
                 </div>
             </div>
+
             <a asp-controller="Noticias" asp-action="Index"
                class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
+
             <div class="nav-dropdown">
-                <span class="@(ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"?"active":"")">Más ▾</span>
+                <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas")?"active":"")">Más ▾</span>
                 <div class="dropdown-menu">
                     <a asp-controller="Historial" asp-action="Index">📚 Historial</a>
                     <a asp-controller="Estadisticas" asp-action="Index">📈 Estadísticas</a>
                 </div>
             </div>
         </nav>
+
+        <!-- AUTH DESKTOP -->
         <div class="nav-auth">
             @if (User.IsInRole("Admin"))
             {
@@ -67,21 +77,22 @@
                 <a asp-controller="Auth" asp-action="Login" class="btn-login">🔐 Admin</a>
             }
         </div>
-        <!-- Hamburger siempre visible en mobile -->
+
+        <!-- HAMBURGER (solo mobile) -->
         <button class="nav-toggle" id="navToggle" aria-label="Menú">
             <span></span><span></span><span></span>
         </button>
     </div>
 </header>
 
-<!-- DRAWER OVERLAY -->
+<!-- OVERLAY (solo mobile, detrás del drawer) -->
 <div class="drawer-overlay" id="drawerOverlay"></div>
 
-<!-- DRAWER LATERAL -->
-<div class="drawer" id="drawer">
+<!-- DRAWER LATERAL (solo mobile) -->
+<nav class="drawer" id="drawer" aria-hidden="true">
     <div class="drawer-header">
         <span class="drawer-logo">🏆 Torneo Chapitas</span>
-        <button class="drawer-close" id="drawerClose">✕</button>
+        <button class="drawer-close" id="drawerClose" aria-label="Cerrar menú">✕</button>
     </div>
     <div class="drawer-body">
         <a asp-controller="Home" asp-action="Index" class="drawer-item">🏠 Inicio</a>
@@ -105,14 +116,22 @@
         <a asp-controller="Historial" asp-action="Index" class="drawer-item">📚 Historial</a>
         <a asp-controller="Estadisticas" asp-action="Index" class="drawer-item">📈 Estadísticas</a>
 
-        
+        <div class="drawer-divider"></div>
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-controller="Admin" asp-action="Index" class="drawer-item">⚙️ Panel Admin</a>
+            <form method="post" asp-controller="Auth" asp-action="Logout" style="margin:0">
+                <button type="submit" class="drawer-item drawer-item-btn">🚪 Cerrar sesión</button>
+            </form>
+        }
+        else
+        {
+            <a asp-controller="Auth" asp-action="Login" class="drawer-item">🔐 Acceso Admin</a>
+        }
+        <!-- Espaciado extra al final para que se pueda scrollear -->
+        <div style="height:40px"></div>
     </div>
-</div>
-
-@if (TempData["Mensaje"] != null)
-{
-    <div class="alert-success"><span>✓</span> @TempData["Mensaje"]</div>
-}
+</nav>
 
 @if (TempData["Mensaje"] != null)
 {
@@ -141,65 +160,70 @@
 </footer>
 
 <script>
-    // ── DRAWER MOBILE ──────────────────────────────
-    const drawer        = document.getElementById('drawer');
-    const drawerOverlay = document.getElementById('drawerOverlay');
-    const navToggle     = document.getElementById('navToggle');
-    const drawerClose   = document.getElementById('drawerClose');
+// ── DRAWER MOBILE ──────────────────────────────
+const drawer        = document.getElementById('drawer');
+const drawerOverlay = document.getElementById('drawerOverlay');
+const navToggle     = document.getElementById('navToggle');
+const drawerClose   = document.getElementById('drawerClose');
 
-    function openDrawer() {
-        drawer.classList.add('open');
-        drawerOverlay.classList.add('open');
-        document.body.style.overflow = 'hidden';
-    }
-    function closeDrawer() {
-        drawer.classList.remove('open');
-        drawerOverlay.classList.remove('open');
-        document.body.style.overflow = '';
-    }
+function openDrawer() {
+    drawer.classList.add('open');
+    drawerOverlay.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+function closeDrawer() {
+    drawer.classList.remove('open');
+    drawerOverlay.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
 
-    navToggle.addEventListener('click', openDrawer);
-    drawerClose.addEventListener('click', closeDrawer);
-    drawerOverlay.addEventListener('click', closeDrawer);
+navToggle.addEventListener('click', function(e) { e.stopPropagation(); openDrawer(); });
+drawerClose.addEventListener('click', closeDrawer);
+drawerOverlay.addEventListener('click', closeDrawer);
 
-    // Swipe para cerrar
-    let touchStartX = 0;
-    drawer.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-    drawer.addEventListener('touchend', e => {
-        if (e.changedTouches[0].clientX - touchStartX > 60) closeDrawer();
-    });
+// Swipe derecha para cerrar
+let txStart = 0;
+drawer.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
+drawer.addEventListener('touchend',   e => {
+    if (e.changedTouches[0].clientX - txStart > 60) closeDrawer();
+}, { passive: true });
 
-    // ── DROPDOWN DESKTOP (position fixed) ──────────
-    document.querySelectorAll('.nav-dropdown > span').forEach(function(span) {
-        span.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var menu   = this.nextElementSibling;
-            var isOpen = menu.classList.contains('open');
+// ── DROPDOWN DESKTOP (position: fixed para evitar clipping) ──
+document.querySelectorAll('.nav-dropdown > span').forEach(function(span) {
+    span.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var menu   = this.nextElementSibling;
+        var isOpen = menu.classList.contains('dd-open');
 
-            document.querySelectorAll('.nav-dropdown .dropdown-menu').forEach(function(m) {
-                m.classList.remove('open');
-                m.style.display = 'none';
-            });
-
-            if (!isOpen) {
-                var rect          = this.getBoundingClientRect();
-                menu.style.position = 'fixed';
-                menu.style.top      = rect.bottom + 'px';
-                menu.style.left     = rect.left + 'px';
-                menu.style.zIndex   = '99999';
-                menu.style.display  = 'block';
-                menu.classList.add('open');
-            }
-        });
-    });
-
-    document.addEventListener('click', function() {
-        document.querySelectorAll('.nav-dropdown .dropdown-menu').forEach(function(m) {
-            m.classList.remove('open');
+        // Cerrar todos
+        document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+            m.classList.remove('dd-open');
             m.style.display = 'none';
         });
+
+        if (!isOpen) {
+            var rect        = this.getBoundingClientRect();
+            menu.style.position = 'fixed';
+            menu.style.top      = rect.bottom + 'px';
+            menu.style.left     = rect.left + 'px';
+            menu.style.zIndex   = '99999';
+            menu.style.display  = 'block';
+            menu.classList.add('dd-open');
+        }
     });
+});
+
+// Cerrar dropdown al clickear fuera
+document.addEventListener('click', function() {
+    document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+        m.classList.remove('dd-open');
+        m.style.display = 'none';
+    });
+});
 </script>
+
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

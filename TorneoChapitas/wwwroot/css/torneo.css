@@ -926,14 +926,18 @@ a:hover { color: #fff; }
     z-index: 2000;
     backdrop-filter: blur(2px);
 }
-.drawer-overlay.open { display: block; }
+/* Overlay solo en mobile */
+@media (max-width: 768px) {
+    .drawer-overlay.open { display: block; }
+}
 
 .drawer {
+    /* Oculto por defecto en TODOS los tamaños */
     position: fixed;
     top: 0;
     right: -320px;
     width: 300px;
-    height: 100vh;
+    height: 100dvh; /* dynamic viewport height para mobile */
     background: var(--color-bg2);
     border-left: 1px solid var(--color-border);
     z-index: 3000;
@@ -941,6 +945,7 @@ a:hover { color: #fff; }
     display: flex;
     flex-direction: column;
     box-shadow: -8px 0 32px rgba(0,0,0,.4);
+    /* Solo se muestra si tiene clase open */
 }
 .drawer.open { right: 0; }
 
@@ -974,8 +979,10 @@ a:hover { color: #fff; }
 
 .drawer-body {
     overflow-y: auto;
+    overflow-x: hidden;
     flex: 1;
     padding: 8px 0;
+    -webkit-overflow-scrolling: touch; /* smooth scroll en iOS */
 }
 
 .drawer-section-label {

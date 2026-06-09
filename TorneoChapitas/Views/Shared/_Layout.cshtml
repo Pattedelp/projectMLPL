@@ -78,6 +78,18 @@
             }
         </div>
 
+        <!-- AUTH MOBILE (al lado del hamburger) -->
+        <div class="nav-auth-mobile">
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="Admin" asp-action="Index" class="btn-auth-mobile">⚙️</a>
+            }
+            else
+            {
+                <a asp-controller="Auth" asp-action="Login" class="btn-auth-mobile">🔐</a>
+            }
+        </div>
+
         <!-- HAMBURGER (solo mobile) -->
         <button class="nav-toggle" id="navToggle" aria-label="Menú">
             <span></span><span></span><span></span>
@@ -190,37 +202,35 @@ drawer.addEventListener('touchend',   e => {
     if (e.changedTouches[0].clientX - txStart > 60) closeDrawer();
 }, { passive: true });
 
-// ── DROPDOWN DESKTOP (position: fixed para evitar clipping) ──
-document.querySelectorAll('.nav-dropdown > span').forEach(function(span) {
-    span.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var menu   = this.nextElementSibling;
-        var isOpen = menu.classList.contains('dd-open');
+// ── DROPDOWN DESKTOP — hover con position:fixed ──
+document.querySelectorAll('.nav-dropdown').forEach(function(dropdown) {
+    var span  = dropdown.querySelector('span');
+    var menu  = dropdown.querySelector('.dropdown-menu');
+    var timer = null;
 
-        // Cerrar todos
+    function showMenu() {
+        clearTimeout(timer);
+        // Cerrar otros
         document.querySelectorAll('.dropdown-menu').forEach(function(m) {
-            m.classList.remove('dd-open');
-            m.style.display = 'none';
+            if (m !== menu) { m.style.display = 'none'; }
         });
+        var rect        = span.getBoundingClientRect();
+        menu.style.position = 'fixed';
+        menu.style.top      = rect.bottom + 'px';
+        menu.style.left     = rect.left + 'px';
+        menu.style.minWidth = Math.max(180, rect.width) + 'px';
+        menu.style.zIndex   = '99999';
+        menu.style.display  = 'block';
+    }
 
-        if (!isOpen) {
-            var rect        = this.getBoundingClientRect();
-            menu.style.position = 'fixed';
-            menu.style.top      = rect.bottom + 'px';
-            menu.style.left     = rect.left + 'px';
-            menu.style.zIndex   = '99999';
-            menu.style.display  = 'block';
-            menu.classList.add('dd-open');
-        }
-    });
-});
+    function hideMenu() {
+        timer = setTimeout(function() { menu.style.display = 'none'; }, 150);
+    }
 
-// Cerrar dropdown al clickear fuera
-document.addEventListener('click', function() {
-    document.querySelectorAll('.dropdown-menu').forEach(function(m) {
-        m.classList.remove('dd-open');
-        m.style.display = 'none';
-    });
+    span.addEventListener('mouseenter', showMenu);
+    span.addEventListener('mouseleave', hideMenu);
+    menu.addEventListener('mouseenter', function() { clearTimeout(timer); });
+    menu.addEventListener('mouseleave', hideMenu);
 });
 </script>
 

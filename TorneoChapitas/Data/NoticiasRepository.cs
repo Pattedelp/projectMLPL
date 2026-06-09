@@ -261,11 +261,77 @@ namespace TorneoAmigos.Data
 
         public string GenerarImagenUrl(string contexto)
         {
-            // Pollinations.ai - completamente gratuito, sin API key
-            var prompt = Uri.EscapeDataString(
-                $"dramatic soccer football stadium night lights championship table scoreboard, " +
-                $"dark blue gold colors, cinematic, argentina football style, {contexto}");
-            return $"https://image.pollinations.ai/prompt/{prompt}?width=800&height=450&nologo=true";
+            // Unsplash como URL base (fallback inmediato para la lista)
+            // La imagen de IA se genera en GenerarImagenUrlIA (async, para detalle)
+            var seed = Math.Abs(contexto.GetHashCode()) % 1000;
+            return $"https://source.unsplash.com/800x450/?football,soccer,stadium&sig={seed}";
+        }
+
+        public async Task<string> GenerarImagenUrlIA(string contexto, string? stabilityKey)
+        {
+            if (string.IsNullOrEmpty(stabilityKey))
+                return GenerarImagenUrl(contexto);
+
+            try
+            {
+                using var http = new System.Net.Http.HttpClient();
+                http.DefaultRequestHeaders.Add("Authorization", $"Bearer {stabilityKey}");
+                http.Timeout = TimeSpan.FromSeconds(30);
+
+                var prompt = $"dramatic soccer football match, {contexto}, stadium lights, cinematic, dark blue and gold colors, argentina football atmosphere, high quality";
+
+                var body = new
+                {
+                    text_prompts = new[] { new { text = prompt, weight = 1.0 } },
+                    cfg_scale    = 7,
+                    height       = 512,
+                    width        = 896,
+                    steps        = 30,
+                    samples      = 1
+                };
+
+                var json     = System.Text.Json.JsonSerializer.Serialize(body);
+                var response = await http.PostAsync(
+                    "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
+                    new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json"));
+
+                if (!response.IsSuccessStatusCode)
+                    return GenerarImagenUrl(contexto); // fallback a Unsplash
+
+                var result  = await response.Content.ReadAsStringAsync();
+                var doc     = System.Text.Json.JsonDocument.Parse(result);
+                var base64  = doc.RootElement
+                    .GetProperty("artifacts")[0]
+                    .GetProperty("base64").GetString();
+
+                if (string.IsNullOrEmpty(base64))
+                    return GenerarImagenUrl(contexto);
+
+                // Guardar imagen localmente
+                var bytes    = Convert.FromBase64String(base64);
+                var fileName = $"ia_{DateTime.Now.Ticks}.png";
+                var folder   = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "img", "noticias");
+                Directory.CreateDirectory(folder);
+                await File.WriteAllBytesAsync(Path.Combine(folder, fileName), bytes);
+                return $"/img/noticias/{fileName}";
+            }
+            catch
+            {
+                return GenerarImagenUrl(contexto); // fallback a Unsplash si falla
+            }
+        }
+
+        public bool EditarNoticia(int id, string titulo, string contenido, string? imagenUrl)
+        {
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(@"
+                UPDATE noticias SET titulo=@T, contenido=@C, imagen_url=@I WHERE id=@Id", conn);
+            cmd.Parameters.AddWithValue("@T",  titulo);
+            cmd.Parameters.AddWithValue("@C",  contenido);
+            cmd.Parameters.AddWithValue("@I",  (object?)imagenUrl ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Id", id);
+            conn.Open();
+            return cmd.ExecuteNonQuery() > 0;
         }
 
         // ── HELPERS ─────────────────────────────────────

@@ -6,17 +6,24 @@ namespace TorneoAmigos.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly TorneoRepository _repo;
-        public HomeController(TorneoRepository repo) => _repo = repo;
+        private readonly TorneoRepository  _repo;
+        private readonly NoticiasRepository _noticias;
+
+        public HomeController(TorneoRepository repo, NoticiasRepository noticias)
+        {
+            _repo     = repo;
+            _noticias = noticias;
+        }
 
         public IActionResult Index()
         {
             var vm = new HomeViewModel
             {
-                PrimeraDivision        = BuildVM(1),
-                NacionalB              = BuildVM(2),
-                TotalPartidosJugados   = _repo.GetTotalPartidosJugados(),
-                TotalGoles             = _repo.GetTotalGoles()
+                PrimeraDivision      = BuildVM(1),
+                NacionalB            = BuildVM(2),
+                TotalPartidosJugados = _repo.GetTotalPartidosJugados(),
+                TotalGoles           = _repo.GetTotalGoles(),
+                UltimasNoticias      = _noticias.GetNoticias(soloPublicadas: true).Take(6).ToList()
             };
             return View(vm);
         }

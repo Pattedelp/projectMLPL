@@ -12,11 +12,13 @@ namespace TorneoAmigos.Controllers
     {
         private readonly NoticiasRepository _repo;
         private readonly TorneoRepository   _torneo;
+        private readonly IConfiguration     _config;
 
-        public NoticiasController(NoticiasRepository repo, TorneoRepository torneo)
+        public NoticiasController(NoticiasRepository repo, TorneoRepository torneo, IConfiguration config)
         {
             _repo   = repo;
             _torneo = torneo;
+            _config = config;
         }
 
         // ── PÚBLICO ─────────────────────────────────────
@@ -107,7 +109,7 @@ namespace TorneoAmigos.Controllers
 
         [Authorize(AuthenticationSchemes = "RedactorCookie,Cookies", Roles = "Redactor,Admin")]
         [HttpPost]
-        public IActionResult Nueva(NuevaNoticiaViewModel vm)
+        public async Task<IActionResult> Nueva(NuevaNoticiaViewModel vm, IFormFile? imagenArchivo)
         {
             if (string.IsNullOrWhiteSpace(vm.Titulo) || string.IsNullOrWhiteSpace(vm.Contenido))
             {
@@ -116,10 +118,24 @@ namespace TorneoAmigos.Controllers
             }
 
             string? imagenUrl = null;
-            if (vm.GenerarImagen)
+
+            if (imagenArchivo != null && imagenArchivo.Length > 0)
             {
-                var contexto = string.IsNullOrEmpty(vm.ImagenPrompt) ? vm.Titulo : vm.ImagenPrompt;
-                imagenUrl = _repo.GenerarImagenUrl(contexto);
+                var ext     = Path.GetExtension(imagenArchivo.FileName).ToLower();
+                var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+                if (!allowed.Contains(ext)) { ViewBag.Error = "Formato no permitido. Usá JPG, PNG o WebP."; return View(vm); }
+                var fileName = $"noticia_{DateTime.Now.Ticks}{ext}";
+                var folder   = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "img", "noticias");
+                Directory.CreateDirectory(folder);
+                using var stream = new FileStream(Path.Combine(folder, fileName), FileMode.Create);
+                await imagenArchivo.CopyToAsync(stream);
+                imagenUrl = $"/img/noticias/{fileName}";
+            }
+            else if (vm.GenerarImagen)
+            {
+                var contexto     = string.IsNullOrEmpty(vm.ImagenPrompt) ? vm.Titulo : vm.ImagenPrompt;
+                var stabilityKey = _config["STABILITY_API_KEY"];
+                imagenUrl        = await _repo.GenerarImagenUrlIA(contexto, stabilityKey);
             }
 
             var autor = User.Identity?.Name ?? "Redactor";
@@ -132,7 +148,7 @@ namespace TorneoAmigos.Controllers
 
         [Authorize(AuthenticationSchemes = "RedactorCookie,Cookies", Roles = "Redactor,Admin")]
         [HttpPost]
-        public IActionResult GenerarAutomatica([FromBody] GenerarNoticiaDto dto)
+        public async Task<IActionResult> GenerarAutomatica([FromBody] GenerarNoticiaDto dto)
         {
             var tablaPrimera = _torneo.GetTablaPosiciones(1);
             var tablaB       = _torneo.GetTablaPosiciones(2);
@@ -143,12 +159,72 @@ namespace TorneoAmigos.Controllers
             var contexto  = tipo == "lider" && tablaPrimera.Any()
                 ? $"champion leader {tablaPrimera[0].NombreEquipo}"
                 : tipo == "descenso" ? "relegation battle tension" : "standings table update";
-            var imagenUrl = _repo.GenerarImagenUrl(contexto);
+
+            // Intentar con Stability AI, fallback a Unsplash
+            var stabilityKey = _config["STABILITY_API_KEY"];
+            var imagenUrl    = await _repo.GenerarImagenUrlIA(contexto, stabilityKey);
 
             var autor = User.Identity?.Name ?? "Redactor";
             var id    = _repo.CrearNoticia(titulo, contenido, imagenUrl, "automatica", autor);
 
             return Json(new { ok = true, id, titulo, contenido, imagenUrl });
+        }
+
+        [Authorize(AuthenticationSchemes = "RedactorCookie,Cookies", Roles = "Redactor,Admin")]
+        [HttpGet]
+        public IActionResult Editar(int id)
+        {
+            ViewBag.ActivePage = "noticias";
+            var n = _repo.GetNoticiaById(id);
+            if (n == null) return NotFound();
+            return View(new NuevaNoticiaViewModel
+            {
+                Titulo        = n.Titulo,
+                Contenido     = n.Contenido,
+                ImagenPrompt  = n.ImagenUrl,
+                GenerarImagen = false
+            });
+        }
+
+        [Authorize(AuthenticationSchemes = "RedactorCookie,Cookies", Roles = "Redactor,Admin")]
+        [HttpPost]
+        public async Task<IActionResult> Editar(int id, NuevaNoticiaViewModel vm,
+            IFormFile? imagenArchivo)
+        {
+            if (string.IsNullOrWhiteSpace(vm.Titulo) || string.IsNullOrWhiteSpace(vm.Contenido))
+            {
+                ViewBag.Error = "El título y el contenido son obligatorios.";
+                return View(vm);
+            }
+
+            string? imagenUrl = vm.ImagenPrompt; // mantiene la existente si no cambia
+
+            // Si subió un archivo
+            if (imagenArchivo != null && imagenArchivo.Length > 0)
+            {
+                var ext      = Path.GetExtension(imagenArchivo.FileName).ToLower();
+                var allowed  = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+                if (!allowed.Contains(ext))
+                {
+                    ViewBag.Error = "Formato de imagen no permitido. Usá JPG, PNG o WebP.";
+                    return View(vm);
+                }
+                var fileName = $"noticia_{id}_{DateTime.Now.Ticks}{ext}";
+                var folder   = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "img", "noticias");
+                Directory.CreateDirectory(folder);
+                var path = Path.Combine(folder, fileName);
+                using var stream = new FileStream(path, FileMode.Create);
+                await imagenArchivo.CopyToAsync(stream);
+                imagenUrl = $"/img/noticias/{fileName}";
+            }
+            else if (vm.GenerarImagen && string.IsNullOrEmpty(imagenArchivo?.FileName))
+            {
+                imagenUrl = _repo.GenerarImagenUrl(vm.Titulo);
+            }
+
+            _repo.EditarNoticia(id, vm.Titulo, vm.Contenido, imagenUrl);
+            TempData["Mensaje"] = "¡Noticia actualizada!";
+            return RedirectToAction("Redaccion");
         }
 
         [Authorize(AuthenticationSchemes = "RedactorCookie,Cookies", Roles = "Redactor,Admin")]

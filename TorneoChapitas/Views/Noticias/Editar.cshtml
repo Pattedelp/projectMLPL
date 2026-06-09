@@ -1,0 +1,77 @@
+@model NuevaNoticiaViewModel
+@{
+    ViewBag.Title = "Editar Noticia";
+    ViewBag.ActivePage = "noticias";
+    var id = Context.Request.RouteValues["id"];
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">✏️</div>
+    <div class="page-hero-text">
+        <h1>Editar Noticia</h1>
+        <p>Sala de redacción · Torneo Chapitas</p>
+    </div>
+</div>
+
+<a asp-action="Redaccion" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:24px;">
+    ← Volver a redacción
+</a>
+
+@if (ViewBag.Error != null)
+{
+    <div style="background:rgba(224,85,85,.15);border-left:3px solid var(--color-red);color:var(--color-red);padding:10px 14px;border-radius:6px;margin-bottom:20px;">
+        ⚠️ @ViewBag.Error
+    </div>
+}
+
+<div class="form-card" style="max-width:700px;">
+    <form method="post" asp-action="Editar" asp-route-id="@id" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>Título *</label>
+            <input type="text" name="Titulo" value="@Model.Titulo" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+            <label>Contenido *</label>
+            <textarea name="Contenido" class="form-control" rows="8" required>@Model.Contenido</textarea>
+        </div>
+
+        <!-- Imagen actual -->
+        @if (!string.IsNullOrEmpty(Model.ImagenPrompt))
+        {
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--color-muted);margin-bottom:8px;">
+                    Imagen actual
+                </label>
+                <img src="@Model.ImagenPrompt" alt="imagen actual"
+                     style="max-width:300px;border-radius:8px;border:1px solid var(--color-border);"
+                     onerror="this.style.display='none'" />
+            </div>
+        }
+
+        <!-- Subir nueva imagen -->
+        <div class="form-group">
+            <label>Reemplazar imagen (opcional)</label>
+            <input type="file" name="imagenArchivo" accept="image/*"
+                   style="background:var(--color-bg3);border:1px solid var(--color-border);border-radius:8px;padding:10px;width:100%;color:var(--color-text);font-size:14px;" />
+            <p style="font-size:11px;color:var(--color-muted);margin-top:4px;">JPG, PNG o WebP. Máx 5MB.</p>
+        </div>
+
+        <!-- O generar nueva con Unsplash -->
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                <input type="checkbox" name="GenerarImagen" value="true"
+                       style="accent-color:var(--color-gold);width:16px;height:16px;" />
+                <span>Generar nueva imagen automática (Unsplash)</span>
+            </label>
+        </div>
+
+        <!-- Mantener imagen actual oculta -->
+        <input type="hidden" name="ImagenPrompt" value="@Model.ImagenPrompt" />
+
+        <div style="display:flex;gap:12px;margin-top:8px;">
+            <button type="submit" class="btn-primary">Guardar cambios</button>
+            <a asp-action="Redaccion" class="btn-cancelar">Cancelar</a>
+        </div>
+    </form>
+</div>

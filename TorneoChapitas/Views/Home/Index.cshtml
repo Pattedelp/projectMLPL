@@ -8,7 +8,8 @@
 <div class="home-hero">
     <div class="home-hero-content">
         <div class="home-hero-badge">
-            <img src="~/img/aac-logo.png" alt="AAC" style="width:76px;height:76px;border-radius:50%;object-fit:cover;" />
+            <img src="~/img/aac-logo.png" alt="AAC"
+                 style="width:76px;height:76px;border-radius:50%;object-fit:cover;" />
         </div>
         <div class="home-hero-text">
             <h1>TORNEO <span>CHAPITAS</span></h1>
@@ -50,8 +51,95 @@
     </div>
 </div>
 
+<!-- CARRUSEL DE NOTICIAS -->
+@if (Model.UltimasNoticias.Any())
+{
+    <div class="carrusel-section">
+        <div class="carrusel-header">
+            <h2 class="carrusel-titulo">📰 Últimas Noticias</h2>
+            <a asp-controller="Noticias" asp-action="Index" class="carrusel-ver-mas">Ver todas →</a>
+        </div>
+        <div class="carrusel-wrapper">
+            <button class="carrusel-btn carrusel-prev" onclick="moverCarrusel(-1)">‹</button>
+            <div class="carrusel-track-outer">
+                <div class="carrusel-track" id="carruselTrack">
+                    @foreach (var n in Model.UltimasNoticias)
+                    {
+                        <a asp-controller="Noticias" asp-action="Detalle" asp-route-id="@n.Id"
+                           class="carrusel-slide">
+                            <div class="carrusel-img"
+                                 style="@(!string.IsNullOrEmpty(n.ImagenUrl) ? $"background-image:url('{n.ImagenUrl}')" : "")">
+                                @if (string.IsNullOrEmpty(n.ImagenUrl))
+                                {
+                                    <span style="font-size:32px;">📰</span>
+                                }
+                            </div>
+                            <div class="carrusel-body">
+                                <span class="noticia-badge @(n.Tipo == "automatica" ? "badge-auto" : "badge-manual")" style="font-size:10px;">
+                                    @(n.Tipo == "automatica" ? "⚡ Auto" : "✍️")
+                                </span>
+                                <h3 class="carrusel-noticia-titulo">@n.Titulo</h3>
+                                <p class="carrusel-noticia-fecha">@n.CreatedAt.ToString("dd/MM/yyyy")</p>
+                            </div>
+                        </a>
+                    }
+                </div>
+            </div>
+            <button class="carrusel-btn carrusel-next" onclick="moverCarrusel(1)">›</button>
+        </div>
+        <div class="carrusel-dots" id="carruselDots"></div>
+    </div>
+}
+
 <!-- MINI TABLAS -->
 <div class="home-sections">
     @await Html.PartialAsync("_MiniTabla", Model.PrimeraDivision)
     @await Html.PartialAsync("_MiniTabla", Model.NacionalB)
 </div>
+
+@section Scripts {
+<script>
+let currentSlide = 0;
+const track  = document.getElementById('carruselTrack');
+if (track) {
+    const slides     = track.querySelectorAll('.carrusel-slide');
+    const dotsContainer = document.getElementById('carruselDots');
+    let slidesVisible = getSlidesVisible();
+    let total = Math.ceil(slides.length / slidesVisible);
+
+    function getSlidesVisible() {
+        return window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3;
+    }
+
+    function buildDots() {
+        slidesVisible = getSlidesVisible();
+        total = Math.ceil(slides.length / slidesVisible);
+        dotsContainer.innerHTML = '';
+        for (let i = 0; i < total; i++) {
+            const d = document.createElement('span');
+            d.className = 'carrusel-dot' + (i === 0 ? ' active' : '');
+            d.onclick = () => goTo(i);
+            dotsContainer.appendChild(d);
+        }
+    }
+
+    function goTo(idx) {
+        slidesVisible = getSlidesVisible();
+        total = Math.ceil(slides.length / slidesVisible);
+        currentSlide = Math.max(0, Math.min(idx, total - 1));
+        const pct = currentSlide * (100 / total);
+        track.style.transform = `translateX(-${pct * total / slides.length * slidesVisible}%)`;
+        document.querySelectorAll('.carrusel-dot').forEach((d, i) => {
+            d.classList.toggle('active', i === currentSlide);
+        });
+    }
+
+    window.moverCarrusel = (dir) => goTo(currentSlide + dir);
+    window.addEventListener('resize', () => { buildDots(); goTo(0); });
+    buildDots();
+
+    // Auto-avance cada 5 segundos
+    setInterval(() => goTo((currentSlide + 1) % total), 5000);
+}
+</script>
+}

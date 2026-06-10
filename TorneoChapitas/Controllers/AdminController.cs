@@ -30,14 +30,29 @@ namespace TorneoAmigos.Controllers
 
         // ── FINALIZAR TEMPORADA ─────────────────────────
         [HttpPost]
-        public IActionResult FinalizarTemporada()
+        public IActionResult FinalizarTemporada([FromBody] FinalizarTemporadaDto? dto)
         {
             var temporada = _tempRepo.GetTemporadaActiva();
             if (temporada == null) return Json(new { ok = false, msg = "No hay temporada activa" });
 
-            var tablaPrimera = _repo.GetTablaPosiciones(1);
-            var tablaB       = _repo.GetTablaPosiciones(2);
-            var ok = _tempRepo.FinalizarTemporada(temporada.Id, tablaPrimera, tablaB);
+            var tablaPrimera  = _repo.GetTablaPosiciones(1);
+            var tablaB        = _repo.GetTablaPosiciones(2);
+            bool sinDescensos = dto?.SinDescensos ?? false;
+
+            var ok = _tempRepo.FinalizarTemporada(temporada.Id, tablaPrimera, tablaB, sinDescensos);
+
+            // Registrar títulos de Copa y Supercopa si se indicaron
+            if (ok && dto?.CampeonCopaId > 0)
+            {
+                var tempNom = temporada.Nombre;
+                _tempRepo.AgregarTitulo(dto.CampeonCopaId, "campeon_copa", "Campeón Copa Argentina", temporada.Id, tempNom);
+            }
+            if (ok && dto?.CampeonSupercopaId > 0)
+            {
+                var tempNom = temporada.Nombre;
+                _tempRepo.AgregarTitulo(dto.CampeonSupercopaId, "campeon_supercopa", "Campeón Supercopa Argentina", temporada.Id, tempNom);
+            }
+
             return Json(new { ok, msg = ok ? "Temporada finalizada" : "Error al finalizar" });
         }
 
@@ -177,6 +192,44 @@ namespace TorneoAmigos.Controllers
         }
 
         [HttpGet]
+        public IActionResult AgregarJugador()
+        {
+            ViewBag.ActivePage = "admin";
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult GetPaisesTomados()
+        {
+            var todos = _repo.GetEquiposByDivision(1)
+                .Concat(_repo.GetEquiposByDivision(2))
+                .Where(e => !string.IsNullOrEmpty(e.FlagCode))
+                .Select(e => new { equipo = e.Nombre, flagCode = e.FlagCode })
+                .ToList();
+            return Json(todos);
+        }
+
+        [HttpPost]
+        public IActionResult AgregarJugador([FromBody] NuevoJugadorDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Nombre)) return Json(new { ok = false, msg = "Nombre requerido" });
+            try
+            {
+                using var conn = new Npgsql.NpgsqlConnection(
+                    HttpContext.RequestServices.GetRequiredService<IConfiguration>().GetConnectionString("TorneoAmigosDB"));
+                using var cmd = new Npgsql.NpgsqlCommand(
+                    "INSERT INTO equipos (divisionid, nombre, colorprincipal, colorsecundario, activo, pais_code) VALUES (@D, @N, '#003366', '#FFD700', true, @P) RETURNING id", conn);
+                cmd.Parameters.AddWithValue("@D", dto.DivisionId);
+                cmd.Parameters.AddWithValue("@N", dto.Nombre.Trim());
+                cmd.Parameters.AddWithValue("@P", string.IsNullOrEmpty(dto.PaisCode) ? (object)DBNull.Value : dto.PaisCode);
+                conn.Open();
+                var id = Convert.ToInt32(cmd.ExecuteScalar());
+                return Json(new { ok = true, id });
+            }
+            catch (Exception ex) { return Json(new { ok = false, msg = ex.Message }); }
+        }
+
+        [HttpGet]
         public IActionResult GetEquiposPrimera()
         {
             var equipos = _repo.GetEquiposByDivision(1)
@@ -194,11 +247,25 @@ namespace TorneoAmigos.Controllers
         }
     }
 
+    public class NuevoJugadorDto
+    {
+        public string Nombre { get; set; } = "";
+        public string? PaisCode { get; set; }
+        public int DivisionId { get; set; } = 2;
+    }
+
     public class RegistrarTituloDto
     {
         public int EquipoId { get; set; }
         public string TipoTitulo { get; set; } = "";
         public string NombreTitulo { get; set; } = "";
+    }
+
+    public class FinalizarTemporadaDto
+    {
+        public bool SinDescensos { get; set; } = false;
+        public int CampeonCopaId { get; set; }
+        public int CampeonSupercopaId { get; set; }
     }
 
     public class SortearCopaDto

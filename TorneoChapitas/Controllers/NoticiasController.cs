@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TorneoAmigos.Data;
 using TorneoAmigos.Models;
-
+ 
 namespace TorneoAmigos.Controllers
 {
     public class NoticiasController : Controller

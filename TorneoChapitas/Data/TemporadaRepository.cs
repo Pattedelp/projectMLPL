@@ -71,7 +71,7 @@ namespace TorneoAmigos.Data
 
         // ── FINALIZAR TEMPORADA ─────────────────────────
 
-        public bool FinalizarTemporada(int temporadaId, List<PosicionViewModel> tablaPrimera, List<PosicionViewModel> tablaB)
+        public bool FinalizarTemporada(int temporadaId, List<PosicionViewModel> tablaPrimera, List<PosicionViewModel> tablaB, bool sinDescensos = false)
         {
             using var conn = GetConnection();
             conn.Open();
@@ -89,6 +89,28 @@ namespace TorneoAmigos.Data
                 cmd.ExecuteNonQuery();
                 tx.Commit();
 
+                // Mover equipos entre divisiones
+                // Ascensos (siempre se aplican)
+                if (tablaB.Count >= 2)
+                {
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var eq = tablaB[i];
+                        if (eq.EquipoId > 0)
+                            EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 1 WHERE id = @Id", eq.EquipoId);
+                    }
+                }
+                // Descensos (solo si NO es temporada sin descensos)
+                if (!sinDescensos && tablaPrimera.Count >= 2)
+                {
+                    for (int i = tablaPrimera.Count - 2; i < tablaPrimera.Count; i++)
+                    {
+                        var eq = tablaPrimera[i];
+                        if (eq.EquipoId > 0)
+                            EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", eq.EquipoId);
+                    }
+                }
+
                 // Registrar títulos en el palmarés
                 var temporadaNombre = GetTodasLasTemporadas().FirstOrDefault(t => t.Id == temporadaId)?.Nombre ?? $"Temporada {temporadaId}";
                 if (tablaPrimera.Any())
@@ -96,21 +118,29 @@ namespace TorneoAmigos.Data
                     var campeon = tablaPrimera.First();
                     AgregarTitulo(campeon.EquipoId, "campeon_torneo", "Campeón Primera División", temporadaId, temporadaNombre);
                 }
+                // Campeón de la B
+                if (tablaB.Any())
+                {
+                    var campeonB = tablaB.First();
+                    AgregarTitulo(campeonB.EquipoId, "campeon_primera_b", "Campeón Primera Nacional", temporadaId, temporadaNombre);
+                }
 
                 return true;
             }
             catch { tx.Rollback(); return false; }
         }
 
+        private bool _sinDescensos = false;
+
         private void GuardarResultados(NpgsqlConnection conn, NpgsqlTransaction tx,
-            int temporadaId, int divisionId, List<PosicionViewModel> tabla)
+            int temporadaId, int divisionId, List<PosicionViewModel> tabla, bool sinDescensos = false)
         {
             int totalEquipos = tabla.Count;
             for (int i = 0; i < tabla.Count; i++)
             {
                 var f = tabla[i];
                 bool campeon   = divisionId == 1 && i == 0;
-                bool descendio = divisionId == 1 && i >= totalEquipos - 2;
+                bool descendio = !sinDescensos && divisionId == 1 && i >= totalEquipos - 2;
                 bool ascendio  = divisionId == 2 && i < 2;
 
                 using var cmd = new NpgsqlCommand(@"
@@ -359,7 +389,7 @@ namespace TorneoAmigos.Data
             return lista;
         }
 
-        public int SortearCopaArgentina(int temporadaId, List<int> todosLosEquipos)
+        public int SortearCopaArgentina(int temporadaId, List<int> equiposPrimera, List<int> equiposB)
         {
             using var conn = GetConnection();
             conn.Open();
@@ -375,90 +405,94 @@ namespace TorneoAmigos.Data
                     copaId = Convert.ToInt32(cmd.ExecuteScalar());
                 }
 
-                // Mezclar equipos aleatoriamente
-                var equipos = todosLosEquipos.OrderBy(_ => Guid.NewGuid()).ToList();
-                int n = equipos.Count;
+                // Mezclar aleatoriamente dentro de cada grupo
+                var primera = equiposPrimera.OrderBy(_ => Guid.NewGuid()).ToList();
+                var b       = equiposB.OrderBy(_ => Guid.NewGuid()).ToList();
 
-                // Determinar rondas según cantidad de equipos
-                // Buscamos la potencia de 2 mayor o igual a n
-                int tamañoBracket = 1;
-                while (tamañoBracket < n) tamañoBracket *= 2;
-                int byes = tamañoBracket - n; // equipos que pasan directo
+                int nPrimera = primera.Count; // ej: 12
+                int nB       = b.Count;       // ej: 12
 
-                // Crear rondas
-                var rondas = new List<string>();
-                int tam = tamañoBracket;
-                while (tam >= 2)
-                {
-                    if (tam == tamañoBracket && byes > 0) rondas.Add("Fase Previa");
-                    else if (tam == 16) rondas.Add("Octavos de Final");
-                    else if (tam == 8)  rondas.Add("Cuartos de Final");
-                    else if (tam == 4)  rondas.Add("Semifinales");
-                    else if (tam == 2)  rondas.Add("Final");
-                    tam /= 2;
-                }
-                // Si tamañoBracket == n (potencia exacta), ajustar nombres
-                if (byes == 0)
-                {
-                    rondas.Clear();
-                    tam = n;
-                    while (tam >= 2)
-                    {
-                        if (tam == 16) rondas.Add("Octavos de Final");
-                        else if (tam == 8)  rondas.Add("Cuartos de Final");
-                        else if (tam == 4)  rondas.Add("Semifinales");
-                        else if (tam == 2)  rondas.Add("Final");
-                        else rondas.Add($"Ronda de {tam}");
-                        tam /= 2;
-                    }
-                }
+                // Cruces directos: cada equipo de B vs uno de Primera
+                int crucesDirectos = Math.Min(nPrimera, nB);
+                int sobranB        = nB - crucesDirectos; // B sin rival → van a fase previa
 
-                var rondaIds = new List<int>();
-                for (int i = 0; i < rondas.Count; i++)
+                // Rondas a crear
+                var rondas = new List<(string nombre, int orden, bool habilitada)>();
+                if (sobranB > 0)
+                    rondas.Add(("Fase Previa", 1, true));
+
+                // Determinar nombre de ronda principal según cantidad de cruces
+                int totalRonda1 = crucesDirectos + (sobranB > 0 ? sobranB / 2 : 0);
+                // después de fase previa, los ganadores + directos = crucesDirectos + ceil(sobranB/2)
+                int partidosRonda1 = crucesDirectos + (int)Math.Ceiling(sobranB / 2.0);
+
+                string nombreRonda1 = partidosRonda1 switch {
+                    >= 8 => "Octavos de Final",
+                    >= 4 => "Cuartos de Final",
+                    >= 2 => "Semifinales",
+                    _    => "Final"
+                };
+                rondas.Add((nombreRonda1, sobranB > 0 ? 2 : 1, sobranB == 0));
+
+                // Semifinales si hay octavos o cuartos
+                if (partidosRonda1 >= 4)
+                    rondas.Add(("Semifinales", rondas.Count + 1, false));
+                if (partidosRonda1 >= 8 || (partidosRonda1 >= 4))
+                    rondas.Add(("Final", rondas.Count + 1, false));
+                // Asegurar que siempre haya Final
+                if (!rondas.Any(r => r.nombre == "Final"))
+                    rondas.Add(("Final", rondas.Count + 1, false));
+                // Deduplicar
+                rondas = rondas.GroupBy(r => r.nombre).Select(g => g.First()).ToList();
+
+                // Insertar rondas
+                var rondaIds = new Dictionary<string, int>();
+                foreach (var (nombre, orden, habilitada) in rondas)
                 {
                     int rondaId;
                     using var cmd = new NpgsqlCommand(
                         "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, @N, @O, @H) RETURNING id", conn, tx);
                     cmd.Parameters.AddWithValue("@C", copaId);
-                    cmd.Parameters.AddWithValue("@N", rondas[i]);
-                    cmd.Parameters.AddWithValue("@O", i + 1);
-                    cmd.Parameters.AddWithValue("@H", i == 0); // primera ronda habilitada
+                    cmd.Parameters.AddWithValue("@N", nombre);
+                    cmd.Parameters.AddWithValue("@O", orden);
+                    cmd.Parameters.AddWithValue("@H", habilitada);
                     rondaId = Convert.ToInt32(cmd.ExecuteScalar());
-                    rondaIds.Add(rondaId);
+                    rondaIds[nombre] = rondaId;
                 }
 
-                // Llenar primera ronda con los partidos reales
-                int primeraRondaId = rondaIds[0];
-                int posicion = 0;
-                // Los primeros 'byes*2' equipos se emparejan en la fase previa
-                // El resto pasan directo a la siguiente ronda (se insertan como TBD)
-                int enFasePrevia = (n - byes) * 0; // = 0 si no hay byes
-                if (byes > 0)
+                int pos = 0;
+
+                // Fase Previa: equipos sobrantes de B entre sí
+                if (sobranB > 0 && rondaIds.ContainsKey("Fase Previa"))
                 {
-                    // Equipos en fase previa: los últimos (n - byes) equipos se emparejan
-                    // Los primeros 'byes' pasan directo
-                    int enPrevia = n - byes;
-                    for (int i = 0; i < enPrevia / 2; i++)
-                    {
-                        InsertarPartidoCopa(conn, tx, primeraRondaId, copaId,
-                            equipos[byes + i * 2], equipos[byes + i * 2 + 1], posicion++);
-                    }
-                }
-                else
-                {
-                    // Todos entran en la primera ronda
-                    for (int i = 0; i < n / 2; i++)
-                        InsertarPartidoCopa(conn, tx, primeraRondaId, copaId,
-                            equipos[i * 2], equipos[i * 2 + 1], posicion++);
+                    var sobrantesB = b.Skip(crucesDirectos).ToList();
+                    for (int i = 0; i + 1 < sobrantesB.Count; i += 2)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa"], copaId, sobrantesB[i], sobrantesB[i + 1], pos++);
+                    if (sobrantesB.Count % 2 != 0)
+                        InsertarPartidoCopaVacio(conn, tx, rondaIds["Fase Previa"], copaId, pos++);
                 }
 
-                // Crear partidos vacíos para rondas siguientes
-                int partidosSiguiente = tamañoBracket / 4;
-                for (int ri = 1; ri < rondaIds.Count; ri++)
+                // Ronda principal: Primera vs B
+                if (rondaIds.ContainsKey(nombreRonda1))
                 {
-                    for (int p = 0; p < partidosSiguiente; p++)
-                        InsertarPartidoCopaVacio(conn, tx, rondaIds[ri], copaId, p);
-                    partidosSiguiente /= 2;
+                    for (int i = 0; i < crucesDirectos; i++)
+                        InsertarPartidoCopa(conn, tx, rondaIds[nombreRonda1], copaId, primera[i], b[i], pos++);
+                    // Ganadores de fase previa (vacíos por ahora)
+                    int ganadoresFasePrevia = (int)Math.Ceiling(sobranB / 2.0);
+                    for (int i = 0; i < ganadoresFasePrevia; i++)
+                        InsertarPartidoCopaVacio(conn, tx, rondaIds[nombreRonda1], copaId, pos++);
+                }
+
+                // Rondas siguientes vacías
+                foreach (var rondaNom in new[] { "Semifinales", "Final" })
+                {
+                    if (!rondaIds.ContainsKey(rondaNom)) continue;
+                    int prev = rondaIds.Values.OrderBy(x => x).SkipWhile(x => x != rondaIds[rondaNom]).Skip(1).FirstOrDefault();
+                    // Insertar partidos vacíos
+                    int cantPrev = rondas.IndexOf(rondas.First(r => r.nombre == rondaNom));
+                    int partidos = (int)Math.Pow(2, rondas.Count - 1 - cantPrev);
+                    for (int i = 0; i < Math.Max(1, partidos / 2); i++)
+                        InsertarPartidoCopaVacio(conn, tx, rondaIds[rondaNom], copaId, i);
                 }
 
                 tx.Commit();
@@ -466,6 +500,7 @@ namespace TorneoAmigos.Data
             }
             catch (Exception ex) { tx.Rollback(); throw new Exception("Error sorteando copa: " + ex.Message); }
         }
+
 
         public int SortearSupercopa(int temporadaId, int campeonId, int subcampeonId, int campeonCopaId, bool conSemifinal = false)
         {

@@ -22,9 +22,11 @@ namespace TorneoAmigos.Data
         {
             var lista = new List<Noticia>();
             var where = soloPublicadas ? "WHERE publicada = true" : "";
+            // NO traemos imagen_url en el listado — puede ser Base64 enorme
+            // Solo traemos un flag de si tiene imagen o no
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(
-                $"SELECT id, titulo, contenido, imagen_url, tipo, autor, publicada, created_at FROM noticias {where} ORDER BY created_at DESC", conn);
+                $"SELECT id, titulo, contenido, CASE WHEN imagen_url IS NOT NULL AND imagen_url != '' THEN 'HAS_IMAGE' ELSE NULL END, tipo, autor, publicada, created_at FROM noticias {where} ORDER BY created_at DESC", conn);
             conn.Open();
             using var r = cmd.ExecuteReader();
             while (r.Read()) lista.Add(MapNoticia(r));
@@ -33,6 +35,7 @@ namespace TorneoAmigos.Data
 
         public Noticia? GetNoticiaById(int id)
         {
+            // Acá SÍ traemos imagen_url completa (solo para el detalle)
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(
                 "SELECT id, titulo, contenido, imagen_url, tipo, autor, publicada, created_at FROM noticias WHERE id = @Id", conn);
@@ -40,6 +43,17 @@ namespace TorneoAmigos.Data
             conn.Open();
             using var r = cmd.ExecuteReader();
             return r.Read() ? MapNoticia(r) : null;
+        }
+
+        public string? GetImagenUrl(int id)
+        {
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(
+                "SELECT imagen_url FROM noticias WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@Id", id);
+            conn.Open();
+            var result = cmd.ExecuteScalar();
+            return result == DBNull.Value ? null : result as string;
         }
 
         public int CrearNoticia(string titulo, string contenido, string? imagenUrl, string tipo, string autor)

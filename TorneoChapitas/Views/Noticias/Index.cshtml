@@ -45,8 +45,8 @@ else
     <a asp-action="Detalle" asp-route-id="@primera.Id" class="noticia-destacada">
         @if (!string.IsNullOrEmpty(primera.ImagenUrl))
         {
-            <div class="noticia-destacada-img noticia-img-lazy"
-                 data-src="@primera.ImagenUrl"
+            <div class="noticia-destacada-img @(primera.ImagenUrl == "HAS_IMAGE" ? "noticia-img-lazy" : "")"
+                 data-src="@(primera.ImagenUrl == "HAS_IMAGE" ? $"/Noticias/Imagen/{primera.Id}" : "")"
                  style="background-color:var(--color-bg3);">
                 <div class="img-placeholder-text">⚽ Cargando imagen...</div>
             </div>
@@ -73,8 +73,8 @@ else
                 <a asp-action="Detalle" asp-route-id="@n.Id" class="noticia-card">
                     @if (!string.IsNullOrEmpty(n.ImagenUrl))
                     {
-                        <div class="noticia-card-img noticia-img-lazy"
-                             data-src="@n.ImagenUrl"
+                        <div class="noticia-card-img @(n.ImagenUrl == "HAS_IMAGE" ? "noticia-img-lazy" : "")"
+                             data-src="@(n.ImagenUrl == "HAS_IMAGE" ? $"/Noticias/Imagen/{n.Id}" : "")"
                              style="background-color:var(--color-bg3);">
                             <div class="img-placeholder-text" style="font-size:20px;">⚽</div>
                         </div>
@@ -101,21 +101,22 @@ else
 
 @section Scripts {
 <script>
-// Carga lazy de imágenes de Pollinations
-document.querySelectorAll('.noticia-img-lazy').forEach(div => {
-    const src = div.dataset.src;
-    if (!src) return;
+// Carga lazy de imágenes por ID — evita traer Base64 enorme en el listado
+document.querySelectorAll('.noticia-img-lazy[data-img-id]').forEach(div => {
+    const id = div.dataset.imgId;
+    if (!id) return;
+    const src = `/Noticias/Imagen/${id}`;
     const img = new Image();
     img.onload = () => {
-        div.style.backgroundImage = `url('${src}')`;
-        div.style.backgroundSize  = 'cover';
+        div.style.backgroundImage    = `url('${src}')`;
+        div.style.backgroundSize     = 'cover';
         div.style.backgroundPosition = 'center';
-        const placeholder = div.querySelector('.img-placeholder-text');
-        if (placeholder) placeholder.style.display = 'none';
+        const ph = div.querySelector('.img-placeholder-text');
+        if (ph) ph.style.display = 'none';
     };
     img.onerror = () => {
-        const placeholder = div.querySelector('.img-placeholder-text');
-        if (placeholder) placeholder.textContent = '📰';
+        const ph = div.querySelector('.img-placeholder-text');
+        if (ph) ph.textContent = '📰';
     };
     img.src = src;
 });

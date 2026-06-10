@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TorneoAmigos.Data;
 using TorneoAmigos.Models;
- 
+
 namespace TorneoAmigos.Controllers
 {
     public class NoticiasController : Controller
@@ -37,6 +37,23 @@ namespace TorneoAmigos.Controllers
             return View(vm);
         }
 
+        // Endpoint para cargar imagen de forma lazy (evita traer Base64 en el listado)
+        [HttpGet]
+        public IActionResult Imagen(int id)
+        {
+            var url = _repo.GetImagenUrl(id);
+            if (string.IsNullOrEmpty(url)) return NotFound();
+            // Si es Base64, devolver como imagen directamente
+            if (url.StartsWith("data:"))
+            {
+                var parts    = url.Split(',');
+                var mimeType = parts[0].Replace("data:", "").Replace(";base64", "");
+                var bytes    = Convert.FromBase64String(parts[1]);
+                return File(bytes, mimeType);
+            }
+            return Redirect(url);
+        }
+
         public IActionResult Detalle(int id)
         {
             ViewBag.ActivePage = "noticias";
@@ -44,6 +61,25 @@ namespace TorneoAmigos.Controllers
             if (noticia == null) return NotFound();
             ViewBag.Comentarios = _comentarios.GetComentarios(id);
             return View(noticia);
+        }
+
+        // Endpoint para cargar imagen lazy — evita traer Base64 en el listado
+        [HttpGet]
+        public IActionResult Imagen(int id)
+        {
+            var url = _repo.GetImagenUrl(id);
+            if (string.IsNullOrEmpty(url)) return NotFound();
+
+            // Si es Base64, convertir a bytes y devolver como imagen
+            if (url.StartsWith("data:"))
+            {
+                var parts    = url.Split(',');
+                var mimeType = parts[0].Split(':')[1].Split(';')[0];
+                var bytes    = Convert.FromBase64String(parts[1]);
+                return File(bytes, mimeType);
+            }
+            // Si es URL externa, redirigir
+            return Redirect(url);
         }
 
         [HttpPost]

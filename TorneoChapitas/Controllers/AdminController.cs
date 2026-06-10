@@ -222,16 +222,38 @@ namespace TorneoAmigos.Controllers
             if (string.IsNullOrWhiteSpace(dto.Nombre)) return Json(new { ok = false, msg = "Nombre requerido" });
             try
             {
-                using var conn = new Npgsql.NpgsqlConnection(
-                    HttpContext.RequestServices.GetRequiredService<IConfiguration>().GetConnectionString("TorneoAmigosDB"));
-                using var cmd = new Npgsql.NpgsqlCommand(
-                    "INSERT INTO equipos (divisionid, nombre, colorprincipal, colorsecundario, activo, pais_code) VALUES (@D, @N, '#003366', '#FFD700', true, @P) RETURNING id", conn);
-                cmd.Parameters.AddWithValue("@D", dto.DivisionId);
-                cmd.Parameters.AddWithValue("@N", dto.Nombre.Trim());
-                cmd.Parameters.AddWithValue("@P", string.IsNullOrEmpty(dto.PaisCode) ? (object)DBNull.Value : dto.PaisCode);
+                var connStr = HttpContext.RequestServices.GetRequiredService<IConfiguration>().GetConnectionString("TorneoAmigosDB");
+                using var conn = new Npgsql.NpgsqlConnection(connStr);
                 conn.Open();
-                var id = Convert.ToInt32(cmd.ExecuteScalar());
-                return Json(new { ok = true, id });
+
+                // Verificar si ya existe con ese nombre exacto (jugador retirado que vuelve)
+                using var check = new Npgsql.NpgsqlCommand(
+                    "SELECT id FROM equipos WHERE LOWER(nombre) = LOWER(@N) LIMIT 1", conn);
+                check.Parameters.AddWithValue("@N", dto.Nombre.Trim());
+                var existeId = check.ExecuteScalar();
+
+                if (existeId != null && existeId != DBNull.Value)
+                {
+                    // Jugador ya existe — reactivar y actualizar país y división
+                    using var upd = new Npgsql.NpgsqlCommand(
+                        "UPDATE equipos SET activo = true, divisionid = @D, pais_code = @P WHERE id = @Id", conn);
+                    upd.Parameters.AddWithValue("@D",  dto.DivisionId);
+                    upd.Parameters.AddWithValue("@P",  string.IsNullOrEmpty(dto.PaisCode) ? (object)DBNull.Value : dto.PaisCode);
+                    upd.Parameters.AddWithValue("@Id", Convert.ToInt32(existeId));
+                    upd.ExecuteNonQuery();
+                    return Json(new { ok = true, id = Convert.ToInt32(existeId), reactivado = true });
+                }
+                else
+                {
+                    // Jugador nuevo — insertar
+                    using var cmd = new Npgsql.NpgsqlCommand(
+                        "INSERT INTO equipos (divisionid, nombre, colorprincipal, colorsecundario, activo, pais_code) VALUES (@D, @N, '#003366', '#FFD700', true, @P) RETURNING id", conn);
+                    cmd.Parameters.AddWithValue("@D", dto.DivisionId);
+                    cmd.Parameters.AddWithValue("@N", dto.Nombre.Trim());
+                    cmd.Parameters.AddWithValue("@P", string.IsNullOrEmpty(dto.PaisCode) ? (object)DBNull.Value : dto.PaisCode);
+                    var id = Convert.ToInt32(cmd.ExecuteScalar());
+                    return Json(new { ok = true, id, reactivado = false });
+                }
             }
             catch (Exception ex) { return Json(new { ok = false, msg = ex.Message }); }
         }

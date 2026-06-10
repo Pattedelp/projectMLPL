@@ -1,0 +1,188 @@
+@{
+    ViewBag.Title = "Agregar Jugador";
+    ViewBag.ActivePage = "admin";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">➕</div>
+    <div class="page-hero-text">
+        <h1>Agregar Jugador</h1>
+        <p>Nuevo participante · Torneo Chapitas</p>
+    </div>
+</div>
+
+<a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:24px;">
+    ← Volver al panel
+</a>
+
+<div style="max-width:500px;">
+    <div id="msg-ok" style="display:none;background:rgba(76,175,130,.15);border-left:3px solid var(--color-green);color:var(--color-green);padding:12px 20px;border-radius:6px;margin-bottom:20px;"></div>
+    <div id="msg-err" style="display:none;background:rgba(224,85,85,.15);border-left:3px solid var(--color-red);color:var(--color-red);padding:12px 20px;border-radius:6px;margin-bottom:20px;"></div>
+
+    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:28px;">
+
+        <div class="form-group">
+            <label>Nombre del jugador</label>
+            <input type="text" id="inp-nombre" class="form-control"
+                   placeholder="Ej: Yornier" maxlength="50" style="max-width:280px;" />
+        </div>
+
+        <div class="form-group">
+            <label>País / Bandera</label>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <select id="sel-pais" class="form-control" style="max-width:260px;">
+                    <option value="">-- Seleccioná un país --</option>
+                </select>
+                <img id="preview-bandera" src="" alt=""
+                     style="display:none;height:24px;border-radius:2px;border:1px solid var(--color-border);" />
+            </div>
+            <p id="pais-tomado-msg" style="display:none;font-size:12px;color:var(--color-red);margin-top:6px;"></p>
+        </div>
+
+        <div class="form-group">
+            <label>División</label>
+            <select id="sel-division" class="form-control" style="max-width:220px;">
+                <option value="2" selected>🥈 Primera Nacional</option>
+                <option value="1">🏆 Primera División</option>
+            </select>
+        </div>
+
+        <button id="btn-agregar" class="btn-primary" onclick="agregarJugador()">
+            ➕ Agregar Jugador
+        </button>
+    </div>
+
+    <!-- Lista de jugadores recién agregados -->
+    <div id="agregados" style="margin-top:24px;"></div>
+</div>
+
+@section Scripts {
+<script>
+const PAISES = [
+    {code:'rs',name:'Serbia'},{code:'sn',name:'Senegal'},{code:'cm',name:'Camerún'},
+    {code:'ca',name:'Canadá'},{code:'qa',name:'Qatar'},{code:'gh',name:'Ghana'},
+    {code:'dz',name:'Argelia'},{code:'au',name:'Australia'},{code:'cn',name:'China'},
+    {code:'hr',name:'Croacia'},{code:'eg',name:'Egipto'},{code:'gb',name:'Inglaterra'},
+    {code:'fr',name:'Francia'},{code:'id',name:'Indonesia'},{code:'jp',name:'Japón'},
+    {code:'my',name:'Malasia'},{code:'mx',name:'México'},{code:'ma',name:'Marruecos'},
+    {code:'ng',name:'Nigeria'},{code:'pe',name:'Perú'},{code:'pt',name:'Portugal'},
+    {code:'ru',name:'Rusia'},{code:'sa',name:'Arabia Saudita'},{code:'kr',name:'Corea del Sur'},
+    {code:'th',name:'Tailandia'},{code:'tn',name:'Túnez'},{code:'tr',name:'Turquía'},
+    {code:'pl',name:'Polonia'}
+];
+
+let paisesTomados = {};
+
+// Cargar países ya tomados
+fetch('/Admin/GetPaisesTomados')
+    .then(r => r.json())
+    .then(data => {
+        data.forEach(e => { paisesTomados[e.flagCode] = e.equipo; });
+        buildSelect();
+    });
+
+function buildSelect() {
+    const sel = document.getElementById('sel-pais');
+    sel.innerHTML = '<option value="">-- Seleccioná un país --</option>';
+    PAISES.forEach(p => {
+        const opt      = document.createElement('option');
+        opt.value      = p.code;
+        const tomado   = paisesTomados[p.code];
+        if (tomado) {
+            opt.textContent = `${p.name} — tomado por ${tomado}`;
+            opt.disabled    = true;
+            opt.style.color = '#555';
+        } else {
+            opt.textContent = p.name;
+        }
+        sel.appendChild(opt);
+    });
+}
+
+// Preview de bandera al seleccionar
+document.getElementById('sel-pais').addEventListener('change', function() {
+    const code    = this.value;
+    const preview = document.getElementById('preview-bandera');
+    const msg     = document.getElementById('pais-tomado-msg');
+
+    if (code) {
+        preview.src           = `https://flagcdn.com/32x24/${code}.png`;
+        preview.style.display = 'inline';
+        msg.style.display     = 'none';
+    } else {
+        preview.style.display = 'none';
+    }
+});
+
+async function agregarJugador() {
+    const nombre     = document.getElementById('inp-nombre').value.trim();
+    const paisCode   = document.getElementById('sel-pais').value;
+    const divisionId = parseInt(document.getElementById('sel-division').value);
+    const msgOk      = document.getElementById('msg-ok');
+    const msgErr     = document.getElementById('msg-err');
+
+    msgOk.style.display = msgErr.style.display = 'none';
+
+    if (!nombre) {
+        msgErr.textContent    = '⚠️ El nombre es obligatorio.';
+        msgErr.style.display  = 'block';
+        return;
+    }
+
+    const btn = document.getElementById('btn-agregar');
+    btn.textContent = 'Guardando...';
+    btn.disabled    = true;
+
+    try {
+        const r = await fetch('/Admin/AgregarJugador', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ nombre, paisCode, divisionId })
+        });
+        const d = await r.json();
+
+        if (d.ok) {
+            if (paisCode) paisesTomados[paisCode] = nombre;
+            buildSelect();
+
+            const esReactivado = d.reactivado;
+            const div  = document.getElementById('agregados');
+            const item = document.createElement('div');
+            item.style.cssText = 'background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;';
+            item.innerHTML = `
+                ${paisCode ? `<img src="https://flagcdn.com/20x15/${paisCode}.png" style="border-radius:2px;" />` : '<span>🏴</span>'}
+                <strong style="font-size:14px;">${nombre}</strong>
+                <span style="font-size:12px;color:var(--color-muted);">${divisionId === 1 ? 'Primera División' : 'Primera Nacional'}</span>
+                <span style="font-size:11px;color:${esReactivado ? '#f0c040' : 'var(--color-green)'};margin-left:auto;">
+                    ${esReactivado ? '↩️ Reactivado' : '✓ Agregado'}
+                </span>
+            `;
+            div.insertBefore(item, div.firstChild);
+
+            document.getElementById('inp-nombre').value   = '';
+            document.getElementById('sel-pais').value     = '';
+            document.getElementById('preview-bandera').style.display = 'none';
+
+            msgOk.textContent   = esReactivado
+                ? `↩️ ${nombre} fue reactivado y actualizado correctamente.`
+                : `✅ ${nombre} agregado correctamente.`;
+            msgOk.style.display = 'block';
+        } else {
+            msgErr.textContent   = '⚠️ Error: ' + (d.msg || 'Intentá de nuevo.');
+            msgErr.style.display = 'block';
+        }
+    } catch {
+        msgErr.textContent   = '⚠️ Error de conexión.';
+        msgErr.style.display = 'block';
+    }
+
+    btn.textContent = '➕ Agregar Jugador';
+    btn.disabled    = false;
+}
+
+// Enter para agregar
+document.getElementById('inp-nombre').addEventListener('keydown', e => {
+    if (e.key === 'Enter') agregarJugador();
+});
+</script>
+}

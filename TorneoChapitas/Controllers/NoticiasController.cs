@@ -63,25 +63,6 @@ namespace TorneoAmigos.Controllers
             return View(noticia);
         }
 
-        // Endpoint para cargar imagen lazy — evita traer Base64 en el listado
-        [HttpGet]
-        public IActionResult Imagen(int id)
-        {
-            var url = _repo.GetImagenUrl(id);
-            if (string.IsNullOrEmpty(url)) return NotFound();
-
-            // Si es Base64, convertir a bytes y devolver como imagen
-            if (url.StartsWith("data:"))
-            {
-                var parts    = url.Split(',');
-                var mimeType = parts[0].Split(':')[1].Split(';')[0];
-                var bytes    = Convert.FromBase64String(parts[1]);
-                return File(bytes, mimeType);
-            }
-            // Si es URL externa, redirigir
-            return Redirect(url);
-        }
-
         [HttpPost]
         public IActionResult AgregarComentario(int id, string autor, string? paisFlag, string contenido)
         {

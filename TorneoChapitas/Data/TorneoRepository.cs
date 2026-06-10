@@ -14,8 +14,7 @@ namespace TorneoAmigos.Data
             {"Tiago S","ua"},{"Enzo","de"},
             {"Joan","kr"},{"Pocho","ec"},{"Jere","br"},{"Fede O","es"},
             {"Tomás","vn"},{"Carlos","co"},{"Sebas C","ar"},{"Santino","uy"},{"Lucas G","ph"},
-            ,
-            // Jugadores históricos activos
+            /// Jugadores históricos activos
             {"Pato L","nl"},{"Nahuel G","us"},{"Juani S","cr"},{"Valen M","ma"},{"Gonza","se"},
             // Jugadores retirados
             {"Monti","retired"},{"Pipe","retired"},{"Nacho M","retired"},

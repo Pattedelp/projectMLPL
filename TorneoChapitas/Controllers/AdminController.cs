@@ -134,16 +134,23 @@ namespace TorneoAmigos.Controllers
             var temporada = _tempRepo.GetTemporadaActiva();
             if (temporada == null) return Json(new { ok = false, msg = "No hay temporada activa" });
 
-            List<int> equipos;
-            if (dto?.Equipos != null && dto.Equipos.Any())
-                equipos = dto.Equipos;
+            List<int> equiposPrimera;
+            List<int> equiposB;
+
+            if (dto?.EquiposPrimera != null && dto.EquiposPrimera.Any())
+            {
+                equiposPrimera = dto.EquiposPrimera;
+                equiposB       = dto.EquiposB ?? new List<int>();
+            }
             else
-                equipos = _repo.GetEquiposByDivision(1).Select(e => e.Id)
-                    .Concat(_repo.GetEquiposByDivision(2).Select(e => e.Id)).ToList();
+            {
+                equiposPrimera = _repo.GetEquiposByDivision(1).Select(e => e.Id).ToList();
+                equiposB       = _repo.GetEquiposByDivision(2).Select(e => e.Id).ToList();
+            }
 
             try
             {
-                _tempRepo.SortearCopaArgentina(temporada.Id, equipos);
+                _tempRepo.SortearCopaArgentina(temporada.Id, equiposPrimera, equiposB);
                 return Json(new { ok = true });
             }
             catch (Exception ex) { return Json(new { ok = false, msg = ex.Message }); }
@@ -270,7 +277,8 @@ namespace TorneoAmigos.Controllers
 
     public class SortearCopaDto
     {
-        public List<int> Equipos { get; set; } = new();
+        public List<int>? EquiposPrimera { get; set; }
+        public List<int>? EquiposB { get; set; }
     }
 
     public class SortearSupercopaDto

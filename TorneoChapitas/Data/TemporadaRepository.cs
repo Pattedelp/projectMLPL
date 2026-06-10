@@ -130,8 +130,6 @@ namespace TorneoAmigos.Data
             catch { tx.Rollback(); return false; }
         }
 
-        private bool _sinDescensos = false;
-
         private void GuardarResultados(NpgsqlConnection conn, NpgsqlTransaction tx,
             int temporadaId, int divisionId, List<PosicionViewModel> tabla, bool sinDescensos = false)
         {

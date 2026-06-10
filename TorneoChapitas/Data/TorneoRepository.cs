@@ -21,7 +21,7 @@ namespace TorneoAmigos.Data
             {"Juanma","retired"},{"Bauti","retired"},
             {"Juli V","retired"},{"Santi DM","retired"},{"Tomi V","retired"},
             {"Juanchi C","retired"},{"Nico M","retired"}
-        }; 
+        };
         public static string GetCode(string nombre) =>
             _codes.TryGetValue(nombre, out var c) ? c : "";
 

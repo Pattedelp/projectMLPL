@@ -356,7 +356,9 @@ namespace TorneoAmigos.Data
             const string sql = @"
                 SELECT cp.id, cp.ronda_id, cp.copa_id,
                        cp.equipo_local_id, COALESCE(el.nombre, 'Por definir'),
+                       COALESCE(el.pais_code, '') as flag_local,
                        cp.equipo_visitante_id, COALESCE(ev.nombre, 'Por definir'),
+                       COALESCE(ev.pais_code, '') as flag_visitante,
                        cp.goles_local, cp.goles_visitante, cp.jugado, cp.posicion_bracket
                 FROM copa_partidos cp
                 LEFT JOIN equipos el ON cp.equipo_local_id = el.id
@@ -369,19 +371,28 @@ namespace TorneoAmigos.Data
             using var r = cmd.ExecuteReader();
             while (r.Read())
             {
+                var nombreLocal     = r.GetString(4);
+                var paisLocal       = r.GetString(5);
+                var nombreVisitante = r.GetString(7);
+                var paisVisitante   = r.GetString(8);
+
                 lista.Add(new CopaPartido
                 {
                     Id = r.GetInt32(0), RondaId = r.GetInt32(1), CopaId = r.GetInt32(2),
                     EquipoLocalId     = r.IsDBNull(3) ? null : r.GetInt32(3),
-                    NombreLocal       = r.GetString(4),
-                    FlagLocal         = r.IsDBNull(3) ? "" : BanderaMap.GetCode(r.GetString(4)),
-                    EquipoVisitanteId = r.IsDBNull(5) ? null : r.GetInt32(5),
-                    NombreVisitante   = r.GetString(6),
-                    FlagVisitante     = r.IsDBNull(5) ? "" : BanderaMap.GetCode(r.GetString(6)),
-                    GolesLocal        = r.IsDBNull(7) ? null : r.GetInt32(7),
-                    GolesVisitante    = r.IsDBNull(8) ? null : r.GetInt32(8),
-                    Jugado            = r.GetBoolean(9),
-                    PosicionBracket   = r.GetInt32(10)
+                    NombreLocal       = nombreLocal,
+                    FlagLocal         = r.IsDBNull(3) ? "" :
+                                        !string.IsNullOrEmpty(paisLocal) ? paisLocal :
+                                        BanderaMap.GetCode(nombreLocal),
+                    EquipoVisitanteId = r.IsDBNull(6) ? null : r.GetInt32(6),
+                    NombreVisitante   = nombreVisitante,
+                    FlagVisitante     = r.IsDBNull(6) ? "" :
+                                        !string.IsNullOrEmpty(paisVisitante) ? paisVisitante :
+                                        BanderaMap.GetCode(nombreVisitante),
+                    GolesLocal        = r.IsDBNull(9)  ? null : r.GetInt32(9),
+                    GolesVisitante    = r.IsDBNull(10) ? null : r.GetInt32(10),
+                    Jugado            = r.GetBoolean(11),
+                    PosicionBracket   = r.GetInt32(12)
                 });
             }
             return lista;

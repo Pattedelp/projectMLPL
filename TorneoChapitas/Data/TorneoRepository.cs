@@ -72,11 +72,21 @@ namespace TorneoAmigos.Data
             var partidos = GetPartidosJugados(divisionId);
             var equipos  = GetEquiposByDivision(divisionId);
 
-            var tabla = equipos.Select(e => new PosicionViewModel
+            // IDs de equipos que tienen al menos un partido en el fixture
+            var equiposConPartido = new HashSet<int>(
+                partidos.SelectMany(p => new[] { p.EquipoLocalId, p.EquipoVisitanteId })
+                        .Where(id => id > 0));
+
+            // Solo mostrar equipos que participaron en el torneo
+            var equiposFiltrados = equipos
+                .Where(e => equiposConPartido.Contains(e.Id))
+                .ToList();
+
+            var tabla = equiposFiltrados.Select(e => new PosicionViewModel
             {
                 EquipoId       = e.Id,
                 NombreEquipo   = e.Nombre,
-                FlagCode       = BanderaMap.GetCode(e.Nombre),
+                FlagCode       = e.FlagCode, // ya viene de BD o BanderaMap desde GetEquiposByDivision
                 ColorPrincipal = e.ColorPrincipal
             }).ToList();
 

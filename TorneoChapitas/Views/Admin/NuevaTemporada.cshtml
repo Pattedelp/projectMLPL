@@ -13,7 +13,7 @@
 </div>
 
 <form method="post" asp-action="NuevaTemporada">
-    <div class="admin-form-card">
+    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:24px;margin-bottom:24px;">
         <div class="form-group">
             <label>Nombre de la temporada</label>
             <input type="text" name="nombreTemporada"
@@ -26,48 +26,48 @@
     <div class="admin-section">
         <h2 class="admin-section-title">🏆 Primera División</h2>
         <p style="color:var(--color-muted);font-size:13px;margin-bottom:16px;">
-            Destildá los equipos que no participen. Los tildados incluyen ascensos automáticos de la B.
+            Destildá los equipos que no participen.
         </p>
-        <div class="equipos-check-grid">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
             @foreach (var e in Model.EquiposPrimera)
             {
-                <label class="equipo-check-card @(e.EsNuevo ? "equipo-nuevo" : "")">
-                    <input type="checkbox" name="equiposPrimera" value="@e.Id" checked />
+                <label style="display:flex;align-items:center;gap:8px;background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:10px 14px;cursor:pointer;font-size:13px;">
+                    <input type="checkbox" name="equiposPrimera" value="@e.Id" checked
+                           style="accent-color:var(--color-gold);width:16px;height:16px;" />
                     @if (!string.IsNullOrEmpty(e.FlagCode))
                     {
                         <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" class="flag-img" alt="" />
                     }
                     <span>@e.Nombre</span>
-                    @if (e.EsNuevo) { <span class="badge-nuevo">NUEVO</span> }
                 </label>
             }
         </div>
     </div>
 
-    <!-- NACIONAL B -->
+    <!-- PRIMERA NACIONAL -->
     <div class="admin-section">
-        <h2 class="admin-section-title">🥈 Nacional B</h2>
-        <div class="equipos-check-grid">
+        <h2 class="admin-section-title">🥈 Primera Nacional</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
             @foreach (var e in Model.EquiposNacionalB)
             {
-                <label class="equipo-check-card @(e.EsNuevo ? "equipo-nuevo" : "")">
-                    <input type="checkbox" name="equiposB" value="@e.Id" checked />
+                <label style="display:flex;align-items:center;gap:8px;background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:10px 14px;cursor:pointer;font-size:13px;">
+                    <input type="checkbox" name="equiposB" value="@e.Id" checked
+                           style="accent-color:var(--color-gold);width:16px;height:16px;" />
                     @if (!string.IsNullOrEmpty(e.FlagCode))
                     {
                         <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" class="flag-img" alt="" />
                     }
                     <span>@e.Nombre</span>
-                    @if (e.EsNuevo) { <span class="badge-nuevo">NUEVO</span> }
                 </label>
             }
         </div>
     </div>
 
-    <!-- AGREGAR NUEVOS EQUIPOS -->
+    <!-- AGREGAR NUEVOS JUGADORES -->
     <div class="admin-section">
-        <h2 class="admin-section-title">➕ Agregar Equipos Nuevos</h2>
+        <h2 class="admin-section-title">➕ Agregar Jugadores Nuevos</h2>
         <p style="color:var(--color-muted);font-size:13px;margin-bottom:16px;">
-            Ingresá los nuevos participantes. Se agregarán a la base de datos y al fixture.
+            Ingresá nombre, elegí el país y la división. Los países ya tomados aparecen bloqueados.
         </p>
         <div id="nuevos-container"></div>
         <button type="button" class="btn-outline" onclick="agregarNuevo()">+ Agregar jugador</button>
@@ -83,20 +83,60 @@
 
 @section Scripts {
 <script>
-let contadorNuevos = 0;
+// Países disponibles
+const PAISES = [
+    {code:'se',name:'Suecia 🇸🇪'},{code:'rs',name:'Serbia 🇷🇸'},{code:'sn',name:'Senegal 🇸🇳'},{code:'cm',name:'Camerún 🇨🇲'},
+    {code:'ca',name:'Canadá 🇨🇦'},{code:'qa',name:'Qatar 🇶🇦'},{code:'gh',name:'Ghana 🇬🇭'},
+    {code:'dz',name:'Argelia 🇩🇿'},{code:'au',name:'Australia 🇦🇺'},{code:'cn',name:'China 🇨🇳'},
+    {code:'hr',name:'Croacia 🇭🇷'},{code:'eg',name:'Egipto 🇪🇬'},{code:'gb',name:'Inglaterra 🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+    {code:'fr',name:'Francia 🇫🇷'},{code:'id',name:'Indonesia 🇮🇩'},{code:'jp',name:'Japón 🇯🇵'},
+    {code:'my',name:'Malasia 🇲🇾'},{code:'mx',name:'México 🇲🇽'},{code:'ma',name:'Marruecos 🇲🇦'},
+    {code:'ng',name:'Nigeria 🇳🇬'},{code:'pe',name:'Perú 🇵🇪'},{code:'pt',name:'Portugal 🇵🇹'},
+    {code:'ru',name:'Rusia 🇷🇺'},{code:'sa',name:'Arabia Saudita 🇸🇦'},{code:'kr',name:'Corea del Sur 🇰🇷'},
+    {code:'th',name:'Tailandia 🇹🇭'},{code:'tn',name:'Túnez 🇹🇳'},{code:'tr',name:'Turquía 🇹🇷'},
+    {code:'pl',name:'Polonia 🇵🇱'}
+];
+
+let paisesTomados = {};
+
+// Cargar países tomados
+fetch('/Admin/GetPaisesTomados')
+    .then(r => r.json())
+    .then(data => {
+        data.forEach(e => { paisesTomados[e.flagCode] = e.equipo; });
+    });
+
+function buildSelectPaises(selectedCode) {
+    let html = '<option value="">-- Sin bandera --</option>';
+    PAISES.forEach(p => {
+        const tomado = paisesTomados[p.code];
+        if (tomado) {
+            html += `<option value="${p.code}" disabled style="color:#666;">${p.name} (${tomado})</option>`;
+        } else {
+            html += `<option value="${p.code}" ${p.code === selectedCode ? 'selected' : ''}>${p.name}</option>`;
+        }
+    });
+    return html;
+}
+
 function agregarNuevo() {
     const div = document.createElement('div');
     div.className = 'nuevo-equipo-row';
+    div.style.cssText = 'display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;';
     div.innerHTML = `
-        <input type="text" name="nuevosNombres" placeholder="Nombre del jugador" class="form-control" style="width:220px" />
-        <select name="nuevasDivisiones" class="form-control" style="width:180px">
-            <option value="1">Primera División</option>
-            <option value="2">Nacional B</option>
+        <input type="text" name="nuevosNombres" placeholder="Nombre del jugador"
+               class="form-control" style="width:180px" />
+        <select name="nuevasPaisCodesN" class="form-control" style="width:200px">
+            ${buildSelectPaises('')}
         </select>
-        <button type="button" onclick="this.parentElement.remove()" class="btn-cancelar" style="padding:8px 12px">✕</button>
+        <select name="nuevasDivisiones" class="form-control" style="width:160px">
+            <option value="1">Primera División</option>
+            <option value="2" selected>Primera Nacional</option>
+        </select>
+        <button type="button" onclick="this.parentElement.remove()"
+                class="btn-cancelar" style="padding:8px 12px;">✕</button>
     `;
     document.getElementById('nuevos-container').appendChild(div);
-    contadorNuevos++;
 }
 </script>
 }

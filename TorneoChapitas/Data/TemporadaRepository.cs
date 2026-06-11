@@ -419,20 +419,43 @@ namespace TorneoAmigos.Data
                 int nB      = equiposB.Count;
                 int sobranB = Math.Max(0, nB - nP);
 
+                // Calcular cuántos de B van a fase previa:
+                // Necesitamos que de la B salgan exactamente nP para octavos.
+                // ganadoresPrevia = mitad de los que juegan fase previa
+                // bDirectos = nP - ganadoresPrevia
+                // Entonces: equiposEnPrevia = nB - bDirectosNeeded
+                // bDirectosNeeded = nP - ganadoresPrevia
+                // ganadoresPrevia = equiposEnPrevia / 2
+                // Resolviendo: equiposEnPrevia = nB - nP + equiposEnPrevia/2
+                // → equiposEnPrevia/2 = nB - nP → equiposEnPrevia = 2*(nB-nP) = 2*sobranB
+                int equiposEnPrevia  = sobranB * 2;  // con 14B,10P → 4*2=8? NO
+                // Corrección: con 14B y 10P queremos 10 en octavos
+                // bDirectos + ganadoresPrevia = nP
+                // (nB - equiposEnPrevia) + equiposEnPrevia/2 = nP
+                // nB - equiposEnPrevia/2 = nP
+                // equiposEnPrevia/2 = nB - nP = sobranB
+                // equiposEnPrevia = 2 * sobranB ... pero con 14-10=4 → 8 en previa → 4 ganadores → 6+4=10 ✓
+                equiposEnPrevia = sobranB * 2; // 4*2=8 en previa, 4 ganadores, 6 directos + 4 = 10 ✓
+                int bDirectosCount = nB - equiposEnPrevia; // 14-8=6
+
                 // Separar B: nuevos primero para fase previa, luego peores veteranos
                 var nuevos    = (equiposNuevosB ?? new List<int>()).Where(id => equiposB.Contains(id)).ToList();
                 var veteranos = equiposB.Except(nuevos).ToList();
 
-                // Equipos para fase previa (exactamente sobranB)
+                // Armar fase previa con nuevos primero, luego peores veteranos
                 var paraPrevia = new List<int>();
-                paraPrevia.AddRange(nuevos.Take(sobranB));
-                if (paraPrevia.Count < sobranB)
-                    paraPrevia.AddRange(veteranos.TakeLast(sobranB - paraPrevia.Count));
-                paraPrevia = paraPrevia.Take(sobranB).OrderBy(_ => Guid.NewGuid()).ToList();
+                paraPrevia.AddRange(nuevos.Take(equiposEnPrevia));
+                if (paraPrevia.Count < equiposEnPrevia)
+                    paraPrevia.AddRange(veteranos.TakeLast(equiposEnPrevia - paraPrevia.Count));
+                paraPrevia = paraPrevia.Take(equiposEnPrevia).OrderBy(_ => Guid.NewGuid()).ToList();
 
-                // B directos = todos los de B menos los de fase previa, mezclados
-                var bDirectos = equiposB.Except(paraPrevia).OrderBy(_ => Guid.NewGuid()).ToList();
+                // B directos = los mejores que NO van a fase previa
+                var bDirectos = equiposB.Except(paraPrevia)
+                                        .Take(bDirectosCount)
+                                        .OrderBy(_ => Guid.NewGuid()).ToList();
                 var primera   = equiposPrimera.OrderBy(_ => Guid.NewGuid()).ToList();
+
+                int ganadoresPrevia2 = equiposEnPrevia / 2; // 4 ganadores
 
                 // ── RONDAS en orden correcto ──────────────────────
                 // Determinar ronda principal según nP partidos
@@ -481,7 +504,7 @@ namespace TorneoAmigos.Data
                 // ── RONDA PRINCIPAL ───────────────────────────────
                 if (rondaIds.ContainsKey(ronPrincipal))
                 {
-                    int ganadoresPrevia = sobranB / 2;
+                    int ganadoresPrevia = ganadoresPrevia2;
                     int directos        = nP - ganadoresPrevia;
 
                     // Cruces directos: primera[i] vs bDirectos[i]

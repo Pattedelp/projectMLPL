@@ -1,4 +1,4 @@
-@model CopaFullViewModel
+it @model CopaFullViewModel
 @{
     ViewBag.Title = Model.Copa.Nombre;
     ViewBag.ActivePage = "copas";
@@ -58,12 +58,19 @@
                             <span>@(string.IsNullOrEmpty(partido.NombreVisitante) ? "Por definir" : partido.NombreVisitante)</span>
                             @if (partido.Jugado) { <span class="bracket-score">@partido.GolesVisitante</span> }
                         </div>
-                        @if (Model.EsAdmin && !tbd && ronda.Habilitada)
+                        @if (Model.EsAdmin && ronda.Habilitada)
                         {
-                            <div class="bracket-admin-btn">
-                                <a href="#" class="btn-editar"
-                                   onclick="abrirModalCopa(@partido.Id, '@partido.NombreLocal', '@partido.FlagLocal', '@partido.NombreVisitante', '@partido.FlagVisitante', @(partido.GolesLocal??0), @(partido.GolesVisitante??0)); return false;">
-                                    @(partido.Jugado ? "editar" : "+ resultado")
+                            <div class="bracket-admin-btn" style="display:flex;gap:6px;justify-content:flex-end;">
+                                @if (!tbd)
+                                {
+                                    <a href="#" class="btn-editar"
+                                       onclick="abrirModalCopa(@partido.Id, '@partido.NombreLocal', '@partido.FlagLocal', '@partido.NombreVisitante', '@partido.FlagVisitante', @(partido.GolesLocal??0), @(partido.GolesVisitante??0)); return false;">
+                                        @(partido.Jugado ? "editar" : "+ resultado")
+                                    </a>
+                                }
+                                <a href="#" class="btn-editar" style="background:rgba(58,130,200,.2);color:#8aabcc;"
+                                   onclick="abrirModalEditarBracket(@partido.Id, '@partido.NombreLocal', '@partido.NombreVisitante'); return false;">
+                                    ✏️
                                 </a>
                             </div>
                         }
@@ -108,6 +115,37 @@
             <button class="btn-cancelar" onclick="cerrarModalCopa()">Cancelar</button>
         </div>
         <p id="copa-error" style="color:var(--color-red);font-size:13px;text-align:center;margin-top:8px;display:none"></p>
+    </div>
+</div>
+
+<!-- MODAL EDITAR BRACKET -->
+<div id="modal-overlay-edit-bracket" class="modal-overlay" onclick="cerrarModalEditarBracket()" style="display:none"></div>
+<div id="modal-edit-bracket" class="modal-resultado" style="display:none">
+    <div class="modal-header">
+        <h3>Editar Participantes</h3>
+        <button onclick="cerrarModalEditarBracket()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+        <input type="hidden" id="edit-bracket-id" />
+        <p style="font-size:12px;color:var(--color-muted);margin-bottom:16px;">
+            Local actual: <strong id="edit-local-actual"></strong> · 
+            Visitante actual: <strong id="edit-visita-actual"></strong>
+        </p>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="flex:1;">
+                <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Local</label>
+                <select id="edit-sel-local" class="form-control"></select>
+            </div>
+            <div style="font-size:18px;color:var(--color-muted);padding-top:16px;">vs</div>
+            <div style="flex:1;">
+                <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Visitante</label>
+                <select id="edit-sel-visita" class="form-control"></select>
+            </div>
+        </div>
+        <div style="display:flex;gap:12px;justify-content:center;">
+            <button class="btn-primary" onclick="guardarEditBracket()">Guardar</button>
+            <button class="btn-cancelar" onclick="cerrarModalEditarBracket()">Cancelar</button>
+        </div>
     </div>
 </div>
 
@@ -181,6 +219,49 @@ document.querySelectorAll('.check-ronda').forEach(chk => {
         else location.reload();
     });
 });
+
+// Modal editar bracket
+let editBracketId = null;
+function abrirModalEditarBracket(id, local, visitante) {
+    editBracketId = id;
+    document.getElementById('edit-bracket-id').value = id;
+    document.getElementById('edit-local-actual').textContent  = local || 'Por definir';
+    document.getElementById('edit-visita-actual').textContent = visitante || 'Por definir';
+    // Cargar equipos en selects
+    fetch('/Admin/GetEquiposTodos')
+        .then(r => r.json())
+        .then(equipos => {
+            ['edit-sel-local','edit-sel-visita'].forEach(selId => {
+                const sel = document.getElementById(selId);
+                sel.innerHTML = '<option value="0">-- Por definir --</option>';
+                equipos.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id; opt.textContent = e.nombre;
+                    sel.appendChild(opt);
+                });
+            });
+        });
+    document.getElementById('modal-overlay-edit-bracket').style.display = 'block';
+    document.getElementById('modal-edit-bracket').style.display = 'block';
+}
+function cerrarModalEditarBracket() {
+    document.getElementById('modal-overlay-edit-bracket').style.display = 'none';
+    document.getElementById('modal-edit-bracket').style.display = 'none';
+    editBracketId = null;
+}
+async function guardarEditBracket() {
+    const id      = document.getElementById('edit-bracket-id').value;
+    const localId = document.getElementById('edit-sel-local').value;
+    const visitId = document.getElementById('edit-sel-visita').value;
+    const r = await fetch('/Copas/EditarBracket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partidoId: parseInt(id), localId: parseInt(localId), visitanteId: parseInt(visitId) })
+    });
+    const d = await r.json();
+    if (d.ok) { cerrarModalEditarBracket(); location.reload(); }
+    else alert('Error al guardar.');
+}
 
 // Registrar título de copa (admin)
 async function registrarTituloCopa(equipoId, nombreEquipo, tipoTitulo, nombreTitulo) {

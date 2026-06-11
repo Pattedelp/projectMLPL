@@ -626,38 +626,43 @@ namespace TorneoAmigos.Data
                     ganadorId = r.IsDBNull(3) ? 0 : r.GetInt32(3);
                 }
 
+                // AUTO-AVANCE: buscar slot vacío en la siguiente ronda
                 if (ganadorId > 0)
                 {
-                    // Buscar la siguiente ronda
                     int? siguienteRondaId = null;
-                    using (var cmd = new NpgsqlCommand(@"
+                    using (var cmd2 = new NpgsqlCommand(@"
                         SELECT id FROM copa_rondas
-                        WHERE copa_id = @C AND orden > (SELECT orden FROM copa_rondas WHERE id = @R)
+                        WHERE copa_id = @C
+                          AND orden > (SELECT orden FROM copa_rondas WHERE id = @R)
                         ORDER BY orden LIMIT 1", conn, tx))
                     {
-                        cmd.Parameters.AddWithValue("@C", copaId);
-                        cmd.Parameters.AddWithValue("@R", rondaId);
-                        var result = cmd.ExecuteScalar();
-                        if (result != null) siguienteRondaId = Convert.ToInt32(result);
+                        cmd2.Parameters.AddWithValue("@C", copaId);
+                        cmd2.Parameters.AddWithValue("@R", rondaId);
+                        var res = cmd2.ExecuteScalar();
+                        if (res != null) siguienteRondaId = Convert.ToInt32(res);
                     }
 
                     if (siguienteRondaId.HasValue)
                     {
-                        // Posición en la siguiente ronda = posición actual / 2 (redondeado abajo)
-                        int posiciónSiguiente = posicion / 2;
-                        bool esLocal = posicion % 2 == 0; // par = local, impar = visitante
+                        // Buscar partido en siguiente ronda donde local o visitante esté vacío
+                        // La posición del partido siguiente = posicion_actual / 2
+                        int posSiguiente = posicion / 2;
+                        bool esLocal = posicion % 2 == 0;
 
-                        // Actualizar el partido correspondiente en la siguiente ronda
-                        var campo = esLocal ? "equipo_local_id" : "equipo_visitante_id";
-                        using var cmd = new NpgsqlCommand($@"
+                        // Solo actualizar si ese campo está vacío (no pisar equipos ya asignados)
+                        var campoCheck = esLocal ? "equipo_local_id" : "equipo_visitante_id";
+                        using var cmdAdv = new NpgsqlCommand($@"
                             UPDATE copa_partidos
-                            SET {campo} = @G
-                            WHERE ronda_id = @SR AND posicion_bracket = @PS AND copa_id = @C", conn, tx);
-                        cmd.Parameters.AddWithValue("@G",  ganadorId);
-                        cmd.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
-                        cmd.Parameters.AddWithValue("@PS", posiciónSiguiente);
-                        cmd.Parameters.AddWithValue("@C",  copaId);
-                        cmd.ExecuteNonQuery();
+                            SET {campoCheck} = @G
+                            WHERE ronda_id = @SR
+                              AND posicion_bracket = @PS
+                              AND copa_id = @C
+                              AND {campoCheck} IS NULL", conn, tx);
+                        cmdAdv.Parameters.AddWithValue("@G",  ganadorId);
+                        cmdAdv.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
+                        cmdAdv.Parameters.AddWithValue("@PS", posSiguiente);
+                        cmdAdv.Parameters.AddWithValue("@C",  copaId);
+                        cmdAdv.ExecuteNonQuery();
                     }
                 }
 

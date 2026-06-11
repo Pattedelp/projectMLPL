@@ -41,12 +41,39 @@ namespace TorneoAmigos.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
+        public IActionResult EditarBracket([FromBody] EditarBracketDto dto)
+        {
+            if (dto == null) return Json(new { ok = false });
+            using var conn = new Npgsql.NpgsqlConnection(
+                HttpContext.RequestServices.GetRequiredService<IConfiguration>().GetConnectionString("TorneoAmigosDB"));
+            using var cmd = new Npgsql.NpgsqlCommand(@"
+                UPDATE copa_partidos SET
+                    equipo_local_id     = CASE WHEN @L > 0 THEN @L ELSE NULL END,
+                    equipo_visitante_id = CASE WHEN @V > 0 THEN @V ELSE NULL END,
+                    jugado = false, goles_local = NULL, goles_visitante = NULL
+                WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@L",  dto.LocalId);
+            cmd.Parameters.AddWithValue("@V",  dto.VisitanteId);
+            cmd.Parameters.AddWithValue("@Id", dto.PartidoId);
+            conn.Open();
+            return Json(new { ok = cmd.ExecuteNonQuery() > 0 });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
         public IActionResult ToggleRonda([FromBody] ToggleRondaDto dto)
         {
             if (dto == null) return Json(new { ok = false });
             var ok = _repo.ToggleRondaHabilitada(dto.RondaId, dto.Habilitada);
             return Json(new { ok });
         }
+    }
+
+    public class EditarBracketDto
+    {
+        public int PartidoId { get; set; }
+        public int LocalId { get; set; }
+        public int VisitanteId { get; set; }
     }
 
     public class ResultadoCopaDto

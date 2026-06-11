@@ -1,3 +1,5 @@
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using System.Data;
 using System.Security.Cryptography;
 using System.Text;
@@ -22,11 +24,10 @@ namespace TorneoAmigos.Data
         {
             var lista = new List<Noticia>();
             var where = soloPublicadas ? "WHERE publicada = true" : "";
-            // NO traemos imagen_url en el listado — puede ser Base64 enorme
-            // Solo traemos un flag de si tiene imagen o no
+            // Con Cloudinary las URLs son pequeñas — podemos traerlas directamente
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(
-                $"SELECT id, titulo, contenido, CASE WHEN imagen_url IS NOT NULL AND imagen_url != '' THEN 'HAS_IMAGE' ELSE NULL END, tipo, autor, publicada, created_at FROM noticias {where} ORDER BY created_at DESC", conn);
+                $"SELECT id, titulo, contenido, imagen_url, tipo, autor, publicada, created_at FROM noticias {where} ORDER BY created_at DESC", conn);
             conn.Open();
             using var r = cmd.ExecuteReader();
             while (r.Read()) lista.Add(MapNoticia(r));
@@ -275,10 +276,30 @@ namespace TorneoAmigos.Data
 
         public string GenerarImagenUrl(string contexto)
         {
-            // Unsplash como URL base (fallback inmediato para la lista)
-            // La imagen de IA se genera en GenerarImagenUrlIA (async, para detalle)
             var seed = Math.Abs(contexto.GetHashCode()) % 1000;
             return $"https://source.unsplash.com/800x450/?football,soccer,stadium&sig={seed}";
+        }
+
+        public async Task<string> SubirImagenCloudinary(IFormFile archivo, string cloudName, string apiKey, string apiSecret)
+        {
+            var account = new CloudinaryDotNet.Account(cloudName, apiKey, apiSecret);
+            var cloudinary = new CloudinaryDotNet.Cloudinary(account);
+            cloudinary.Api.Secure = true;
+
+            using var stream = archivo.OpenReadStream();
+            var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams
+            {
+                File           = new CloudinaryDotNet.FileDescription(archivo.FileName, stream),
+                Folder         = "torneo-chapitas",
+                Transformation = new CloudinaryDotNet.Transformation()
+                                    .Width(900).Height(500).Crop("fill").Quality("auto")
+            };
+
+            var result = await cloudinary.UploadAsync(uploadParams);
+            if (result.Error != null)
+                throw new Exception("Cloudinary error: " + result.Error.Message);
+
+            return result.SecureUrl.ToString();
         }
 
         public async Task<string> GenerarImagenUrlIA(string contexto, string? stabilityKey)

@@ -7,5 +7,6 @@
   <ItemGroup>
     <PackageReference Include="Npgsql" Version="8.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.2.0" />
+    <PackageReference Include="CloudinaryDotNet" Version="1.26.0" />
   </ItemGroup>
 </Project>

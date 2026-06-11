@@ -68,10 +68,9 @@
                         <div class="carrusel-slide">
                             <a asp-controller="Noticias" asp-action="Detalle" asp-route-id="@n.Id"
                                class="carrusel-slide-inner">
-                                <div class="carrusel-img noticia-img-lazy"
-                                     data-img-id="@n.Id"
-                                     style="background-color:var(--color-bg3);">
-                                    <span class="img-placeholder-text" style="font-size:24px;">📰</span>
+                                <div class="carrusel-img"
+                                     style="@(!string.IsNullOrEmpty(n.ImagenUrl) && n.ImagenUrl != "HAS_IMAGE" ? $"background-image:url(\'{n.ImagenUrl}\')" : "background-color:var(--color-bg3);display:flex;align-items:center;justify-content:center")">
+                                    @if (string.IsNullOrEmpty(n.ImagenUrl) || n.ImagenUrl == "HAS_IMAGE") { <span style="font-size:28px;">📰</span> }
                                 </div>
                                 <div class="carrusel-body">
                                     <span class="noticia-badge @(n.Tipo == "automatica" ? "badge-auto" : "badge-manual")" style="font-size:10px;">
@@ -178,19 +177,6 @@
     resetTimer();
 })();
 
-// Lazy load carrusel images
-document.querySelectorAll('.noticia-img-lazy[data-img-id]').forEach(div => {
-    const id  = div.dataset.imgId;
-    if (!id) return;
-    const img = new Image();
-    img.onload = () => {
-        div.style.backgroundImage    = `url('/Noticias/Imagen/${id}')`;
-        div.style.backgroundSize     = 'cover';
-        div.style.backgroundPosition = 'center';
-        const ph = div.querySelector('.img-placeholder-text');
-        if (ph) ph.style.display = 'none';
-    };
-    img.src = `/Noticias/Imagen/${id}`;
-});
+
 </script>
 }

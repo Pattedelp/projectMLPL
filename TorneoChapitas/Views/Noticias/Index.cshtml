@@ -99,26 +99,4 @@ else
     }
 }
 
-@section Scripts {
-<script>
-// Carga lazy de imágenes por ID — evita traer Base64 enorme en el listado
-document.querySelectorAll('.noticia-img-lazy[data-img-id]').forEach(div => {
-    const id = div.dataset.imgId;
-    if (!id) return;
-    const src = `/Noticias/Imagen/${id}`;
-    const img = new Image();
-    img.onload = () => {
-        div.style.backgroundImage    = `url('${src}')`;
-        div.style.backgroundSize     = 'cover';
-        div.style.backgroundPosition = 'center';
-        const ph = div.querySelector('.img-placeholder-text');
-        if (ph) ph.style.display = 'none';
-    };
-    img.onerror = () => {
-        const ph = div.querySelector('.img-placeholder-text');
-        if (ph) ph.textContent = '📰';
-    };
-    img.src = src;
-});
-</script>
-}
+

@@ -161,17 +161,28 @@ namespace TorneoAmigos.Controllers
                 var ext     = Path.GetExtension(imagenArchivo.FileName).ToLower();
                 var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
                 if (!allowed.Contains(ext)) { ViewBag.Error = "Formato no permitido. Usá JPG, PNG o WebP."; return View(vm); }
-                if (imagenArchivo.Length > 5 * 1024 * 1024) { ViewBag.Error = "La imagen no puede superar 5MB."; return View(vm); }
-                // Guardar como Base64 en la BD — persiste entre deploys
-                var mimeType = ext switch {
-                    ".png"  => "image/png",
-                    ".webp" => "image/webp",
-                    ".gif"  => "image/gif",
-                    _       => "image/jpeg"
-                };
-                using var ms = new MemoryStream();
-                await imagenArchivo.CopyToAsync(ms);
-                imagenUrl = $"data:{mimeType};base64,{Convert.ToBase64String(ms.ToArray())}";
+                if (imagenArchivo.Length > 10 * 1024 * 1024) { ViewBag.Error = "La imagen no puede superar 10MB."; return View(vm); }
+                try
+                {
+                    var cloudName  = _config["CLOUDINARY_CLOUD_NAME"] ?? Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME");
+                    var apiKey     = _config["CLOUDINARY_API_KEY"]    ?? Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
+                    var apiSecret  = _config["CLOUDINARY_API_SECRET"] ?? Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
+                    if (!string.IsNullOrEmpty(cloudName) && !string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret))
+                        imagenUrl = await _repo.SubirImagenCloudinary(imagenArchivo, cloudName, apiKey, apiSecret);
+                    else
+                    {
+                        // Fallback Base64 si no hay Cloudinary configurado
+                        using var ms = new MemoryStream();
+                        await imagenArchivo.CopyToAsync(ms);
+                        var mime = ext == ".png" ? "image/png" : ext == ".webp" ? "image/webp" : "image/jpeg";
+                        imagenUrl = $"data:{mime};base64,{Convert.ToBase64String(ms.ToArray())}";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ViewBag.Error = "Error al subir imagen: " + ex.Message;
+                    return View(vm);
+                }
             }
             else if (vm.GenerarImagen)
             {
@@ -249,16 +260,26 @@ namespace TorneoAmigos.Controllers
                 var ext     = Path.GetExtension(imagenArchivo.FileName).ToLower();
                 var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
                 if (!allowed.Contains(ext)) { ViewBag.Error = "Formato no permitido. Usá JPG, PNG o WebP."; return View(vm); }
-                if (imagenArchivo.Length > 5 * 1024 * 1024) { ViewBag.Error = "La imagen no puede superar 5MB."; return View(vm); }
-                var mimeType = ext switch {
-                    ".png"  => "image/png",
-                    ".webp" => "image/webp",
-                    ".gif"  => "image/gif",
-                    _       => "image/jpeg"
-                };
-                using var ms = new MemoryStream();
-                await imagenArchivo.CopyToAsync(ms);
-                imagenUrl = $"data:{mimeType};base64,{Convert.ToBase64String(ms.ToArray())}";
+                try
+                {
+                    var cloudName  = _config["CLOUDINARY_CLOUD_NAME"] ?? Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME");
+                    var apiKey     = _config["CLOUDINARY_API_KEY"]    ?? Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
+                    var apiSecret  = _config["CLOUDINARY_API_SECRET"] ?? Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
+                    if (!string.IsNullOrEmpty(cloudName) && !string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret))
+                        imagenUrl = await _repo.SubirImagenCloudinary(imagenArchivo, cloudName, apiKey, apiSecret);
+                    else
+                    {
+                        using var ms = new MemoryStream();
+                        await imagenArchivo.CopyToAsync(ms);
+                        var mime = ext == ".png" ? "image/png" : ext == ".webp" ? "image/webp" : "image/jpeg";
+                        imagenUrl = $"data:{mime};base64,{Convert.ToBase64String(ms.ToArray())}";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ViewBag.Error = "Error al subir imagen: " + ex.Message;
+                    return View(vm);
+                }
             }
             else if (vm.GenerarImagen && string.IsNullOrEmpty(imagenArchivo?.FileName))
             {

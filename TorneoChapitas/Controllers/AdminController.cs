@@ -135,22 +135,41 @@ namespace TorneoAmigos.Controllers
             if (temporada == null) return Json(new { ok = false, msg = "No hay temporada activa" });
 
             List<int> equiposPrimera;
-            List<int> equiposB;
+            List<int> equiposBOrdenados; // ordenados peor→mejor según tabla
+            List<int> equiposNuevos;
 
             if (dto?.EquiposPrimera != null && dto.EquiposPrimera.Any())
             {
                 equiposPrimera = dto.EquiposPrimera;
-                equiposB       = dto.EquiposB ?? new List<int>();
+                var seleccionadosB = dto.EquiposB ?? new List<int>();
+
+                // Tabla de la B para ordenar peor→mejor
+                var tablaB = _repo.GetTablaPosiciones(2);
+                // IDs con partidos ordenados de peor a mejor
+                var conPartidos = tablaB
+                    .OrderBy(t => t.Puntos).ThenBy(t => t.DiferenciaGoles)
+                    .Select(t => t.EquipoId)
+                    .Where(id => seleccionadosB.Contains(id))
+                    .ToList();
+                // Nuevos = seleccionados que no tienen partidos en tabla
+                equiposNuevos = seleccionadosB.Except(conPartidos).ToList();
+                // Orden final: nuevos al final (peores), luego peores de tabla
+                equiposBOrdenados = conPartidos.Concat(equiposNuevos).ToList();
             }
             else
             {
-                equiposPrimera = _repo.GetEquiposByDivision(1).Select(e => e.Id).ToList();
-                equiposB       = _repo.GetEquiposByDivision(2).Select(e => e.Id).ToList();
+                equiposPrimera    = _repo.GetEquiposByDivision(1).Select(e => e.Id).ToList();
+                var tablaB        = _repo.GetTablaPosiciones(2);
+                var conPartidos   = tablaB.OrderBy(t => t.Puntos).ThenBy(t => t.DiferenciaGoles)
+                                         .Select(t => t.EquipoId).ToList();
+                var todosB        = _repo.GetEquiposByDivision(2).Select(e => e.Id).ToList();
+                equiposNuevos     = todosB.Except(conPartidos).ToList();
+                equiposBOrdenados = conPartidos.Concat(equiposNuevos).ToList();
             }
 
             try
             {
-                _tempRepo.SortearCopaArgentina(temporada.Id, equiposPrimera, equiposB);
+                _tempRepo.SortearCopaArgentina(temporada.Id, equiposPrimera, equiposBOrdenados, equiposNuevos);
                 return Json(new { ok = true });
             }
             catch (Exception ex) { return Json(new { ok = false, msg = ex.Message }); }

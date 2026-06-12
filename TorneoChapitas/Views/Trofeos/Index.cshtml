@@ -19,10 +19,10 @@
 
             <!-- IMAGEN DEL TROFEO -->
             <div style="flex-shrink:0;">
-                <div id="trofeo-img-@t.Id" style="width:180px;height:180px;border-radius:12px;background:var(--color-bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--color-border);">
+                <div id="trofeo-img-@t.Id" style="width:180px;height:240px;border-radius:12px;background:var(--color-bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--color-border);padding:12px;">
                     @if (!string.IsNullOrEmpty(t.ImagenUrl))
                     {
-                        <img src="@t.ImagenUrl" alt="@t.Nombre" style="width:100%;height:100%;object-fit:cover;" />
+                        <img src="@t.ImagenUrl" alt="@t.Nombre" style="width:100%;height:100%;object-fit:contain;" />
                     }
                     else
                     {
@@ -107,7 +107,7 @@ async function subirImagenTrofeo(trofeoId) {
         const d = await r.json();
         if (d.ok) {
             document.getElementById('trofeo-img-' + trofeoId).innerHTML =
-                `<img src="${d.url}" style="width:100%;height:100%;object-fit:cover;" />`;
+                `<img src="${d.url}" style="width:100%;height:100%;object-fit:contain;" />`;
             msg.textContent = '✅ Imagen actualizada';
         } else {
             msg.textContent = '⚠️ ' + (d.msg || 'Error al subir');

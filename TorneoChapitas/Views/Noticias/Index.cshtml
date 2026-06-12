@@ -45,10 +45,8 @@ else
     <a asp-action="Detalle" asp-route-id="@primera.Id" class="noticia-destacada">
         @if (!string.IsNullOrEmpty(primera.ImagenUrl))
         {
-            <div class="noticia-destacada-img @(primera.ImagenUrl == "HAS_IMAGE" ? "noticia-img-lazy" : "")"
-                 data-src="@(primera.ImagenUrl == "HAS_IMAGE" ? $"/Noticias/Imagen/{primera.Id}" : "")"
-                 style="background-color:var(--color-bg3);">
-                <div class="img-placeholder-text">⚽ Cargando imagen...</div>
+            <div class="noticia-destacada-img"
+                 style="background-image:url('@primera.ImagenUrl');background-size:cover;background-position:center;">
             </div>
         }
         <div class="noticia-destacada-body">
@@ -73,10 +71,8 @@ else
                 <a asp-action="Detalle" asp-route-id="@n.Id" class="noticia-card">
                     @if (!string.IsNullOrEmpty(n.ImagenUrl))
                     {
-                        <div class="noticia-card-img @(n.ImagenUrl == "HAS_IMAGE" ? "noticia-img-lazy" : "")"
-                             data-src="@(n.ImagenUrl == "HAS_IMAGE" ? $"/Noticias/Imagen/{n.Id}" : "")"
-                             style="background-color:var(--color-bg3);">
-                            <div class="img-placeholder-text" style="font-size:20px;">⚽</div>
+                        <div class="noticia-card-img"
+                             style="background-image:url('@n.ImagenUrl');background-size:cover;background-position:center;">
                         </div>
                     }
                     else

@@ -1,0 +1,120 @@
+@model List<Trofeo>
+@{
+    ViewBag.Title = "Vidriera de Copas";
+    var esAdmin = User.IsInRole("Admin");
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🏆</div>
+    <div class="page-hero-text">
+        <h1>Vidriera de Copas</h1>
+        <p>Los trofeos del Torneo Chapitas y su historia</p>
+    </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:40px;">
+    @foreach (var t in Model)
+    {
+        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:16px;padding:28px;display:flex;gap:28px;flex-wrap:wrap;">
+
+            <!-- IMAGEN DEL TROFEO -->
+            <div style="flex-shrink:0;">
+                <div id="trofeo-img-@t.Id" style="width:180px;height:180px;border-radius:12px;background:var(--color-bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--color-border);">
+                    @if (!string.IsNullOrEmpty(t.ImagenUrl))
+                    {
+                        <img src="@t.ImagenUrl" alt="@t.Nombre" style="width:100%;height:100%;object-fit:cover;" />
+                    }
+                    else
+                    {
+                        <span style="font-size:56px;opacity:0.3;">🏆</span>
+                    }
+                </div>
+                @if (esAdmin)
+                {
+                    <form id="form-trofeo-@t.Id" style="margin-top:10px;">
+                        <input type="file" id="file-trofeo-@t.Id" accept="image/*" style="display:none;"
+                               onchange="subirImagenTrofeo(@t.Id)" />
+                        <button type="button" class="btn-outline" style="font-size:11px;width:180px;"
+                                onclick="document.getElementById('file-trofeo-@t.Id').click()">
+                            📷 @(string.IsNullOrEmpty(t.ImagenUrl) ? "Subir imagen" : "Cambiar imagen")
+                        </button>
+                        <p id="msg-trofeo-@t.Id" style="font-size:11px;color:var(--color-muted);margin-top:4px;"></p>
+                    </form>
+                }
+            </div>
+
+            <!-- INFO Y CAMPEONES -->
+            <div style="flex:1;min-width:240px;">
+                <h2 style="font-family:var(--font-heading);font-size:20px;font-weight:700;color:var(--color-gold);letter-spacing:1px;margin-bottom:4px;">
+                    @t.Nombre
+                </h2>
+                <p style="font-size:12px;color:var(--color-muted);margin-bottom:16px;">
+                    @t.Campeones.Count campeones registrados
+                </p>
+
+                @if (!t.Campeones.Any())
+                {
+                    <p style="font-size:13px;color:var(--color-muted);">Sin campeones registrados todavía.</p>
+                }
+                else
+                {
+                    <div style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;">
+                        @foreach (var c in t.Campeones)
+                        {
+                            <div style="background:var(--color-bg3);border-radius:6px;padding:8px 14px;display:flex;align-items:center;gap:10px;">
+                                @if (c.FlagCode == "retired")
+                                {
+                                    <span style="font-size:13px;color:var(--color-muted);">✝</span>
+                                }
+                                else if (!string.IsNullOrEmpty(c.FlagCode))
+                                {
+                                    <img src="https://flagcdn.com/16x12/@(c.FlagCode).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" />
+                                }
+                                @if (c.EquipoId > 0)
+                                {
+                                    <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@c.EquipoId"
+                                       style="font-size:13px;color:var(--color-text);text-decoration:none;font-weight:500;">@c.NombreEquipo</a>
+                                }
+                                else
+                                {
+                                    <span style="font-size:13px;color:var(--color-text);font-weight:500;">@c.NombreEquipo</span>
+                                }
+                                <span style="font-size:11px;color:var(--color-muted);margin-left:auto;">@c.NombreTitulo · @c.TemporadaNombre</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+async function subirImagenTrofeo(trofeoId) {
+    const fileInput = document.getElementById('file-trofeo-' + trofeoId);
+    const msg = document.getElementById('msg-trofeo-' + trofeoId);
+    if (!fileInput.files.length) return;
+
+    const formData = new FormData();
+    formData.append('trofeoId', trofeoId);
+    formData.append('imagen', fileInput.files[0]);
+
+    msg.textContent = 'Subiendo...';
+
+    try {
+        const r = await fetch('/Trofeos/SubirImagen', { method: 'POST', body: formData });
+        const d = await r.json();
+        if (d.ok) {
+            document.getElementById('trofeo-img-' + trofeoId).innerHTML =
+                `<img src="${d.url}" style="width:100%;height:100%;object-fit:cover;" />`;
+            msg.textContent = '✅ Imagen actualizada';
+        } else {
+            msg.textContent = '⚠️ ' + (d.msg || 'Error al subir');
+        }
+    } catch {
+        msg.textContent = '⚠️ Error de conexión';
+    }
+}
+</script>
+}

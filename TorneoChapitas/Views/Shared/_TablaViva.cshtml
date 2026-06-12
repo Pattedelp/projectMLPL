@@ -11,12 +11,15 @@
             <tr class="zona-@f.Zona">
                 <td class="col-pos">@f.Posicion</td>
                 <td>
+                    <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@f.EquipoId"
+                       style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
                     @if (!string.IsNullOrEmpty(f.FlagCode))
                     {
                         <img src="https://flagcdn.com/16x12/@(f.FlagCode).png"
                              class="flag-sm" alt="" onerror="this.style.display='none'" />
                     }
                     @f.NombreEquipo
+                    </a>
                 </td>
                 <td class="col-num">@f.PartidosJugados</td>
                 <td class="col-g">@f.Ganados</td>

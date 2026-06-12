@@ -55,7 +55,7 @@ namespace TorneoAmigos.Data
         public List<Equipo> GetEquiposByDivision(int divisionId)
         {
             var lista = new List<Equipo>();
-            const string sql = @"SELECT id, divisionid, nombre, escudo, colorprincipal, colorsecundario, activo
+            const string sql = @"SELECT id, divisionid, nombre, escudo, colorprincipal, colorsecundario, activo, COALESCE(pais_code,'') as pais_code
                                  FROM equipos WHERE divisionid = @D AND activo = true ORDER BY nombre";
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -64,6 +64,42 @@ namespace TorneoAmigos.Data
             using var r = cmd.ExecuteReader();
             while (r.Read()) lista.Add(MapEquipo(r));
             return lista;
+        }
+
+        // ── EQUIPO INDIVIDUAL ────────────────────
+        public Equipo? GetEquipoById(int id)
+        {
+            const string sql = @"SELECT id, nombre, colorprincipal, colorsecundario, divisionid,
+                                         COALESCE(pais_code,''), COALESCE(descripcion,'')
+                                  FROM equipos WHERE id = @Id";
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", id);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            if (!r.Read()) return null;
+            var nombre   = r.GetString(1);
+            var paisCode = r.GetString(5);
+            return new Equipo
+            {
+                Id              = r.GetInt32(0),
+                Nombre          = nombre,
+                ColorPrincipal  = r.GetString(2),
+                ColorSecundario = r.GetString(3),
+                DivisionId      = r.GetInt32(4),
+                FlagCode        = !string.IsNullOrEmpty(paisCode) ? paisCode : BanderaMap.GetCode(nombre),
+                Descripcion     = string.IsNullOrEmpty(r.GetString(6)) ? null : r.GetString(6)
+            };
+        }
+
+        public bool ActualizarDescripcionEquipo(int id, string descripcion)
+        {
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand("UPDATE equipos SET descripcion = @D WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@D",  descripcion);
+            cmd.Parameters.AddWithValue("@Id", id);
+            conn.Open();
+            return cmd.ExecuteNonQuery() > 0;
         }
 
         // ── TABLA DE POSICIONES ─────────────────
@@ -281,7 +317,9 @@ namespace TorneoAmigos.Data
             Escudo = r.IsDBNull(3) ? null : r.GetString(3),
             ColorPrincipal  = r.IsDBNull(4) ? "#003366" : r.GetString(4),
             ColorSecundario = r.IsDBNull(5) ? "#FFD700" : r.GetString(5),
-            FlagCode = BanderaMap.GetCode(r.GetString(2)),
+            FlagCode = !string.IsNullOrEmpty(r.IsDBNull(7) ? "" : r.GetString(7))
+                ? r.GetString(7)
+                : BanderaMap.GetCode(r.GetString(2)),
             Activo = r.GetBoolean(6)
         };
 

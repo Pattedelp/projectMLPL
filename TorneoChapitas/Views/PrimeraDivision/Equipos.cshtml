@@ -28,7 +28,7 @@
     {
         var pos = GetPos(e.Id);
         var pts = GetPts(e.Id);
-        <div class="equipo-card">
+        <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@e.Id" class="equipo-card" style="text-decoration:none;cursor:pointer;display:block;">
             <div class="equipo-escudo">
                 @if (!string.IsNullOrEmpty(e.FlagCode))
                 {
@@ -50,6 +50,6 @@
                     <span>Sin partidos</span>
                 }
             </div>
-        </div>
+        </a>
     }
 </div>

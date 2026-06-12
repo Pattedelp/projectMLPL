@@ -1,3 +1,4 @@
+using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TorneoAmigos.Data;
@@ -46,7 +47,24 @@ namespace TorneoAmigos.Controllers
                 string url;
                 if (!string.IsNullOrEmpty(cloudName) && !string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret))
                 {
-                    url = await _noticiasRepo.SubirImagenCloudinary(imagen, cloudName, apiKey, apiSecret);
+                    // Subida sin recorte forzado — los trofeos son verticales, no se aplastan
+                    var account    = new CloudinaryDotNet.Account(cloudName, apiKey, apiSecret);
+                    var cloudinary = new CloudinaryDotNet.Cloudinary(account);
+                    cloudinary.Api.Secure = true;
+
+                    using var stream = imagen.OpenReadStream();
+                    var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams
+                    {
+                        File           = new CloudinaryDotNet.FileDescription(imagen.FileName, stream),
+                        Folder         = "torneo-chapitas",
+                        Transformation = new CloudinaryDotNet.Transformation().Width(600).Crop("limit").Quality("auto")
+                    };
+
+                    var result = await cloudinary.UploadAsync(uploadParams);
+                    if (result.Error != null)
+                        return Json(new { ok = false, msg = "Cloudinary: " + result.Error.Message });
+
+                    url = result.SecureUrl.ToString();
                 }
                 else
                 {

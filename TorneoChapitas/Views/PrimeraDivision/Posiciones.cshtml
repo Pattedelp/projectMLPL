@@ -41,6 +41,8 @@
                 <tr class="zona-@f.Zona">
                     <td class="col-pos">@f.Posicion</td>
                     <td class="col-equipo">
+                        <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@f.EquipoId"
+                           style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
                         @if (!string.IsNullOrEmpty(f.FlagCode))
                         {
                             <img src="https://flagcdn.com/20x15/@(f.FlagCode).png"
@@ -48,6 +50,7 @@
                                  onerror="this.style.display='none'" />
                         }
                         @f.NombreEquipo
+                        </a>
                         @if (f.Zona == "campeon")
                         {
                             <span style="color:var(--color-gold);font-size:12px;margin-left:4px">👑</span>

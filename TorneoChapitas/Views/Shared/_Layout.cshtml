@@ -54,10 +54,11 @@
                class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
 
             <div class="nav-dropdown">
-                <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas")?"active":"")">Más ▾</span>
+                <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"||ViewBag.ActivePage=="trofeos")?"active":"")">Más ▾</span>
                 <div class="dropdown-menu">
                     <a asp-controller="Historial" asp-action="Index">📚 Historial</a>
                     <a asp-controller="Estadisticas" asp-action="Index">📈 Estadísticas</a>
+                    <a asp-controller="Trofeos" asp-action="Index">🏆 Vidriera de Copas</a>
                 </div>
             </div>
         </nav>

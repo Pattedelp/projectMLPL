@@ -141,7 +141,6 @@ namespace TorneoAmigos.Models
     {
         public PalmaresViewModel Palmares { get; set; } = new();
     }
-}
 
     // ── NOTICIAS ─────────────────────────────────────
 
@@ -198,3 +197,23 @@ namespace TorneoAmigos.Models
         public string? PaisFlag { get; set; }
         public string Contenido { get; set; } = "";
     }
+
+    // ── DETALLE DE EQUIPO ────────────────────────────
+    public class EquipoDetalleViewModel
+    {
+        public Equipo Equipo { get; set; } = new();
+        public PosicionViewModel? Posicion { get; set; }
+        public List<Titulo> Titulos { get; set; } = new();
+    }
+
+    // ── TROFEOS (VIDRIERA) ───────────────────────────
+    public class Trofeo
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = "";
+        public string? ImagenUrl { get; set; }
+        public string TipoTitulo { get; set; } = "";
+        public int Orden { get; set; }
+        public List<Titulo> Campeones { get; set; } = new();
+    }
+}

@@ -20,6 +20,7 @@ namespace TorneoAmigos.Models
         public string ColorPrincipal { get; set; } = "#003366";
         public string ColorSecundario { get; set; } = "#FFD700";
         public string FlagCode { get; set; } = "";
+        public string? Descripcion { get; set; }
         public bool Activo { get; set; } = true;
     }
 

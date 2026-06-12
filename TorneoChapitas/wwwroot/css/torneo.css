@@ -1110,3 +1110,93 @@ a:hover { color: #fff; }
 }
 .dropdown-menu a:last-child { border-bottom: none; }
 .dropdown-menu a:hover { background: var(--color-bg2); color: var(--color-gold); }
+
+/* ── SPONSORS ────────────────────────────────── */
+.sponsors-section {
+    margin: 0 -24px 32px;
+    padding: 20px 0;
+    background: var(--color-bg2);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    overflow: hidden;
+}
+.sponsors-label {
+    text-align: center;
+    font-family: var(--font-heading);
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--color-muted);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+}
+.sponsors-track-outer {
+    overflow: hidden;
+    position: relative;
+}
+.sponsors-track-outer::before,
+.sponsors-track-outer::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 80px;
+    z-index: 2;
+}
+.sponsors-track-outer::before {
+    left: 0;
+    background: linear-gradient(to right, var(--color-bg2), transparent);
+}
+.sponsors-track-outer::after {
+    right: 0;
+    background: linear-gradient(to left, var(--color-bg2), transparent);
+}
+.sponsors-track {
+    display: flex;
+    gap: 0;
+    animation: scrollSponsors 25s linear infinite;
+    width: max-content;
+}
+.sponsors-track:hover { animation-play-state: paused; }
+
+@keyframes scrollSponsors {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.sponsor-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 32px;
+    min-width: 120px;
+    border-right: 1px solid var(--color-border);
+}
+.sp-letra {
+    font-family: var(--font-heading);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--color-gold);
+    line-height: 1;
+}
+.sp-nombre {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    white-space: nowrap;
+}
+
+/* Equipo card clickeable */
+.equipo-card:hover {
+    border-color: var(--color-gold);
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+}
+
+/* Highlight de fila al hacer hover sobre el nombre del equipo */
+.tabla-posiciones tbody tr:has(a:hover) {
+    background: rgba(240, 192, 64, 0.08);
+}
+.tabla-posiciones tbody tr td a:hover {
+    color: var(--color-gold) !important;
+}

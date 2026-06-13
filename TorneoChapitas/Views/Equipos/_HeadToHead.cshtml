@@ -41,14 +41,10 @@
     else
     {
         <!-- Resumen de victorias -->
-        <div style="display:flex;justify-content:center;gap:24px;margin-bottom:20px;text-align:center;">
+        <div style="display:flex;justify-content:center;gap:40px;margin-bottom:20px;text-align:center;">
             <div>
                 <div style="font-family:var(--font-heading);font-size:28px;color:var(--color-green);">@Model.VictoriasA</div>
                 <div style="font-size:11px;color:var(--color-muted);">Victorias @Model.EquipoA.Nombre</div>
-            </div>
-            <div>
-                <div style="font-family:var(--font-heading);font-size:28px;color:var(--color-muted);">@Model.Empates</div>
-                <div style="font-size:11px;color:var(--color-muted);">Empates</div>
             </div>
             <div>
                 <div style="font-family:var(--font-heading);font-size:28px;color:var(--color-red);">@Model.VictoriasB</div>
@@ -102,4 +98,68 @@
             Stats no disponibles (alguno de los equipos no tiene partidos en el fixture actual).
         </p>
     }
+
+    <!-- PALMARÉS DE AMBOS -->
+    <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+            <h4 style="font-size:12px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;margin-bottom:10px;text-align:center;">
+                🏆 @Model.EquipoA.Nombre (@Model.TitulosA.Count)
+            </h4>
+            @if (!Model.TitulosA.Any())
+            {
+                <p style="text-align:center;font-size:12px;color:var(--color-muted);">Sin títulos</p>
+            }
+            else
+            {
+                <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;">
+                    @foreach (var t in Model.TitulosA.OrderBy(x => x.TemporadaNombre))
+                    {
+                        var icono = t.TipoTitulo switch {
+                            "campeon_torneo"     => "🏆",
+                            "campeon_copa"       => "🥇",
+                            "campeon_supercopa"  => "⭐",
+                            "campeon_primera_b"  => "🥈",
+                            "campeon_primera_c"  => "🎖",
+                            "campeon_especial"   => "🎪",
+                            _                    => "🏅"
+                        };
+                        <div style="background:var(--color-bg3);border-radius:6px;padding:6px 12px;font-size:12px;">
+                            <span>@icono</span> @t.NombreTitulo
+                            <div style="font-size:10px;color:var(--color-muted);">@t.TemporadaNombre</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <div>
+            <h4 style="font-size:12px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;margin-bottom:10px;text-align:center;">
+                🏆 @Model.EquipoB.Nombre (@Model.TitulosB.Count)
+            </h4>
+            @if (!Model.TitulosB.Any())
+            {
+                <p style="text-align:center;font-size:12px;color:var(--color-muted);">Sin títulos</p>
+            }
+            else
+            {
+                <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;">
+                    @foreach (var t in Model.TitulosB.OrderBy(x => x.TemporadaNombre))
+                    {
+                        var icono = t.TipoTitulo switch {
+                            "campeon_torneo"     => "🏆",
+                            "campeon_copa"       => "🥇",
+                            "campeon_supercopa"  => "⭐",
+                            "campeon_primera_b"  => "🥈",
+                            "campeon_primera_c"  => "🎖",
+                            "campeon_especial"   => "🎪",
+                            _                    => "🏅"
+                        };
+                        <div style="background:var(--color-bg3);border-radius:6px;padding:6px 12px;font-size:12px;">
+                            <span>@icono</span> @t.NombreTitulo
+                            <div style="font-size:10px;color:var(--color-muted);">@t.TemporadaNombre</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
 </div>

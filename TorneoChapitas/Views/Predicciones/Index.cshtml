@@ -8,6 +8,14 @@
         {"co","🇨🇴"},{"ar","🇦🇷"},{"uy","🇺🇾"},{"ph","🇵🇭"},
         {"pl","🇵🇱"},{"se","🇸🇪"},{"sa","🇸🇦"},{"ma","🇲🇦"},{"jp","🇯🇵"},{"gb-eng","🏴"}
     };
+    // Nombres en texto para el <option> (los emoji de bandera no renderizan bien en <select> de Windows)
+    var nombresPaises = new Dictionary<string,string> {
+        {"nl","Países Bajos"},{"dk","Dinamarca"},{"cr","Costa Rica"},{"it","Italia"},{"us","EE.UU."},
+        {"ir","Irán"},{"gb-wls","Gales"},{"be","Bélgica"},{"ua","Ucrania"},{"de","Alemania"},
+        {"kr","Corea del Sur"},{"ec","Ecuador"},{"br","Brasil"},{"es","España"},{"vn","Vietnam"},
+        {"co","Colombia"},{"ar","Argentina"},{"uy","Uruguay"},{"ph","Filipinas"},
+        {"pl","Polonia"},{"se","Suecia"},{"sa","Arabia Saudita"},{"ma","Marruecos"},{"jp","Japón"},{"gb-eng","Inglaterra"}
+    };
 }
 
 <div class="page-hero">
@@ -90,9 +98,9 @@ else
                     <input type="text" name="autor" placeholder="Tu nombre" required maxlength="50"
                            class="form-control" style="width:120px;font-size:13px;" />
 
-                    <select name="paisFlag" class="form-control" style="width:100px;font-size:13px;">
-                        <option value="">🏴 --</option>
-                        @foreach (var b in banderas)
+                    <select name="paisFlag" class="form-control" style="width:130px;font-size:13px;">
+                        <option value="">🏴 Sin bandera</option>
+                        @foreach (var b in nombresPaises)
                         {
                             <option value="@b.Key">@b.Value</option>
                         }
@@ -100,9 +108,9 @@ else
 
                     <select name="prediccion1x2" required class="form-control" style="width:110px;font-size:13px;">
                         <option value="">1X2...</option>
-                        <option value="L">🔵 Gana Local</option>
-                        <option value="E">⚪ Empate</option>
-                        <option value="V">🔴 Gana Visit.</option>
+                        <option value="L">Gana Local</option>
+                        <option value="E">Empate</option>
+                        <option value="V">Gana Visit.</option>
                     </select>
 
                     <input type="number" name="golesLocal" min="0" max="20" placeholder="GL"

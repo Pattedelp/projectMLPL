@@ -268,6 +268,8 @@ namespace TorneoAmigos.Models
         // Stats generales para comparar
         public PosicionViewModel? StatsA { get; set; }
         public PosicionViewModel? StatsB { get; set; }
+        public List<Titulo> TitulosA { get; set; } = new();
+        public List<Titulo> TitulosB { get; set; } = new();
     }
 
     public class EnfrentamientoDirecto

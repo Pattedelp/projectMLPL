@@ -52,6 +52,8 @@ namespace TorneoAmigos.Controllers
         {
             var vm = _repo.GetHeadToHead(equipoAId, equipoBId);
             if (vm == null) return Json(new { ok = false });
+            vm.TitulosA = _tempRepo.GetTitulosPorEquipo(vm.EquipoA.Nombre);
+            vm.TitulosB = _tempRepo.GetTitulosPorEquipo(vm.EquipoB.Nombre);
             return PartialView("_HeadToHead", vm);
         }
 

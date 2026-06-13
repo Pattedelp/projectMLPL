@@ -61,7 +61,7 @@
                     <span style="color:var(--color-muted);">-</span>
                     <span style="@(e.GolesB > e.GolesA ? "color:var(--color-green);font-weight:700;" : "")">@e.GolesB</span>
                     <span style="font-size:11px;color:var(--color-muted);margin-left:8px;">
-                        (@(e.ALocal ? Model.EquipoA.Nombre + " local" : Model.EquipoB.Nombre + " local"))
+                        (@(e.ALocal ? Model.EquipoA.Nombre + " local" : Model.EquipoB.Nombre + " local") · @e.TemporadaNombre)
                     </span>
                 </div>
             }

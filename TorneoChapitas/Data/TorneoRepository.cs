@@ -112,12 +112,23 @@ namespace TorneoAmigos.Data
             var vm = new HeadToHeadViewModel { EquipoA = equipoA, EquipoB = equipoB };
 
             const string sql = @"
-                SELECT p.goleslocal, p.golesvisitante, p.equipolocalid, p.equipovisitanteid
-                FROM partidos p
-                WHERE p.jugado = true
-                  AND ((p.equipolocalid = @A AND p.equipovisitanteid = @B)
-                    OR (p.equipolocalid = @B AND p.equipovisitanteid = @A))
-                ORDER BY p.id DESC";
+                SELECT goleslocal, golesvisitante, equipolocalid, equipovisitanteid, temporada_nombre FROM (
+                    SELECT p.goleslocal, p.golesvisitante, p.equipolocalid, p.equipovisitanteid,
+                           'Temporada actual' as temporada_nombre, p.id as ord
+                    FROM partidos p
+                    WHERE p.jugado = true
+                      AND ((p.equipolocalid = @A AND p.equipovisitanteid = @B)
+                        OR (p.equipolocalid = @B AND p.equipovisitanteid = @A))
+
+                    UNION ALL
+
+                    SELECT eh.goles_local, eh.goles_visitante, eh.equipo_local_id, eh.equipo_visitante_id,
+                           COALESCE(eh.temporada_nombre, 'Histórico') as temporada_nombre, -eh.id as ord
+                    FROM enfrentamientos_historicos eh
+                    WHERE (eh.equipo_local_id = @A AND eh.equipo_visitante_id = @B)
+                       OR (eh.equipo_local_id = @B AND eh.equipo_visitante_id = @A)
+                ) t
+                ORDER BY ord DESC";
 
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -140,7 +151,7 @@ namespace TorneoAmigos.Data
                     GolesA = golesA,
                     GolesB = golesB,
                     ALocal = aEsLocal,
-                    TemporadaNombre = "Temporada actual"
+                    TemporadaNombre = r.GetString(4)
                 });
 
                 if (golesA > golesB) vm.VictoriasA++;

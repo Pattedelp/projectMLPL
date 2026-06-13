@@ -102,6 +102,61 @@ namespace TorneoAmigos.Data
             return cmd.ExecuteNonQuery() > 0;
         }
 
+        // ── HEAD TO HEAD ─────────────────────────
+        public HeadToHeadViewModel? GetHeadToHead(int equipoAId, int equipoBId)
+        {
+            var equipoA = GetEquipoById(equipoAId);
+            var equipoB = GetEquipoById(equipoBId);
+            if (equipoA == null || equipoB == null) return null;
+
+            var vm = new HeadToHeadViewModel { EquipoA = equipoA, EquipoB = equipoB };
+
+            const string sql = @"
+                SELECT p.goleslocal, p.golesvisitante, p.equipolocalid, p.equipovisitanteid
+                FROM partidos p
+                WHERE p.jugado = true
+                  AND ((p.equipolocalid = @A AND p.equipovisitanteid = @B)
+                    OR (p.equipolocalid = @B AND p.equipovisitanteid = @A))
+                ORDER BY p.id DESC";
+
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@A", equipoAId);
+            cmd.Parameters.AddWithValue("@B", equipoBId);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                var gl = r.GetInt32(0);
+                var gv = r.GetInt32(1);
+                var localId = r.GetInt32(2);
+                bool aEsLocal = localId == equipoAId;
+
+                int golesA = aEsLocal ? gl : gv;
+                int golesB = aEsLocal ? gv : gl;
+
+                vm.Enfrentamientos.Add(new EnfrentamientoDirecto
+                {
+                    GolesA = golesA,
+                    GolesB = golesB,
+                    ALocal = aEsLocal,
+                    TemporadaNombre = "Temporada actual"
+                });
+
+                if (golesA > golesB) vm.VictoriasA++;
+                else if (golesB > golesA) vm.VictoriasB++;
+                else vm.Empates++;
+            }
+
+            // Stats generales de cada equipo (de su división actual)
+            var tablaA = GetTablaPosiciones(equipoA.DivisionId);
+            var tablaB = GetTablaPosiciones(equipoB.DivisionId);
+            vm.StatsA = tablaA.FirstOrDefault(t => t.EquipoId == equipoAId);
+            vm.StatsB = tablaB.FirstOrDefault(t => t.EquipoId == equipoBId);
+
+            return vm;
+        }
+
         // ── TABLA DE POSICIONES ─────────────────
         public List<PosicionViewModel> GetTablaPosiciones(int divisionId)
         {
@@ -230,6 +285,16 @@ namespace TorneoAmigos.Data
             conn.Open();
             using var r = cmd.ExecuteReader();
             return r.Read() ? MapPartido(r) : null;
+        }
+
+        public int GetDivisionIdDePartido(int partidoId)
+        {
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand("SELECT divisionid FROM partidos WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@Id", partidoId);
+            conn.Open();
+            var result = cmd.ExecuteScalar();
+            return result == null ? 0 : Convert.ToInt32(result);
         }
 
         public bool CargarResultado(int partidoId, int golesLocal, int golesVisitante, string? obs = null)

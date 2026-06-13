@@ -305,6 +305,65 @@ namespace TorneoAmigos.Data
 
         // ── COPAS ───────────────────────────────────────
 
+        // Partidos de copa pendientes con AMBOS equipos ya definidos (para Predicciones)
+        public List<CopaPartido> GetPartidosCopaPendientes(string tipoCopa)
+        {
+            var lista = new List<CopaPartido>();
+            using var conn = GetConnection();
+            conn.Open();
+
+            const string sql = @"
+                SELECT cp.id, cp.ronda_id, cp.copa_id,
+                       cp.equipo_local_id, cp.equipo_visitante_id,
+                       el.nombre, COALESCE(el.pais_code,''),
+                       ev.nombre, COALESCE(ev.pais_code,''),
+                       cp.goles_local, cp.goles_visitante, cp.jugado, cp.posicion_bracket
+                FROM copa_partidos cp
+                JOIN copas c ON cp.copa_id = c.id
+                JOIN equipos el ON cp.equipo_local_id = el.id
+                JOIN equipos ev ON cp.equipo_visitante_id = ev.id
+                WHERE c.tipo = @Tipo AND c.finalizada = false
+                  AND cp.equipo_local_id IS NOT NULL AND cp.equipo_visitante_id IS NOT NULL
+                  AND cp.jugado = false
+                ORDER BY cp.id";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Tipo", tipoCopa);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                var nombreLocal = r.GetString(5);
+                var nombreVisit = r.GetString(7);
+                var paisLocal   = r.GetString(6);
+                var paisVisit   = r.GetString(8);
+
+                lista.Add(new CopaPartido
+                {
+                    Id                = r.GetInt32(0),
+                    RondaId           = r.GetInt32(1),
+                    CopaId            = r.GetInt32(2),
+                    EquipoLocalId     = r.GetInt32(3),
+                    EquipoVisitanteId = r.GetInt32(4),
+                    NombreLocal       = nombreLocal,
+                    FlagLocal         = !string.IsNullOrEmpty(paisLocal) ? paisLocal : BanderaMap.GetCode(nombreLocal),
+                    NombreVisitante   = nombreVisit,
+                    FlagVisitante     = !string.IsNullOrEmpty(paisVisit) ? paisVisit : BanderaMap.GetCode(nombreVisit),
+                    GolesLocal        = r.IsDBNull(9)  ? null : r.GetInt32(9),
+                    GolesVisitante    = r.IsDBNull(10) ? null : r.GetInt32(10),
+                    Jugado            = r.GetBoolean(11),
+                    PosicionBracket   = r.GetInt32(12)
+                });
+            }
+            return lista;
+        }
+
+        public int GetDivisionIdParaCopa(string tipoCopa) => tipoCopa switch
+        {
+            "copa_argentina" => 100,
+            "supercopa"      => 101,
+            _                => 0
+        };
+
         public Copa? GetCopaActiva(string tipo)
         {
             using var conn = GetConnection();
@@ -652,6 +711,19 @@ namespace TorneoAmigos.Data
                 return copaId;
             }
             catch (Exception ex) { tx.Rollback(); throw new Exception("Error sorteando supercopa: " + ex.Message); }
+        }
+
+        public string? GetTipoCopaDePartido(int copaPartidoId)
+        {
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(@"
+                SELECT c.tipo FROM copa_partidos cp
+                JOIN copas c ON cp.copa_id = c.id
+                WHERE cp.id = @Id", conn);
+            cmd.Parameters.AddWithValue("@Id", copaPartidoId);
+            conn.Open();
+            var result = cmd.ExecuteScalar();
+            return result?.ToString();
         }
 
         public bool GuardarResultadoCopa(int partidoId, int golesLocal, int golesVisitante)

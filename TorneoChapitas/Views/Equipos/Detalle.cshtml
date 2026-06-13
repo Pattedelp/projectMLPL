@@ -95,6 +95,26 @@
         }
     </div>
 
+    <!-- HEAD TO HEAD -->
+    <div style="margin-bottom:32px;">
+        <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);margin-bottom:12px;text-transform:uppercase;">
+            ⚔️ Head to Head
+        </h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="h2h-rival" class="form-control" style="flex:1;min-width:160px;">
+                <option value="">Elegí un rival...</option>
+                @foreach (var r in (List<Equipo>)ViewBag.TodosLosEquipos)
+                {
+                    <option value="@r.Id">@r.Nombre</option>
+                }
+            </select>
+            <button onclick="compararH2H(@e.Id)" class="btn-primary" style="font-size:12px;padding:8px 16px;">
+                Comparar
+            </button>
+        </div>
+        <div id="h2h-resultado"></div>
+    </div>
+
     <!-- PALMARÉS -->
     <div>
         <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);margin-bottom:12px;text-transform:uppercase;">
@@ -162,10 +182,25 @@ function editarDescripcion() {
     document.getElementById('desc-empty').style.display = 'none';
     document.getElementById('desc-edit').style.display  = 'block';
 }
-function cancelarEdicion() {
+async function cancelarEdicion() {
     document.getElementById('desc-edit').style.display = 'none';
     const tieneTexto = document.getElementById('desc-texto')?.textContent.trim().length > 0;
     document.getElementById(tieneTexto ? 'desc-view' : 'desc-empty').style.display = 'block';
+}
+
+async function compararH2H(equipoAId) {
+    const rivalId = document.getElementById('h2h-rival').value;
+    const cont = document.getElementById('h2h-resultado');
+    if (!rivalId) { cont.innerHTML = ''; return; }
+
+    cont.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--color-muted);margin-top:12px;">Cargando...</p>';
+    try {
+        const r = await fetch(`/Equipos/HeadToHead?equipoAId=${equipoAId}&equipoBId=${rivalId}`);
+        const html = await r.text();
+        cont.innerHTML = html;
+    } catch {
+        cont.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--color-muted);margin-top:12px;">Error al cargar comparación.</p>';
+    }
 }
 async function guardarDescripcion(equipoId) {
     const texto = document.getElementById('desc-input').value;

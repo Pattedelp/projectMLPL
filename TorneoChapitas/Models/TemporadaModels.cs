@@ -216,4 +216,66 @@ namespace TorneoAmigos.Models
         public int Orden { get; set; }
         public List<Titulo> Campeones { get; set; } = new();
     }
+
+    // ── PREDICCIONES ─────────────────────────────────
+    public class Prediccion
+    {
+        public int Id { get; set; }
+        public int PartidoId { get; set; }
+        public int DivisionId { get; set; }
+        public string Autor { get; set; } = "";
+        public string? PaisFlag { get; set; }
+        public string Prediccion1X2 { get; set; } = ""; // L, E, V
+        public int? GolesLocal { get; set; }
+        public int? GolesVisitante { get; set; }
+        public int? Puntos { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class PartidoConPrediccionesViewModel
+    {
+        public Partido Partido { get; set; } = new();
+        public List<Prediccion> Predicciones { get; set; } = new();
+        public Prediccion? MiPrediccion { get; set; }
+    }
+
+    public class PrediccionesViewModel
+    {
+        public int DivisionId { get; set; }
+        public List<PartidoConPrediccionesViewModel> ProximosPartidos { get; set; } = new();
+        public List<RankingPronosticador> Ranking { get; set; } = new();
+    }
+
+    public class RankingPronosticador
+    {
+        public string Autor { get; set; } = "";
+        public string? PaisFlag { get; set; }
+        public int TotalPuntos { get; set; }
+        public int Predicciones { get; set; }
+        public int Aciertos1X2 { get; set; }
+        public int AciertosExactos { get; set; }
+    }
+
+    // ── HEAD TO HEAD ─────────────────────────────────
+    public class HeadToHeadViewModel
+    {
+        public Equipo EquipoA { get; set; } = new();
+        public Equipo EquipoB { get; set; } = new();
+        public List<EnfrentamientoDirecto> Enfrentamientos { get; set; } = new();
+        public int VictoriasA { get; set; }
+        public int VictoriasB { get; set; }
+        public int Empates { get; set; }
+        // Stats generales para comparar
+        public PosicionViewModel? StatsA { get; set; }
+        public PosicionViewModel? StatsB { get; set; }
+    }
+
+    public class EnfrentamientoDirecto
+    {
+        public DateTime? Fecha { get; set; }
+        public int GolesA { get; set; }
+        public int GolesB { get; set; }
+        public string TemporadaNombre { get; set; } = "";
+        public bool ALocal { get; set; } // true si EquipoA jugó de local
+    }
 }

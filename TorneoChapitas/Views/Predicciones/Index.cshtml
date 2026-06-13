@@ -1,0 +1,190 @@
+@model PrediccionesViewModel
+@{
+    ViewBag.Title = "Predicciones";
+    var banderas = new Dictionary<string,string> {
+        {"nl","🇳🇱"},{"dk","🇩🇰"},{"cr","🇨🇷"},{"it","🇮🇹"},{"us","🇺🇲"},
+        {"ir","🇮🇷"},{"gb-wls","🏴"},{"be","🇧🇪"},{"ua","🇺🇦"},{"de","🇩🇪"},
+        {"kr","🇰🇷"},{"ec","🇪🇨"},{"br","🇧🇷"},{"es","🇪🇸"},{"vn","🇻🇳"},
+        {"co","🇨🇴"},{"ar","🇦🇷"},{"uy","🇺🇾"},{"ph","🇵🇭"},
+        {"pl","🇵🇱"},{"se","🇸🇪"},{"sa","🇸🇦"},{"ma","🇲🇦"},{"jp","🇯🇵"},{"gb-eng","🏴"}
+    };
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🔮</div>
+    <div class="page-hero-text">
+        <h1>Predicciones</h1>
+        <p>Adiviná los resultados y subí en el ranking de pronosticadores</p>
+    </div>
+</div>
+
+<!-- TABS DIVISIÓN -->
+<div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+    <a href="/Predicciones?division=1" class="tab-btn @(Model.DivisionId==1?"active":"")">🏆 Primera División</a>
+    <a href="/Predicciones?division=2" class="tab-btn @(Model.DivisionId==2?"active":"")">🥈 Primera Nacional</a>
+    <a href="/Predicciones?division=100" class="tab-btn @(Model.DivisionId==100?"active":"")">🏆 Copa Argentina</a>
+    <a href="/Predicciones?division=101" class="tab-btn @(Model.DivisionId==101?"active":"")">⭐ Supercopa</a>
+</div>
+
+<!-- PRÓXIMOS PARTIDOS -->
+<h2 style="font-family:var(--font-heading);font-size:14px;letter-spacing:2px;color:var(--color-gold);margin-bottom:16px;text-transform:uppercase;">
+    📅 Próximos Partidos
+</h2>
+
+@if (!Model.ProximosPartidos.Any())
+{
+    var msg = Model.DivisionId >= 100
+        ? "No hay cruces definidos todavía para predecir, o la copa ya finalizó."
+        : "No hay partidos pendientes en el fixture.";
+    <p style="font-size:13px;color:var(--color-muted);margin-bottom:32px;">@msg</p>
+}
+else
+{
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:40px;">
+        @foreach (var pc in Model.ProximosPartidos)
+        {
+            var p = pc.Partido;
+            var totalPreds = pc.Predicciones.Count;
+            var pctL = totalPreds > 0 ? (int)(100.0 * pc.Predicciones.Count(x => x.Prediccion1X2=="L") / totalPreds) : 0;
+            var pctE = totalPreds > 0 ? (int)(100.0 * pc.Predicciones.Count(x => x.Prediccion1X2=="E") / totalPreds) : 0;
+            var pctV = totalPreds > 0 ? (100 - pctL - pctE) : 0;
+
+            <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:18px 20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;">
+                        @if (!string.IsNullOrEmpty(p.EquipoLocal?.FlagCode))
+                        {
+                            <img src="https://flagcdn.com/20x15/@(p.EquipoLocal.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" />
+                        }
+                        <span>@p.EquipoLocal?.Nombre</span>
+                        <span style="color:var(--color-muted);font-weight:400;">vs</span>
+                        <span>@p.EquipoVisitante?.Nombre</span>
+                        @if (!string.IsNullOrEmpty(p.EquipoVisitante?.FlagCode))
+                        {
+                            <img src="https://flagcdn.com/20x15/@(p.EquipoVisitante.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" />
+                        }
+                    </div>
+                    <span style="font-size:11px;color:var(--color-muted);">@totalPreds predicciones</span>
+                </div>
+
+                @if (totalPreds > 0)
+                {
+                    <!-- Barra de tendencia -->
+                    <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:12px;">
+                        <div style="width:@(pctL)%;background:#3a82c8;" title="Local @pctL%"></div>
+                        <div style="width:@(pctE)%;background:#8aabcc;" title="Empate @pctE%"></div>
+                        <div style="width:@(pctV)%;background:#e05555;" title="Visitante @pctV%"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-muted);margin-bottom:14px;">
+                        <span>🔵 Local @pctL%</span>
+                        <span>⚪ Empate @pctE%</span>
+                        <span>🔴 Visitante @pctV%</span>
+                    </div>
+                }
+
+                <!-- FORMULARIO DE PREDICCIÓN -->
+                <form method="post" asp-action="Predecir" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <input type="hidden" name="partidoId" value="@p.Id" />
+                    <input type="hidden" name="divisionId" value="@Model.DivisionId" />
+
+                    <input type="text" name="autor" placeholder="Tu nombre" required maxlength="50"
+                           class="form-control" style="width:120px;font-size:13px;" />
+
+                    <select name="paisFlag" class="form-control" style="width:100px;font-size:13px;">
+                        <option value="">🏴 --</option>
+                        @foreach (var b in banderas)
+                        {
+                            <option value="@b.Key">@b.Value</option>
+                        }
+                    </select>
+
+                    <select name="prediccion1x2" required class="form-control" style="width:110px;font-size:13px;">
+                        <option value="">1X2...</option>
+                        <option value="L">🔵 Gana Local</option>
+                        <option value="E">⚪ Empate</option>
+                        <option value="V">🔴 Gana Visit.</option>
+                    </select>
+
+                    <input type="number" name="golesLocal" min="0" max="20" placeholder="GL"
+                           class="form-control" style="width:60px;font-size:13px;text-align:center;" />
+                    <span style="color:var(--color-muted);">-</span>
+                    <input type="number" name="golesVisitante" min="0" max="20" placeholder="GV"
+                           class="form-control" style="width:60px;font-size:13px;text-align:center;" />
+
+                    <button type="submit" class="btn-primary" style="font-size:12px;padding:8px 16px;">
+                        🔮 Predecir
+                    </button>
+                </form>
+                <p style="font-size:11px;color:var(--color-muted);margin-top:6px;">
+                    💡 1X2 correcto = 1 pto · Resultado exacto = 3 ptos
+                </p>
+            </div>
+        }
+    </div>
+}
+
+<!-- RANKING -->
+<h2 style="font-family:var(--font-heading);font-size:14px;letter-spacing:2px;color:var(--color-gold);margin-bottom:16px;text-transform:uppercase;">
+    🏅 Ranking de Pronosticadores
+</h2>
+
+@if (!Model.Ranking.Any())
+{
+    <p style="font-size:13px;color:var(--color-muted);">Aún no hay predicciones con resultados confirmados.</p>
+}
+else
+{
+    <div class="tabla-wrapper">
+        <table class="tabla-posiciones">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Pronosticador</th>
+                    <th>Puntos</th>
+                    <th>Predicciones</th>
+                    <th>Aciertos 1X2</th>
+                    <th>Exactos</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int pos = 1; }
+                @foreach (var r in Model.Ranking)
+                {
+                    <tr>
+                        <td class="col-pos">@pos</td>
+                        <td class="col-equipo">
+                            @if (!string.IsNullOrEmpty(r.PaisFlag) && banderas.ContainsKey(r.PaisFlag))
+                            {
+                                <span style="margin-right:6px;">@banderas[r.PaisFlag]</span>
+                            }
+                            <strong>@r.Autor</strong>
+                        </td>
+                        <td class="col-pts"><strong style="color:var(--color-gold);">@r.TotalPuntos</strong></td>
+                        <td class="col-num">@r.Predicciones</td>
+                        <td class="col-num">@r.Aciertos1X2</td>
+                        <td class="col-num">@r.AciertosExactos</td>
+                    </tr>
+                    pos++;
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<style>
+.tab-btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    background: var(--color-bg2);
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+}
+.tab-btn.active {
+    background: var(--color-gold);
+    color: var(--color-bg);
+    border-color: var(--color-gold);
+}
+</style>

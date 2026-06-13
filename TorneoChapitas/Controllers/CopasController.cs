@@ -8,7 +8,12 @@ namespace TorneoAmigos.Controllers
     public class CopasController : Controller
     {
         private readonly TemporadaRepository _repo;
-        public CopasController(TemporadaRepository repo) => _repo = repo;
+        private readonly PrediccionesRepository _prediRepo;
+        public CopasController(TemporadaRepository repo, PrediccionesRepository prediRepo)
+        {
+            _repo = repo;
+            _prediRepo = prediRepo;
+        }
 
         public IActionResult Index() => RedirectToAction("CopaArgentina");
 
@@ -36,6 +41,19 @@ namespace TorneoAmigos.Controllers
         {
             if (dto == null) return Json(new { ok = false });
             var ok = _repo.GuardarResultadoCopa(dto.PartidoId, dto.GolesLocal, dto.GolesVisitante);
+
+            if (ok)
+            {
+                var tipo = _repo.GetTipoCopaDePartido(dto.PartidoId);
+                var divisionPred = tipo switch {
+                    "copa_argentina" => 100,
+                    "supercopa"      => 101,
+                    _                => 0
+                };
+                if (divisionPred > 0)
+                    _prediRepo.CalcularPuntosPartido(dto.PartidoId, divisionPred, dto.GolesLocal, dto.GolesVisitante);
+            }
+
             return Json(new { ok });
         }
 

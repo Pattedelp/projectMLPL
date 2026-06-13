@@ -30,6 +30,13 @@ namespace TorneoAmigos.Controllers
             // Títulos históricos
             var titulos = _tempRepo.GetTitulosPorEquipo(equipo.Nombre);
 
+            // Lista de todos los equipos activos para el selector de Head to Head
+            ViewBag.TodosLosEquipos = _repo.GetEquiposByDivision(1)
+                .Concat(_repo.GetEquiposByDivision(2))
+                .Where(e => e.Id != id)
+                .OrderBy(e => e.Nombre)
+                .ToList();
+
             var vm = new EquipoDetalleViewModel
             {
                 Equipo    = equipo,
@@ -38,6 +45,14 @@ namespace TorneoAmigos.Controllers
             };
 
             return View(vm);
+        }
+
+        [HttpGet]
+        public IActionResult HeadToHead(int equipoAId, int equipoBId)
+        {
+            var vm = _repo.GetHeadToHead(equipoAId, equipoBId);
+            if (vm == null) return Json(new { ok = false });
+            return PartialView("_HeadToHead", vm);
         }
 
         [Authorize(Roles = "Admin")]

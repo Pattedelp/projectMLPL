@@ -32,6 +32,7 @@ builder.Services.AddScoped<TorneoRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.TemporadaRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.NoticiasRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.ComentariosRepository>();
+builder.Services.AddScoped<TorneoAmigos.Data.PrediccionesRepository>();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options => {
     options.IdleTimeout = TimeSpan.FromHours(2);

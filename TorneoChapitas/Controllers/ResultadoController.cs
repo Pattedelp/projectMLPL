@@ -8,7 +8,12 @@ namespace TorneoAmigos.Controllers
     public class ResultadoController : Controller
     {
         private readonly TorneoRepository _repo;
-        public ResultadoController(TorneoRepository repo) => _repo = repo;
+        private readonly PrediccionesRepository _prediRepo;
+        public ResultadoController(TorneoRepository repo, PrediccionesRepository prediRepo)
+        {
+            _repo = repo;
+            _prediRepo = prediRepo;
+        }
 
         [Authorize(Roles = "Admin")]
         [HttpPost("Guardar")]
@@ -17,6 +22,15 @@ namespace TorneoAmigos.Controllers
             if (dto == null || dto.GolesLocal < 0 || dto.GolesVisitante < 0)
                 return Json(new { ok = false });
             var ok = _repo.CargarResultado(dto.PartidoId, dto.GolesLocal, dto.GolesVisitante);
+
+            if (ok)
+            {
+                // Calcular puntos de predicciones para este partido
+                var divisionId = _repo.GetDivisionIdDePartido(dto.PartidoId);
+                if (divisionId > 0)
+                    _prediRepo.CalcularPuntosPartido(dto.PartidoId, divisionId, dto.GolesLocal, dto.GolesVisitante);
+            }
+
             return Json(new { ok });
         }
 

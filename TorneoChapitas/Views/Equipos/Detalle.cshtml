@@ -100,14 +100,35 @@
         <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);margin-bottom:12px;text-transform:uppercase;">
             ⚔️ Mano a Mano
         </h3>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <select id="h2h-rival" class="form-control" style="flex:1;min-width:160px;">
-                <option value="">Elegí un rival...</option>
-                @foreach (var r in (List<Equipo>)ViewBag.TodosLosEquipos)
-                {
-                    <option value="@r.Id">@r.Nombre</option>
-                }
-            </select>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;position:relative;">
+            <div id="h2h-dropdown-wrapper" style="flex:1;min-width:160px;position:relative;">
+                <div id="h2h-rival-display" onclick="toggleH2HDropdown()"
+                     class="form-control" style="cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;">
+                    <span id="h2h-rival-flag"></span>
+                    <span id="h2h-rival-text" style="color:var(--color-muted);">Elegí un rival...</span>
+                    <span style="margin-left:auto;color:var(--color-muted);font-size:11px;">▾</span>
+                </div>
+                <input type="hidden" id="h2h-rival" value="" />
+                <div id="h2h-dropdown-list" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;
+                     background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;
+                     max-height:280px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+                    @foreach (var r in (List<Equipo>)ViewBag.TodosLosEquipos)
+                    {
+                        <div class="h2h-option" data-id="@r.Id" onclick="seleccionarRival(@r.Id, '@r.Nombre', '@r.FlagCode')"
+                             style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;">
+                            @if (r.FlagCode == "retired")
+                            {
+                                <span style="font-size:14px;">✝</span>
+                            }
+                            else if (!string.IsNullOrEmpty(r.FlagCode))
+                            {
+                                <img src="https://flagcdn.com/16x12/@(r.FlagCode).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" />
+                            }
+                            <span>@r.Nombre</span>
+                        </div>
+                    }
+                </div>
+            </div>
             <button onclick="compararH2H(@e.Id)" class="btn-primary" style="font-size:12px;padding:8px 16px;">
                 Comparar
             </button>
@@ -153,6 +174,9 @@
 </div>
 
 <style>
+.h2h-option:hover {
+    background: var(--color-bg3);
+}
 .stat-box {
     background: var(--color-bg2);
     border: 1px solid var(--color-border);
@@ -202,6 +226,36 @@ async function compararH2H(equipoAId) {
         cont.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--color-muted);margin-top:12px;">Error al cargar comparación.</p>';
     }
 }
+
+function toggleH2HDropdown() {
+    const list = document.getElementById('h2h-dropdown-list');
+    list.style.display = list.style.display === 'none' ? 'block' : 'none';
+}
+
+function seleccionarRival(id, nombre, flagCode) {
+    document.getElementById('h2h-rival').value = id;
+    document.getElementById('h2h-rival-text').textContent = nombre;
+    document.getElementById('h2h-rival-text').style.color = 'var(--color-text)';
+
+    const flagSpan = document.getElementById('h2h-rival-flag');
+    if (flagCode === 'retired') {
+        flagSpan.innerHTML = '<span style="font-size:14px;">✝</span>';
+    } else if (flagCode) {
+        flagSpan.innerHTML = `<img src="https://flagcdn.com/16x12/${flagCode}.png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" />`;
+    } else {
+        flagSpan.innerHTML = '';
+    }
+
+    document.getElementById('h2h-dropdown-list').style.display = 'none';
+}
+
+// Cerrar el dropdown si se hace click afuera
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('h2h-dropdown-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('h2h-dropdown-list').style.display = 'none';
+    }
+});
 async function guardarDescripcion(equipoId) {
     const texto = document.getElementById('desc-input').value;
     const r = await fetch('/Equipos/ActualizarDescripcion', {

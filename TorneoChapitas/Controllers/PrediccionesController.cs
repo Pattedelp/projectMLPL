@@ -7,11 +7,13 @@ namespace TorneoAmigos.Controllers
     public class PrediccionesController : Controller
     {
         private readonly TorneoRepository _repo;
+        private readonly TemporadaRepository _tempRepo;
         private readonly PrediccionesRepository _prediRepo;
 
-        public PrediccionesController(TorneoRepository repo, PrediccionesRepository prediRepo)
+        public PrediccionesController(TorneoRepository repo, TemporadaRepository tempRepo, PrediccionesRepository prediRepo)
         {
             _repo      = repo;
+            _tempRepo  = tempRepo;
             _prediRepo = prediRepo;
         }
 

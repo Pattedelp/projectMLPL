@@ -10,10 +10,19 @@
              style="width:56px;height:56px;border-radius:50%;object-fit:cover;" />
     </div>
     <div class="page-hero-text">
-        <h1>Palmarés</h1>
-        <p>Historial de campeones · Torneo Chapitas AAC</p>
+        <h1>Estadísticas</h1>
+        <p>Historial de campeones y ranking histórico · Torneo Chapitas AAC</p>
     </div>
 </div>
+
+<!-- TABS -->
+<div style="display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;">
+    <button onclick="showTab('palmares')" id="tab-palmares" class="tab-btn active">🏆 Palmarés</button>
+    <button onclick="showTab('alltime')" id="tab-alltime" class="tab-btn">📊 Tabla Histórica</button>
+</div>
+
+<!-- ============ PALMARÉS ============ -->
+<div id="section-palmares">
 
 @if (!Model.Palmares.Equipos.Any())
 {
@@ -150,6 +159,77 @@ else
     }
 }
 
+</div><!-- /section-palmares -->
+
+<!-- ============ RANKING ALL-TIME ============ -->
+<div id="section-alltime" style="display:none;">
+    <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
+        📊 Tabla Histórica — Primera División
+    </h2>
+    <p style="font-size:12px;color:var(--color-muted);margin-bottom:20px;">
+        Acumula todos los partidos de liga de Primera División registrados en el sistema. Ordenado por victorias totales.
+    </p>
+
+    @if (!Model.RankingAllTime.Any())
+    {
+        <p style="color:var(--color-muted);font-size:13px;">No hay datos suficientes todavía.</p>
+    }
+    else
+    {
+        <div class="tabla-wrapper">
+            <table class="tabla-posiciones">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Jugador</th>
+                        <th title="Partidos Jugados">PJ</th>
+                        <th title="Victorias">V</th>
+                        <th title="Derrotas">D</th>
+                        <th title="Goles a Favor">GF</th>
+                        <th title="Goles en Contra">GC</th>
+                        <th title="Diferencia de Goles">DG</th>
+                        <th title="Puntos">PTS</th>
+                        <th title="% Victorias">%V</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int posAt = 1; }
+                    @foreach (var entry in Model.RankingAllTime)
+                    {
+                        var dg = entry.GolesAFavor - entry.GolesEnContra;
+                        var pct = entry.PartidosJugados > 0 ? (int)(100.0 * entry.Victorias / entry.PartidosJugados) : 0;
+                        <tr style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@entry.EquipoId'">
+                            <td class="col-pos">@posAt</td>
+                            <td class="col-equipo">
+                                @if (entry.FlagCode == "retired")
+                                {
+                                    <span style="font-size:14px;margin-right:6px;color:var(--color-muted);">✝</span>
+                                }
+                                else if (!string.IsNullOrEmpty(entry.FlagCode))
+                                {
+                                    <img src="https://flagcdn.com/20x15/@(entry.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" />
+                                }
+                                <strong>@entry.NombreEquipo</strong>
+                            </td>
+                            <td class="col-num">@entry.PartidosJugados</td>
+                            <td class="col-num" style="color:var(--color-green);font-weight:600;">@entry.Victorias</td>
+                            <td class="col-num" style="color:var(--color-red);">@entry.Derrotas</td>
+                            <td class="col-num">@entry.GolesAFavor</td>
+                            <td class="col-num">@entry.GolesEnContra</td>
+                            <td class="col-num" style="color:@(dg >= 0 ? "var(--color-green)" : "var(--color-red)")">
+                                @(dg >= 0 ? "+" : "")@dg
+                            </td>
+                            <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@entry.PuntosTotal</td>
+                            <td class="col-num"><span style="font-size:12px;">@pct%</span></td>
+                        </tr>
+                        posAt++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
 @section Scripts {
 <script>
 function toggleDetalle(id) {
@@ -158,5 +238,15 @@ function toggleDetalle(id) {
     const isOpen = row.style.display !== 'none';
     row.style.display = isOpen ? 'none' : 'table-row';
 }
+function showTab(tab) {
+    document.getElementById('section-palmares').style.display = tab === 'palmares' ? 'block' : 'none';
+    document.getElementById('section-alltime').style.display  = tab === 'alltime'  ? 'block' : 'none';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+}
 </script>
+<style>
+.tab-btn { padding:10px 18px;border-radius:8px;background:var(--color-bg2);border:1px solid var(--color-border);color:var(--color-muted);font-size:13px;font-weight:500;cursor:pointer; }
+.tab-btn.active { background:var(--color-gold);color:var(--color-bg);border-color:var(--color-gold); }
+</style>
 }

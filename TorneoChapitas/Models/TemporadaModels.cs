@@ -140,6 +140,21 @@ namespace TorneoAmigos.Models
     public class EstadisticasViewModel
     {
         public PalmaresViewModel Palmares { get; set; } = new();
+        public List<RankingAllTimeEntry> RankingAllTime { get; set; } = new();
+    }
+
+    public class RankingAllTimeEntry
+    {
+        public int EquipoId { get; set; }
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int TemporadasJugadas { get; set; }
+        public int PartidosJugados { get; set; }
+        public int Victorias { get; set; }
+        public int Derrotas { get; set; }
+        public int PuntosTotal { get; set; }
+        public int GolesAFavor { get; set; }
+        public int GolesEnContra { get; set; }
     }
 
     // ── NOTICIAS ─────────────────────────────────────

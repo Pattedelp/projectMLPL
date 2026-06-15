@@ -888,6 +888,105 @@ namespace TorneoAmigos.Data
         }
 
         // ── TROFEOS (VIDRIERA) ──────────────────────────
+        public List<RankingAllTimeEntry> GetRankingAllTime()
+        {
+            // Sistema de puntos:
+            // Victoria 5-0/5-1/5-2/5-3 = 3pts ganador, 0pts perdedor
+            // Victoria 5-4             = 2pts ganador, 1pt  perdedor
+            // Fuentes: tabla 'partidos' (div=1, excluyendo histórico y copas)
+            //          tabla 'enfrentamientos_historicos' (torneo = 'Liga')
+            const string sql = @"
+                WITH todos_los_partidos AS (
+                    -- Partidos del sistema (Primera División, excluyendo fecha histórica)
+                    SELECT
+                        p.equipolocalid    AS local_id,
+                        p.equipovisitanteid AS visit_id,
+                        p.goleslocal       AS gl,
+                        p.golesvisitante   AS gv
+                    FROM partidos p
+                    WHERE p.divisionid = 1
+                      AND p.jugado = true
+                      AND p.fechaid NOT IN (SELECT id FROM fechas WHERE nombre = 'Histórico Pre-App')
+
+                    UNION ALL
+
+                    -- Partidos históricos pre-app (solo torneos de Primera División)
+                    SELECT
+                        eh.equipo_local_id,
+                        eh.equipo_visitante_id,
+                        eh.goles_local,
+                        eh.goles_visitante
+                    FROM enfrentamientos_historicos eh
+                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1
+                ),
+                puntos_por_partido AS (
+                    SELECT
+                        local_id AS equipo_id,
+                        gl AS goles_favor,
+                        gv AS goles_contra,
+                        CASE
+                            WHEN gl > gv AND (gl - gv) >= 2 THEN 3  -- 5-0/5-1/5-2/5-3
+                            WHEN gl > gv AND (gl - gv) = 1  THEN 2  -- 5-4
+                            WHEN gl < gv AND (gv - gl) = 1  THEN 1  -- perdió 4-5
+                            ELSE 0
+                        END AS puntos
+                    FROM todos_los_partidos
+
+                    UNION ALL
+
+                    SELECT
+                        visit_id AS equipo_id,
+                        gv AS goles_favor,
+                        gl AS goles_contra,
+                        CASE
+                            WHEN gv > gl AND (gv - gl) >= 2 THEN 3
+                            WHEN gv > gl AND (gv - gl) = 1  THEN 2
+                            WHEN gv < gl AND (gl - gv) = 1  THEN 1
+                            ELSE 0
+                        END AS puntos
+                    FROM todos_los_partidos
+                )
+                SELECT
+                    e.id,
+                    e.nombre,
+                    COALESCE(e.pais_code, '') AS pais_code,
+                    COUNT(*)                                              AS partidos_jugados,
+                    COUNT(*) FILTER (WHERE pp.goles_favor > pp.goles_contra) AS victorias,
+                    COUNT(*) FILTER (WHERE pp.goles_favor < pp.goles_contra) AS derrotas,
+                    COALESCE(SUM(pp.goles_favor),  0)                    AS goles_a_favor,
+                    COALESCE(SUM(pp.goles_contra), 0)                    AS goles_en_contra,
+                    COALESCE(SUM(pp.puntos), 0)                          AS puntos_total
+                FROM equipos e
+                JOIN puntos_por_partido pp ON pp.equipo_id = e.id
+                GROUP BY e.id, e.nombre, e.pais_code
+                HAVING COUNT(*) > 0
+                ORDER BY puntos_total DESC, victorias DESC, goles_a_favor DESC";
+
+            var lista = new List<RankingAllTimeEntry>();
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(sql, conn);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                var nombre   = r.GetString(1);
+                var paisCode = r.GetString(2);
+                lista.Add(new RankingAllTimeEntry
+                {
+                    EquipoId        = r.GetInt32(0),
+                    NombreEquipo    = nombre,
+                    FlagCode        = !string.IsNullOrEmpty(paisCode) ? paisCode : BanderaMap.GetCode(nombre),
+                    PartidosJugados = Convert.ToInt32(r.GetInt64(3)),
+                    Victorias       = Convert.ToInt32(r.GetInt64(4)),
+                    Derrotas        = Convert.ToInt32(r.GetInt64(5)),
+                    GolesAFavor     = Convert.ToInt32(r.GetInt64(6)),
+                    GolesEnContra   = Convert.ToInt32(r.GetInt64(7)),
+                    PuntosTotal     = Convert.ToInt32(r.GetInt64(8))
+                });
+            }
+            return lista;
+        }
+
         public List<Trofeo> GetTrofeos()
         {
             var lista = new List<Trofeo>();

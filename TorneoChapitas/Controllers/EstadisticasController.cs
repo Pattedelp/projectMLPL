@@ -14,7 +14,8 @@ namespace TorneoAmigos.Controllers
             ViewBag.ActivePage = "estadisticas";
             var vm = new EstadisticasViewModel
             {
-                Palmares = _repo.GetPalmares()
+                Palmares      = _repo.GetPalmares(),
+                RankingAllTime = _repo.GetRankingAllTime()
             };
             return View(vm);
         }

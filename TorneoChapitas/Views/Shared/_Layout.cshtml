@@ -66,7 +66,7 @@
             <div class="nav-dropdown">
                 <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"||ViewBag.ActivePage=="trofeos"||ViewBag.ActivePage=="predicciones")?"active":"")">Más ▾</span>
                 <div class="dropdown-menu">
-                    <a asp-controller="Historial" asp-action="Index">📚 Historial</a>
+                    <a asp-controller="Historial" asp-action="Index">📚 Historial de Temporadas</a>
                     <a asp-controller="Estadisticas" asp-action="Index">📈 Estadísticas</a>
                     <a asp-controller="Trofeos" asp-action="Index">🏆 Vidriera de Copas</a>
                     <a asp-controller="Predicciones" asp-action="Index">🔮 Predicciones</a>
@@ -137,7 +137,7 @@
 
         <div class="drawer-divider"></div>
         <a asp-controller="Noticias" asp-action="Index" class="drawer-item">📰 Noticias</a>
-        <a asp-controller="Historial" asp-action="Index" class="drawer-item">📚 Historial</a>
+        <a asp-controller="Historial" asp-action="Index" class="drawer-item">📚 Historial de Temporadas</a>
         <a asp-controller="Estadisticas" asp-action="Index" class="drawer-item">📈 Estadísticas</a>
         <a asp-controller="Trofeos" asp-action="Index" class="drawer-item">🏆 Vidriera de Copas</a>
         <a asp-controller="Predicciones" asp-action="Index" class="drawer-item">🔮 Predicciones</a>

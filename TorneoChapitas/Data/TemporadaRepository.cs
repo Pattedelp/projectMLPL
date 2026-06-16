@@ -83,18 +83,18 @@ namespace TorneoAmigos.Data
                        tc.ascenso_2_id,          ea2.nombre,
                        tc.descenso_1_id,         ed1.nombre,
                        tc.descenso_2_id,         ed2.nombre,
-                       tc.campeon_primera_id, ep.nombre,
-                       tc.campeon_b_id,       eb.nombre,
-                       tc.sin_descensos
+                       tc.sin_descensos,
+                       tc.campeon_primera_id,    ep.nombre,
+                       tc.campeon_b_id,          eb.nombre
                 FROM temporada_cierre tc
-                LEFT JOIN equipos ep  ON tc.campeon_primera_id = ep.id
-                LEFT JOIN equipos eb  ON tc.campeon_b_id         = eb.id
                 LEFT JOIN equipos ec  ON tc.campeon_copa_id      = ec.id
                 LEFT JOIN equipos es  ON tc.campeon_supercopa_id = es.id
                 LEFT JOIN equipos ea1 ON tc.ascenso_1_id         = ea1.id
                 LEFT JOIN equipos ea2 ON tc.ascenso_2_id         = ea2.id
                 LEFT JOIN equipos ed1 ON tc.descenso_1_id        = ed1.id
                 LEFT JOIN equipos ed2 ON tc.descenso_2_id        = ed2.id
+                LEFT JOIN equipos ep  ON tc.campeon_primera_id   = ep.id
+                LEFT JOIN equipos eb  ON tc.campeon_b_id         = eb.id
                 WHERE tc.temporada_id = @T";
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -102,25 +102,35 @@ namespace TorneoAmigos.Data
             conn.Open();
             using var r = cmd.ExecuteReader();
             if (!r.Read()) return null;
+            // índices: 0=id, 1=temporada_id,
+            //          2=copa_id, 3=copa_nombre,
+            //          4=supercopa_id, 5=supercopa_nombre,
+            //          6=asc1_id, 7=asc1_nombre,
+            //          8=asc2_id, 9=asc2_nombre,
+            //          10=desc1_id, 11=desc1_nombre,
+            //          12=desc2_id, 13=desc2_nombre,
+            //          14=sin_descensos,
+            //          15=primera_id, 16=primera_nombre,
+            //          17=b_id, 18=b_nombre
             return new TemporadaCierre
             {
-                Id                 = r.GetInt32(0),
-                TemporadaId        = r.GetInt32(1),
-                CampeonCopaId      = r.IsDBNull(2)  ? null : r.GetInt32(2),
-                CampeonCopaNombre  = r.IsDBNull(3)  ? null : r.GetString(3),
-                CampeonSupercopaId      = r.IsDBNull(4)  ? null : r.GetInt32(4),
-                CampeonSupercoPaNombre  = r.IsDBNull(5)  ? null : r.GetString(5),
-                Ascenso1Id         = r.IsDBNull(6)  ? null : r.GetInt32(6),
-                Ascenso1Nombre     = r.IsDBNull(7)  ? null : r.GetString(7),
-                Ascenso2Id         = r.IsDBNull(8)  ? null : r.GetInt32(8),
-                Ascenso2Nombre     = r.IsDBNull(9)  ? null : r.GetString(9),
-                Descenso1Id        = r.IsDBNull(10) ? null : r.GetInt32(10),
-                Descenso1Nombre    = r.IsDBNull(11) ? null : r.GetString(11),
-                Descenso2Id        = r.IsDBNull(12) ? null : r.GetInt32(12),
-                Descenso2Nombre    = r.IsDBNull(13) ? null : r.GetString(13),
-                SinDescensos       = r.GetBoolean(14),
-                CampeonPrimeraId   = r.IsDBNull(15) ? null : r.GetInt32(15),
-                CampeonBId         = r.IsDBNull(17) ? null : r.GetInt32(17)
+                Id                     = r.GetInt32(0),
+                TemporadaId            = r.GetInt32(1),
+                CampeonCopaId          = r.IsDBNull(2)  ? null : r.GetInt32(2),
+                CampeonCopaNombre      = r.IsDBNull(3)  ? null : r.GetString(3),
+                CampeonSupercopaId     = r.IsDBNull(4)  ? null : r.GetInt32(4),
+                CampeonSupercoPaNombre = r.IsDBNull(5)  ? null : r.GetString(5),
+                Ascenso1Id             = r.IsDBNull(6)  ? null : r.GetInt32(6),
+                Ascenso1Nombre         = r.IsDBNull(7)  ? null : r.GetString(7),
+                Ascenso2Id             = r.IsDBNull(8)  ? null : r.GetInt32(8),
+                Ascenso2Nombre         = r.IsDBNull(9)  ? null : r.GetString(9),
+                Descenso1Id            = r.IsDBNull(10) ? null : r.GetInt32(10),
+                Descenso1Nombre        = r.IsDBNull(11) ? null : r.GetString(11),
+                Descenso2Id            = r.IsDBNull(12) ? null : r.GetInt32(12),
+                Descenso2Nombre        = r.IsDBNull(13) ? null : r.GetString(13),
+                SinDescensos           = r.GetBoolean(14),
+                CampeonPrimeraId       = r.IsDBNull(15) ? null : r.GetInt32(15),
+                CampeonBId             = r.IsDBNull(17) ? null : r.GetInt32(17)
             };
         }
 

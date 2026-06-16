@@ -295,7 +295,6 @@ namespace TorneoAmigos.Models
         public string TemporadaNombre { get; set; } = "";
         public bool ALocal { get; set; } // true si EquipoA jugó de local
     }
-}
 
     // ── HISTORIAL LEGACY ─────────────────────────────
     public class LegacyTemporada
@@ -357,3 +356,4 @@ namespace TorneoAmigos.Models
         public string? Descenso2Nombre { get; set; }
         public bool SinDescensos { get; set; }
     }
+}

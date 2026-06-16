@@ -28,9 +28,9 @@
 
             <!-- FINALIZAR TEMPORADA -->
             @{
-                var cierre = ViewBag.Cierre as TorneoAmigos.Models.TemporadaCierre;
-                var equiposTodos = ViewBag.EquiposTodos as List<TorneoAmigos.Models.Equipo> ?? new();
-                var equiposB = ViewBag.EquiposB as List<TorneoAmigos.Models.Equipo> ?? new();
+                var cierre = ViewBag.Cierre as TemporadaCierre;
+                var equiposTodos = ViewBag.EquiposTodos as List<Equipo> ?? new();
+                var equiposB = ViewBag.EquiposB as List<Equipo> ?? new();
             }
             <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px 24px;">
                 <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px;">
@@ -71,7 +71,7 @@
                                 <option value="0">-- No se jugó --</option>
                                 @foreach (var e in equiposTodos)
                                 {
-                                    <option value="@e.Id" @(cierre?.CampeonCopaId == e.Id ? "selected" : "")>@e.Nombre</option>
+                                    <option value="@e.Id" selected="@(cierre != null && cierre.CampeonCopaId == e.Id)">@e.Nombre</option>
                                 }
                             </select>
                         </div>
@@ -81,7 +81,7 @@
                                 <option value="0">-- No se jugó --</option>
                                 @foreach (var e in equiposTodos)
                                 {
-                                    <option value="@e.Id" @(cierre?.CampeonSupercopaId == e.Id ? "selected" : "")>@e.Nombre</option>
+                                    <option value="@e.Id" selected="@(cierre != null && cierre.CampeonSupercopaId == e.Id)">@e.Nombre</option>
                                 }
                             </select>
                         </div>
@@ -95,14 +95,14 @@
                                 <option value="0">-- Automático (1° de la B) --</option>
                                 @foreach (var e in equiposB)
                                 {
-                                    <option value="@e.Id" @(cierre?.Ascenso1Id == e.Id ? "selected" : "")>@e.Nombre</option>
+                                    <option value="@e.Id" selected="@(cierre != null && cierre.Ascenso1Id == e.Id)">@e.Nombre</option>
                                 }
                             </select>
                             <select id="sel-ascenso-2" class="form-control" style="font-size:13px;">
                                 <option value="0">-- Automático (2° de la B) --</option>
                                 @foreach (var e in equiposB)
                                 {
-                                    <option value="@e.Id" @(cierre?.Ascenso2Id == e.Id ? "selected" : "")>@e.Nombre</option>
+                                    <option value="@e.Id" selected="@(cierre != null && cierre.Ascenso2Id == e.Id)">@e.Nombre</option>
                                 }
                             </select>
                         </div>
@@ -116,14 +116,14 @@
                                 <option value="0">-- Automático (penúltimo) --</option>
                                 @foreach (var e in equiposTodos.Where(e => e.DivisionId == 1))
                                 {
-                                    <option value="@e.Id" @(cierre?.Descenso1Id == e.Id ? "selected" : "")>@e.Nombre</option>
+                                    <option value="@e.Id" selected="@(cierre != null && cierre.Descenso1Id == e.Id)">@e.Nombre</option>
                                 }
                             </select>
                             <select id="sel-descenso-2" class="form-control" style="font-size:13px;">
                                 <option value="0">-- Automático (último) --</option>
                                 @foreach (var e in equiposTodos.Where(e => e.DivisionId == 1))
                                 {
-                                    <option value="@e.Id" @(cierre?.Descenso2Id == e.Id ? "selected" : "")>@e.Nombre</option>
+                                    <option value="@e.Id" selected="@(cierre != null && cierre.Descenso2Id == e.Id)">@e.Nombre</option>
                                 }
                             </select>
                         </div>

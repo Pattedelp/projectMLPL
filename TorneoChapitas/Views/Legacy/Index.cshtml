@@ -1,0 +1,176 @@
+@model List<LegacyTemporada>
+@{
+    ViewBag.Title = "Historial de Temporadas AMATEURISMO";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">📜</div>
+    <div class="page-hero-text">
+        <h1>Amateurismo</h1>
+        <p>Historial de Temporadas · Primera División · Pre-App</p>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <p style="color:var(--color-muted);font-size:13px;">No hay datos históricos cargados todavía.</p>
+}
+else
+{
+    <!-- SELECTOR DE TEMPORADA -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;">
+        @foreach (var t in Model)
+        {
+            <button onclick="showTemp(@t.Numero)"
+                    id="tab-t@(t.Numero)"
+                    class="tab-btn @(t == Model.First() ? "active" : "")">
+                T@t.Numero
+            </button>
+        }
+    </div>
+
+    @foreach (var t in Model)
+    {
+        <div id="temp-@t.Numero" style="display:@(t == Model.First() ? "block" : "none");">
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
+                <h2 style="font-family:var(--font-heading);font-size:18px;color:var(--color-gold);letter-spacing:1px;">
+                    Temporada @t.Numero — Primera División
+                </h2>
+                <span style="font-size:12px;color:var(--color-muted);">@t.TotalPartidos partidos registrados</span>
+            </div>
+
+            <!-- CAMPEÓN -->
+            @if (t.Tabla.Any())
+            {
+                var camp = t.Tabla.First();
+                <div style="background:linear-gradient(135deg,rgba(240,192,64,0.15),rgba(240,192,64,0.05));
+                            border:1px solid rgba(240,192,64,0.4);border-radius:12px;
+                            padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:24px;">🏆</span>
+                    <div>
+                        <div style="font-size:11px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;">Campeón</div>
+                        <div style="font-family:var(--font-heading);font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;">
+                            @if (!string.IsNullOrEmpty(camp.FlagCode) && camp.FlagCode != "retired")
+                            {
+                                <img src="https://flagcdn.com/24x18/@(camp.FlagCode).png" style="border-radius:2px;" alt="" onerror="this.style.display='none'" />
+                            }
+                            <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@camp.EquipoId"
+                               style="color:var(--color-text);text-decoration:none;">@camp.NombreEquipo</a>
+                        </div>
+                        <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">
+                            @camp.Pts pts · @camp.V victorias · @camp.PJ partidos jugados
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- TABLA POSICIONES -->
+            <div class="tabla-wrapper" style="margin-bottom:28px;">
+                <table class="tabla-posiciones">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Equipo</th>
+                            <th>PJ</th>
+                            <th>V</th>
+                            <th>D</th>
+                            <th>GF</th>
+                            <th>GC</th>
+                            <th>DG</th>
+                            <th>PTS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int pos = 1; }
+                        @foreach (var p in t.Tabla)
+                        {
+                            var dg = p.GF - p.GC;
+                            <tr style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@p.EquipoId'">
+                                <td class="col-pos">@pos</td>
+                                <td class="col-equipo">
+                                    @if (p.FlagCode == "retired")
+                                    {
+                                        <span style="margin-right:4px;color:var(--color-muted);">✝</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(p.FlagCode))
+                                    {
+                                        <img src="https://flagcdn.com/20x15/@(p.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" />
+                                    }
+                                    @p.NombreEquipo
+                                </td>
+                                <td class="col-num">@p.PJ</td>
+                                <td class="col-num" style="color:var(--color-green);font-weight:600;">@p.V</td>
+                                <td class="col-num" style="color:var(--color-red);">@p.D</td>
+                                <td class="col-num">@p.GF</td>
+                                <td class="col-num">@p.GC</td>
+                                <td class="col-num" style="color:@(dg >= 0 ? "var(--color-green)" : "var(--color-red)")">
+                                    @(dg >= 0 ? "+" : "")@dg
+                                </td>
+                                <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@p.Pts</td>
+                            </tr>
+                            pos++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- RESULTADOS -->
+            <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);
+                        text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                @foreach (var fecha in t.Fechas)
+                {
+                    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;overflow:hidden;">
+                        <div style="background:var(--color-bg3);padding:6px 14px;font-size:11px;
+                                    letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;">
+                            Fecha @fecha.Numero
+                        </div>
+                        @foreach (var r in fecha.Partidos)
+                        {
+                            var localGana = r.GolesLocal > r.GolesVisitante;
+                            <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
+                                <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                                    <span style="@(localGana ? "font-weight:700;" : "color:var(--color-muted);")">@r.NombreLocal</span>
+                                    @if (!string.IsNullOrEmpty(r.FlagLocal) && r.FlagLocal != "retired")
+                                    {
+                                        <img src="https://flagcdn.com/16x12/@(r.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" />
+                                    }
+                                </div>
+                                <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;
+                                            background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:60px;text-align:center;">
+                                    @r.GolesLocal - @r.GolesVisitante
+                                </div>
+                                <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                                    @if (!string.IsNullOrEmpty(r.FlagVisitante) && r.FlagVisitante != "retired")
+                                    {
+                                        <img src="https://flagcdn.com/16x12/@(r.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" />
+                                    }
+                                    <span style="@(!localGana ? "font-weight:700;" : "color:var(--color-muted);")">@r.NombreVisitante</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+        </div>
+    }
+}
+
+@section Scripts {
+<script>
+function showTemp(num) {
+    document.querySelectorAll('[id^="temp-"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('[id^="tab-t"]').forEach(el => el.classList.remove('active'));
+    document.getElementById('temp-' + num).style.display = 'block';
+    document.getElementById('tab-t' + num).classList.add('active');
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+</script>
+<style>
+.tab-btn { padding:8px 16px;border-radius:8px;background:var(--color-bg2);border:1px solid var(--color-border);
+           color:var(--color-muted);font-size:13px;font-weight:500;cursor:pointer; }
+.tab-btn.active { background:var(--color-gold);color:var(--color-bg);border-color:var(--color-gold); }
+</style>
+}

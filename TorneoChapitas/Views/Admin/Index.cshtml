@@ -27,19 +27,33 @@
         <div style="display:flex;flex-direction:column;gap:12px;">
 
             <!-- FINALIZAR TEMPORADA -->
+            @{
+                var cierre = ViewBag.Cierre as TorneoAmigos.Models.TemporadaCierre;
+                var equiposTodos = ViewBag.EquiposTodos as List<TorneoAmigos.Models.Equipo> ?? new();
+                var equiposB = ViewBag.EquiposB as List<TorneoAmigos.Models.Equipo> ?? new();
+            }
             <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px 24px;">
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px;">
                     <div style="width:44px;height:44px;border-radius:50%;background:rgba(224,85,85,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🏁</div>
                     <div>
-                        <div style="font-family:var(--font-heading);font-size:14px;letter-spacing:1px;color:var(--color-text);">Finalizar Temporada</div>
-                        <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Guarda historial, mueve equipos, registra campeones</div>
+                        <div style="font-family:var(--font-heading);font-size:14px;letter-spacing:1px;color:var(--color-text);">Cierre de Temporada</div>
+                        <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Guardá los datos a medida que se definen. Finalizar es solo la confirmación.</div>
                     </div>
                 </div>
 
-                <!-- Opciones de finalización -->
-                <div style="background:var(--color-bg3);border-radius:8px;padding:16px;margin-bottom:16px;">
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
+                @if (cierre != null)
+                {
+                    <div style="font-size:11px;color:var(--color-green);margin-bottom:12px;margin-left:60px;">
+                        ✅ Borrador guardado
+                    </div>
+                }
+
+                <div style="background:var(--color-bg3);border-radius:8px;padding:16px;margin-bottom:16px;display:flex;flex-direction:column;gap:14px;">
+
+                    <!-- Sin descensos -->
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
                         <input type="checkbox" id="chk-sin-descensos"
+                               @(cierre?.SinDescensos == true ? "checked" : "")
                                style="accent-color:var(--color-gold);width:16px;height:16px;" />
                         <span style="font-size:13px;color:var(--color-text);">
                             ⚠️ <strong>Sin descensos esta temporada</strong>
@@ -49,26 +63,85 @@
                         </span>
                     </label>
 
+                    <!-- Copas -->
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                         <div>
                             <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:6px;">🏆 Campeón Copa Argentina</label>
                             <select id="sel-campeon-copa" class="form-control" style="font-size:13px;">
                                 <option value="0">-- No se jugó --</option>
+                                @foreach (var e in equiposTodos)
+                                {
+                                    <option value="@e.Id" @(cierre?.CampeonCopaId == e.Id ? "selected" : "")>@e.Nombre</option>
+                                }
                             </select>
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:6px;">⭐ Campeón Supercopa</label>
                             <select id="sel-campeon-supercopa" class="form-control" style="font-size:13px;">
                                 <option value="0">-- No se jugó --</option>
+                                @foreach (var e in equiposTodos)
+                                {
+                                    <option value="@e.Id" @(cierre?.CampeonSupercopaId == e.Id ? "selected" : "")>@e.Nombre</option>
+                                }
                             </select>
                         </div>
                     </div>
+
+                    <!-- Ascensos -->
+                    <div>
+                        <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:6px;">📈 Ascensos (de Primera Nacional → Primera)</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <select id="sel-ascenso-1" class="form-control" style="font-size:13px;">
+                                <option value="0">-- Automático (1° de la B) --</option>
+                                @foreach (var e in equiposB)
+                                {
+                                    <option value="@e.Id" @(cierre?.Ascenso1Id == e.Id ? "selected" : "")>@e.Nombre</option>
+                                }
+                            </select>
+                            <select id="sel-ascenso-2" class="form-control" style="font-size:13px;">
+                                <option value="0">-- Automático (2° de la B) --</option>
+                                @foreach (var e in equiposB)
+                                {
+                                    <option value="@e.Id" @(cierre?.Ascenso2Id == e.Id ? "selected" : "")>@e.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Descensos -->
+                    <div id="seccion-descensos" style="@(cierre?.SinDescensos == true ? "display:none;" : "")">
+                        <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:6px;">📉 Descensos (de Primera → Primera Nacional)</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <select id="sel-descenso-1" class="form-control" style="font-size:13px;">
+                                <option value="0">-- Automático (penúltimo) --</option>
+                                @foreach (var e in equiposTodos.Where(e => e.DivisionId == 1))
+                                {
+                                    <option value="@e.Id" @(cierre?.Descenso1Id == e.Id ? "selected" : "")>@e.Nombre</option>
+                                }
+                            </select>
+                            <select id="sel-descenso-2" class="form-control" style="font-size:13px;">
+                                <option value="0">-- Automático (último) --</option>
+                                @foreach (var e in equiposTodos.Where(e => e.DivisionId == 1))
+                                {
+                                    <option value="@e.Id" @(cierre?.Descenso2Id == e.Id ? "selected" : "")>@e.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
                 </div>
 
-                <button onclick="confirmarFinalizar()"
-                        style="background:var(--color-red);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:var(--font-heading);font-size:13px;letter-spacing:1px;cursor:pointer;">
-                    Finalizar Temporada
-                </button>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button onclick="guardarCierre()"
+                            style="background:var(--color-gold);color:var(--color-bg);border:none;border-radius:8px;padding:10px 20px;font-family:var(--font-heading);font-size:13px;letter-spacing:1px;cursor:pointer;">
+                        💾 Guardar borrador
+                    </button>
+                    <button onclick="confirmarFinalizar()"
+                            style="background:var(--color-red);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:var(--font-heading);font-size:13px;letter-spacing:1px;cursor:pointer;">
+                        🏁 Finalizar Temporada
+                    </button>
+                </div>
+                <p id="msg-cierre" style="font-size:12px;margin-top:8px;display:none;"></p>
             </div>
 
             <!-- COPA ARGENTINA -->
@@ -182,41 +255,42 @@ else
 
 @section Scripts {
 <script>
-// Cargar equipos para los selectores de campeones
-fetch('/Admin/GetEquiposTodos')
-    .then(r => r.json())
-    .then(equipos => {
-        ['sel-campeon-copa', 'sel-campeon-supercopa'].forEach(id => {
-            const sel = document.getElementById(id);
-            equipos.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = e.nombre;
-                sel.appendChild(opt);
-            });
-        });
+// Sin descensos toggle
+document.getElementById('chk-sin-descensos').addEventListener('change', function() {
+    document.getElementById('seccion-descensos').style.display = this.checked ? 'none' : '';
+});
+
+async function guardarCierre() {
+    const msg = document.getElementById('msg-cierre');
+    const data = {
+        campeonCopaId:      parseInt(document.getElementById('sel-campeon-copa').value) || 0,
+        campeonSupercopaId: parseInt(document.getElementById('sel-campeon-supercopa').value) || 0,
+        ascenso1Id:         parseInt(document.getElementById('sel-ascenso-1').value) || 0,
+        ascenso2Id:         parseInt(document.getElementById('sel-ascenso-2').value) || 0,
+        descenso1Id:        parseInt(document.getElementById('sel-descenso-1').value) || 0,
+        descenso2Id:        parseInt(document.getElementById('sel-descenso-2').value) || 0,
+        sinDescensos:       document.getElementById('chk-sin-descensos').checked
+    };
+
+    const r = await fetch('/Admin/GuardarCierre', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
     });
+    const d = await r.json();
+    msg.style.display = 'block';
+    msg.style.color = d.ok ? 'var(--color-green)' : 'var(--color-red)';
+    msg.textContent = d.ok ? '✅ Borrador guardado correctamente.' : '⚠️ Error al guardar.';
+    if (d.ok) setTimeout(() => location.reload(), 1000);
+}
 
 async function confirmarFinalizar() {
-    const sinDesc   = document.getElementById('chk-sin-descensos').checked;
-    const copaId    = parseInt(document.getElementById('sel-campeon-copa').value);
-    const supercopaId = parseInt(document.getElementById('sel-campeon-supercopa').value);
-
-    let msg = '¿Finalizar la temporada?';
-    if (sinDesc) msg += '\n⚠️ Sin descensos esta temporada.';
-    if (copaId > 0) msg += '\n🏆 Se registrará el campeón de Copa.';
-    if (supercopaId > 0) msg += '\n⭐ Se registrará el campeón de Supercopa.';
-
-    if (!confirm(msg)) return;
+    if (!confirm('¿Finalizar la temporada? Esta acción no se puede deshacer.\n\nSe usarán los datos del borrador guardado.')) return;
 
     const r = await fetch('/Admin/FinalizarTemporada', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            sinDescensos: sinDesc,
-            campeonCopaId: copaId,
-            campeonSupercopaId: supercopaId
-        })
+        body: JSON.stringify({ sinDescensos: document.getElementById('chk-sin-descensos').checked })
     });
     const d = await r.json();
     if (d.ok) { alert('✅ Temporada finalizada correctamente.'); location.reload(); }

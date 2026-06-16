@@ -72,7 +72,84 @@ namespace TorneoAmigos.Data
 
         // ── FINALIZAR TEMPORADA ─────────────────────────
 
-        public bool FinalizarTemporada(int temporadaId, List<PosicionViewModel> tablaPrimera, List<PosicionViewModel> tablaB, bool sinDescensos = false)
+        // ── BORRADOR DE CIERRE DE TEMPORADA ─────────────
+        public TemporadaCierre? GetCierre(int temporadaId)
+        {
+            const string sql = @"
+                SELECT tc.id, tc.temporada_id,
+                       tc.campeon_copa_id,       ec.nombre,
+                       tc.campeon_supercopa_id,  es.nombre,
+                       tc.ascenso_1_id,          ea1.nombre,
+                       tc.ascenso_2_id,          ea2.nombre,
+                       tc.descenso_1_id,         ed1.nombre,
+                       tc.descenso_2_id,         ed2.nombre,
+                       tc.sin_descensos
+                FROM temporada_cierre tc
+                LEFT JOIN equipos ec  ON tc.campeon_copa_id      = ec.id
+                LEFT JOIN equipos es  ON tc.campeon_supercopa_id = es.id
+                LEFT JOIN equipos ea1 ON tc.ascenso_1_id         = ea1.id
+                LEFT JOIN equipos ea2 ON tc.ascenso_2_id         = ea2.id
+                LEFT JOIN equipos ed1 ON tc.descenso_1_id        = ed1.id
+                LEFT JOIN equipos ed2 ON tc.descenso_2_id        = ed2.id
+                WHERE tc.temporada_id = @T";
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@T", temporadaId);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            if (!r.Read()) return null;
+            return new TemporadaCierre
+            {
+                Id                 = r.GetInt32(0),
+                TemporadaId        = r.GetInt32(1),
+                CampeonCopaId      = r.IsDBNull(2)  ? null : r.GetInt32(2),
+                CampeonCopaNombre  = r.IsDBNull(3)  ? null : r.GetString(3),
+                CampeonSupercopaId      = r.IsDBNull(4)  ? null : r.GetInt32(4),
+                CampeonSupercoPaNombre  = r.IsDBNull(5)  ? null : r.GetString(5),
+                Ascenso1Id         = r.IsDBNull(6)  ? null : r.GetInt32(6),
+                Ascenso1Nombre     = r.IsDBNull(7)  ? null : r.GetString(7),
+                Ascenso2Id         = r.IsDBNull(8)  ? null : r.GetInt32(8),
+                Ascenso2Nombre     = r.IsDBNull(9)  ? null : r.GetString(9),
+                Descenso1Id        = r.IsDBNull(10) ? null : r.GetInt32(10),
+                Descenso1Nombre    = r.IsDBNull(11) ? null : r.GetString(11),
+                Descenso2Id        = r.IsDBNull(12) ? null : r.GetInt32(12),
+                Descenso2Nombre    = r.IsDBNull(13) ? null : r.GetString(13),
+                SinDescensos       = r.GetBoolean(14)
+            };
+        }
+
+        public bool GuardarCierre(TemporadaCierre cierre)
+        {
+            const string sql = @"
+                INSERT INTO temporada_cierre
+                    (temporada_id, campeon_copa_id, campeon_supercopa_id,
+                     ascenso_1_id, ascenso_2_id, descenso_1_id, descenso_2_id,
+                     sin_descensos, updated_at)
+                VALUES (@T, @CC, @CS, @A1, @A2, @D1, @D2, @SD, NOW())
+                ON CONFLICT (temporada_id) DO UPDATE SET
+                    campeon_copa_id      = EXCLUDED.campeon_copa_id,
+                    campeon_supercopa_id = EXCLUDED.campeon_supercopa_id,
+                    ascenso_1_id         = EXCLUDED.ascenso_1_id,
+                    ascenso_2_id         = EXCLUDED.ascenso_2_id,
+                    descenso_1_id        = EXCLUDED.descenso_1_id,
+                    descenso_2_id        = EXCLUDED.descenso_2_id,
+                    sin_descensos        = EXCLUDED.sin_descensos,
+                    updated_at           = NOW()";
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@T",  cierre.TemporadaId);
+            cmd.Parameters.AddWithValue("@CC", (object?)cierre.CampeonCopaId      ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@CS", (object?)cierre.CampeonSupercopaId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@A1", (object?)cierre.Ascenso1Id         ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@A2", (object?)cierre.Ascenso2Id         ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@D1", (object?)cierre.Descenso1Id        ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@D2", (object?)cierre.Descenso2Id        ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@SD", cierre.SinDescensos);
+            conn.Open();
+            return cmd.ExecuteNonQuery() > 0;
+        }
+
+        public bool FinalizarTemporada(int temporadaId, List<PosicionViewModel> tablaPrimera, List<PosicionViewModel> tablaB, bool sinDescensos = false, TemporadaCierre? cierre = null)
         {
             using var conn = GetConnection();
             conn.Open();
@@ -91,25 +168,19 @@ namespace TorneoAmigos.Data
                 tx.Commit();
 
                 // Mover equipos entre divisiones
-                // Ascensos (siempre se aplican)
-                if (tablaB.Count >= 2)
+                // Ascensos: usar borrador si existe, si no usar los 2 primeros de tabla B
+                var ascenso1 = cierre?.Ascenso1Id ?? (tablaB.Count >= 1 ? tablaB[0].EquipoId : 0);
+                var ascenso2 = cierre?.Ascenso2Id ?? (tablaB.Count >= 2 ? tablaB[1].EquipoId : 0);
+                if (ascenso1 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 1 WHERE id = @Id", ascenso1);
+                if (ascenso2 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 1 WHERE id = @Id", ascenso2);
+
+                // Descensos: usar borrador si existe, si no usar los 2 últimos de tabla Primera
+                if (!sinDescensos)
                 {
-                    for (int i = 0; i < 2; i++)
-                    {
-                        var eq = tablaB[i];
-                        if (eq.EquipoId > 0)
-                            EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 1 WHERE id = @Id", eq.EquipoId);
-                    }
-                }
-                // Descensos (solo si NO es temporada sin descensos)
-                if (!sinDescensos && tablaPrimera.Count >= 2)
-                {
-                    for (int i = tablaPrimera.Count - 2; i < tablaPrimera.Count; i++)
-                    {
-                        var eq = tablaPrimera[i];
-                        if (eq.EquipoId > 0)
-                            EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", eq.EquipoId);
-                    }
+                    var descenso1 = cierre?.Descenso1Id ?? (tablaPrimera.Count >= 2 ? tablaPrimera[tablaPrimera.Count - 2].EquipoId : 0);
+                    var descenso2 = cierre?.Descenso2Id ?? (tablaPrimera.Count >= 1 ? tablaPrimera[tablaPrimera.Count - 1].EquipoId : 0);
+                    if (descenso1 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", descenso1);
+                    if (descenso2 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", descenso2);
                 }
 
                 // Registrar títulos en el palmarés

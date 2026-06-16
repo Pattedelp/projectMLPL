@@ -337,3 +337,23 @@ namespace TorneoAmigos.Models
         public int GolesLocal { get; set; }
         public int GolesVisitante { get; set; }
     }
+
+    // ── BORRADOR DE CIERRE DE TEMPORADA ──────────────
+    public class TemporadaCierre
+    {
+        public int Id { get; set; }
+        public int TemporadaId { get; set; }
+        public int? CampeonCopaId { get; set; }
+        public string? CampeonCopaNombre { get; set; }
+        public int? CampeonSupercopaId { get; set; }
+        public string? CampeonSupercoPaNombre { get; set; }
+        public int? Ascenso1Id { get; set; }
+        public string? Ascenso1Nombre { get; set; }
+        public int? Ascenso2Id { get; set; }
+        public string? Ascenso2Nombre { get; set; }
+        public int? Descenso1Id { get; set; }
+        public string? Descenso1Nombre { get; set; }
+        public int? Descenso2Id { get; set; }
+        public string? Descenso2Nombre { get; set; }
+        public bool SinDescensos { get; set; }
+    }

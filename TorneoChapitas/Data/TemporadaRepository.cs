@@ -49,13 +49,6 @@ namespace TorneoAmigos.Data
                 INNER JOIN divisiones d ON tr.division_id = d.id
                 WHERE tr.temporada_id = @T
                 ORDER BY tr.division_id, tr.posicion";
-            var unionHistorico = tablaHistoricoExiste ? @"
-                    UNION ALL
-                    SELECT eh.equipo_local_id, eh.equipo_visitante_id, eh.goles_local, eh.goles_visitante
-                    FROM enfrentamientos_historicos eh
-                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1" : "";
-
-            sql = sql.Replace("@UNION_HISTORICO@", unionHistorico);
 
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
@@ -1184,13 +1177,6 @@ namespace TorneoAmigos.Data
                 WHERE LOWER(TRIM(nombre_equipo)) = LOWER(TRIM(@N))
                    OR LOWER(TRIM(nombre_equipo)) LIKE LOWER(TRIM(@N)) || ' %'
                 ORDER BY created_at DESC";
-            var unionHistorico = tablaHistoricoExiste ? @"
-                    UNION ALL
-                    SELECT eh.equipo_local_id, eh.equipo_visitante_id, eh.goles_local, eh.goles_visitante
-                    FROM enfrentamientos_historicos eh
-                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1" : "";
-
-            sql = sql.Replace("@UNION_HISTORICO@", unionHistorico);
 
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
@@ -1224,13 +1210,6 @@ namespace TorneoAmigos.Data
                 FROM palmares p
                 LEFT JOIN equipos e ON p.equipo_id = e.id
                 ORDER BY p.created_at DESC";
-            var unionHistorico = tablaHistoricoExiste ? @"
-                    UNION ALL
-                    SELECT eh.equipo_local_id, eh.equipo_visitante_id, eh.goles_local, eh.goles_visitante
-                    FROM enfrentamientos_historicos eh
-                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1" : "";
-
-            sql = sql.Replace("@UNION_HISTORICO@", unionHistorico);
 
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);

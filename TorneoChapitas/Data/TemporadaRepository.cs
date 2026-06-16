@@ -83,8 +83,12 @@ namespace TorneoAmigos.Data
                        tc.ascenso_2_id,          ea2.nombre,
                        tc.descenso_1_id,         ed1.nombre,
                        tc.descenso_2_id,         ed2.nombre,
+                       tc.campeon_primera_id, ep.nombre,
+                       tc.campeon_b_id,       eb.nombre,
                        tc.sin_descensos
                 FROM temporada_cierre tc
+                LEFT JOIN equipos ep  ON tc.campeon_primera_id = ep.id
+                LEFT JOIN equipos eb  ON tc.campeon_b_id         = eb.id
                 LEFT JOIN equipos ec  ON tc.campeon_copa_id      = ec.id
                 LEFT JOIN equipos es  ON tc.campeon_supercopa_id = es.id
                 LEFT JOIN equipos ea1 ON tc.ascenso_1_id         = ea1.id
@@ -114,7 +118,9 @@ namespace TorneoAmigos.Data
                 Descenso1Nombre    = r.IsDBNull(11) ? null : r.GetString(11),
                 Descenso2Id        = r.IsDBNull(12) ? null : r.GetInt32(12),
                 Descenso2Nombre    = r.IsDBNull(13) ? null : r.GetString(13),
-                SinDescensos       = r.GetBoolean(14)
+                SinDescensos       = r.GetBoolean(14),
+                CampeonPrimeraId   = r.IsDBNull(15) ? null : r.GetInt32(15),
+                CampeonBId         = r.IsDBNull(17) ? null : r.GetInt32(17)
             };
         }
 
@@ -123,12 +129,15 @@ namespace TorneoAmigos.Data
             const string sql = @"
                 INSERT INTO temporada_cierre
                     (temporada_id, campeon_copa_id, campeon_supercopa_id,
+                     campeon_primera_id, campeon_b_id,
                      ascenso_1_id, ascenso_2_id, descenso_1_id, descenso_2_id,
                      sin_descensos, updated_at)
-                VALUES (@T, @CC, @CS, @A1, @A2, @D1, @D2, @SD, NOW())
+                VALUES (@T, @CC, @CS, @CP, @CB, @A1, @A2, @D1, @D2, @SD, NOW())
                 ON CONFLICT (temporada_id) DO UPDATE SET
                     campeon_copa_id      = EXCLUDED.campeon_copa_id,
                     campeon_supercopa_id = EXCLUDED.campeon_supercopa_id,
+                    campeon_primera_id   = EXCLUDED.campeon_primera_id,
+                    campeon_b_id         = EXCLUDED.campeon_b_id,
                     ascenso_1_id         = EXCLUDED.ascenso_1_id,
                     ascenso_2_id         = EXCLUDED.ascenso_2_id,
                     descenso_1_id        = EXCLUDED.descenso_1_id,
@@ -140,6 +149,8 @@ namespace TorneoAmigos.Data
             cmd.Parameters.AddWithValue("@T",  cierre.TemporadaId);
             cmd.Parameters.AddWithValue("@CC", (object?)cierre.CampeonCopaId      ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@CS", (object?)cierre.CampeonSupercopaId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@CP", (object?)cierre.CampeonPrimeraId   ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@CB", (object?)cierre.CampeonBId         ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@A1", (object?)cierre.Ascenso1Id         ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@A2", (object?)cierre.Ascenso2Id         ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@D1", (object?)cierre.Descenso1Id        ?? DBNull.Value);
@@ -185,17 +196,16 @@ namespace TorneoAmigos.Data
 
                 // Registrar títulos en el palmarés
                 var temporadaNombre = GetTodasLasTemporadas().FirstOrDefault(t => t.Id == temporadaId)?.Nombre ?? $"Temporada {temporadaId}";
-                if (tablaPrimera.Any())
-                {
-                    var campeon = tablaPrimera.First();
-                    AgregarTitulo(campeon.EquipoId, "campeon_torneo", "Campeón Primera División", temporadaId, temporadaNombre);
-                }
-                // Campeón de la B
-                if (tablaB.Any())
-                {
-                    var campeonB = tablaB.First();
-                    AgregarTitulo(campeonB.EquipoId, "campeon_primera_b", "Campeón Primera Nacional", temporadaId, temporadaNombre);
-                }
+
+                // Campeón Primera División: usar borrador si existe, si no el 1° de tabla
+                var campeonPrimId = cierre?.CampeonPrimeraId ?? (tablaPrimera.Any() ? tablaPrimera.First().EquipoId : 0);
+                if (campeonPrimId > 0)
+                    AgregarTitulo(campeonPrimId, "campeon_torneo", "Campeón Primera División", temporadaId, temporadaNombre);
+
+                // Campeón de la B: usar borrador si existe, si no el 1° de tabla B
+                var campeonBId = cierre?.CampeonBId ?? (tablaB.Any() ? tablaB.First().EquipoId : 0);
+                if (campeonBId > 0)
+                    AgregarTitulo(campeonBId, "campeon_primera_b", "Campeón Primera Nacional", temporadaId, temporadaNombre);
 
                 return true;
             }
@@ -949,7 +959,8 @@ namespace TorneoAmigos.Data
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(@"
                 INSERT INTO palmares (equipo_id, tipo_titulo, nombre_titulo, temporada_id, temporada_nombre)
-                VALUES (@E, @T, @N, @TId, @TNom)", conn);
+                VALUES (@E, @T, @N, @TId, @TNom)
+                ON CONFLICT DO NOTHING", conn);
             cmd.Parameters.AddWithValue("@E",    equipoId);
             cmd.Parameters.AddWithValue("@T",    tipoTitulo);
             cmd.Parameters.AddWithValue("@N",    nombreTitulo);

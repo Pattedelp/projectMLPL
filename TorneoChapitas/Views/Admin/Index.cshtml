@@ -63,6 +63,30 @@
                         </span>
                     </label>
 
+                    <!-- Campeón Primera División -->
+                    <div>
+                        <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:6px;">🏆 Campeón Primera División</label>
+                        <select id="sel-campeon-primera" class="form-control" style="font-size:13px;">
+                            <option value="0">-- Automático (1° de tabla) --</option>
+                            @foreach (var e in equiposTodos.Where(e => e.DivisionId == 1))
+                            {
+                                <option value="@e.Id" selected="@(cierre != null && cierre.CampeonPrimeraId == e.Id)">@e.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Campeón Primera Nacional (B) -->
+                    <div>
+                        <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:6px;">🥈 Campeón Primera Nacional</label>
+                        <select id="sel-campeon-b" class="form-control" style="font-size:13px;">
+                            <option value="0">-- Automático (1° de tabla B) --</option>
+                            @foreach (var e in equiposB)
+                            {
+                                <option value="@e.Id" selected="@(cierre != null && cierre.CampeonBId == e.Id)">@e.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
                     <!-- Copas -->
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                         <div>
@@ -265,6 +289,8 @@ async function guardarCierre() {
     const data = {
         campeonCopaId:      parseInt(document.getElementById('sel-campeon-copa').value) || 0,
         campeonSupercopaId: parseInt(document.getElementById('sel-campeon-supercopa').value) || 0,
+        campeonPrimeraId:   parseInt(document.getElementById('sel-campeon-primera').value) || 0,
+        campeonBId:         parseInt(document.getElementById('sel-campeon-b').value) || 0,
         ascenso1Id:         parseInt(document.getElementById('sel-ascenso-1').value) || 0,
         ascenso2Id:         parseInt(document.getElementById('sel-ascenso-2').value) || 0,
         descenso1Id:        parseInt(document.getElementById('sel-descenso-1').value) || 0,

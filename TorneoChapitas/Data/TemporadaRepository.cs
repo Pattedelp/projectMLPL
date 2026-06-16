@@ -964,13 +964,24 @@ namespace TorneoAmigos.Data
 
         // ── PALMARÉS ───────────────────────────────────
 
+        public void BorrarTitulo(string tipoTitulo, int? temporadaId)
+        {
+            if (!temporadaId.HasValue) return;
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(
+                "DELETE FROM palmares WHERE tipo_titulo = @T AND temporada_id = @TId", conn);
+            cmd.Parameters.AddWithValue("@T",   tipoTitulo);
+            cmd.Parameters.AddWithValue("@TId", temporadaId.Value);
+            conn.Open();
+            cmd.ExecuteNonQuery();
+        }
+
         public void AgregarTitulo(int equipoId, string tipoTitulo, string nombreTitulo, int? temporadaId, string temporadaNombre)
         {
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(@"
-                INSERT INTO palmares (equipo_id, tipo_titulo, nombre_titulo, temporada_id, temporada_nombre)
-                VALUES (@E, @T, @N, @TId, @TNom)
-                ON CONFLICT DO NOTHING", conn);
+                INSERT INTO palmares (equipo_id, nombre_equipo, tipo_titulo, nombre_titulo, temporada_id, temporada_nombre)
+                VALUES (@E, (SELECT nombre FROM equipos WHERE id = @E), @T, @N, @TId, @TNom)", conn);
             cmd.Parameters.AddWithValue("@E",    equipoId);
             cmd.Parameters.AddWithValue("@T",    tipoTitulo);
             cmd.Parameters.AddWithValue("@N",    nombreTitulo);

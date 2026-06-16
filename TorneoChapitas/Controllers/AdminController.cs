@@ -58,18 +58,22 @@ namespace TorneoAmigos.Controllers
 
             var ok = _tempRepo.GuardarCierre(cierre);
 
-            // Registrar en palmarés inmediatamente (ON CONFLICT DO NOTHING evita duplicados)
+            // Registrar en palmarés — primero borra el anterior del mismo tipo/temporada, luego inserta
             if (ok)
             {
                 var tempNom = temporada.Nombre;
-                if (cierre.CampeonCopaId.HasValue)
-                    _tempRepo.AgregarTitulo(cierre.CampeonCopaId.Value, "campeon_copa", "Campeón Copa Argentina", temporada.Id, tempNom);
-                if (cierre.CampeonSupercopaId.HasValue)
-                    _tempRepo.AgregarTitulo(cierre.CampeonSupercopaId.Value, "campeon_supercopa", "Campeón Supercopa Argentina", temporada.Id, tempNom);
-                if (cierre.CampeonPrimeraId.HasValue)
-                    _tempRepo.AgregarTitulo(cierre.CampeonPrimeraId.Value, "campeon_torneo", "Campeón Primera División", temporada.Id, tempNom);
-                if (cierre.CampeonBId.HasValue)
-                    _tempRepo.AgregarTitulo(cierre.CampeonBId.Value, "campeon_primera_b", "Campeón Primera Nacional", temporada.Id, tempNom);
+                void ActualizarCampeon(int? nuevoId, string tipo, string nombre)
+                {
+                    if (!nuevoId.HasValue) return;
+                    // Borrar campeón anterior del mismo tipo en esta temporada
+                    _tempRepo.BorrarTitulo(tipo, temporada.Id);
+                    // Insertar el nuevo
+                    _tempRepo.AgregarTitulo(nuevoId.Value, tipo, nombre, temporada.Id, tempNom);
+                }
+                ActualizarCampeon(cierre.CampeonCopaId,      "campeon_copa",       "Campeón Copa Argentina");
+                ActualizarCampeon(cierre.CampeonSupercopaId, "campeon_supercopa",  "Campeón Supercopa Argentina");
+                ActualizarCampeon(cierre.CampeonPrimeraId,   "campeon_torneo",     "Campeón Primera División");
+                ActualizarCampeon(cierre.CampeonBId,         "campeon_primera_b",  "Campeón Primera Nacional");
             }
 
             return Json(new { ok });

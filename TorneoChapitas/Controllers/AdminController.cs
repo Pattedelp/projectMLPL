@@ -20,12 +20,42 @@ namespace TorneoAmigos.Controllers
         public IActionResult Index()
         {
             ViewBag.ActivePage = "admin";
+            var temporadaActiva = _tempRepo.GetTemporadaActiva();
             var vm = new HistorialViewModel
             {
                 Temporadas      = _tempRepo.GetTodasLasTemporadas(),
-                TemporadaActiva = _tempRepo.GetTemporadaActiva()
+                TemporadaActiva = temporadaActiva
             };
+            if (temporadaActiva != null)
+                ViewBag.Cierre = _tempRepo.GetCierre(temporadaActiva.Id);
+            ViewBag.EquiposTodos = _repo.GetEquiposByDivision(1)
+                .Concat(_repo.GetEquiposByDivision(2))
+                .OrderBy(e => e.Nombre).ToList();
+            ViewBag.EquiposB = _repo.GetEquiposByDivision(2).ToList();
             return View(vm);
+        }
+
+        // ── GUARDAR BORRADOR CIERRE ─────────────────────
+        [HttpPost]
+        public IActionResult GuardarCierre([FromBody] GuardarCierreDto dto)
+        {
+            var temporada = _tempRepo.GetTemporadaActiva();
+            if (temporada == null) return Json(new { ok = false, msg = "No hay temporada activa" });
+
+            var cierre = new TemporadaCierre
+            {
+                TemporadaId        = temporada.Id,
+                CampeonCopaId      = dto.CampeonCopaId      > 0 ? dto.CampeonCopaId      : null,
+                CampeonSupercopaId = dto.CampeonSupercopaId > 0 ? dto.CampeonSupercopaId : null,
+                Ascenso1Id         = dto.Ascenso1Id         > 0 ? dto.Ascenso1Id         : null,
+                Ascenso2Id         = dto.Ascenso2Id         > 0 ? dto.Ascenso2Id         : null,
+                Descenso1Id        = dto.Descenso1Id        > 0 ? dto.Descenso1Id        : null,
+                Descenso2Id        = dto.Descenso2Id        > 0 ? dto.Descenso2Id        : null,
+                SinDescensos       = dto.SinDescensos
+            };
+
+            var ok = _tempRepo.GuardarCierre(cierre);
+            return Json(new { ok });
         }
 
         // ── FINALIZAR TEMPORADA ─────────────────────────
@@ -35,23 +65,34 @@ namespace TorneoAmigos.Controllers
             var temporada = _tempRepo.GetTemporadaActiva();
             if (temporada == null) return Json(new { ok = false, msg = "No hay temporada activa" });
 
+            // Usar borrador guardado, con fallback al DTO por compatibilidad
+            var cierre = _tempRepo.GetCierre(temporada.Id);
+
             var tablaPrimera  = _repo.GetTablaPosiciones(1);
             var tablaB        = _repo.GetTablaPosiciones(2);
-            bool sinDescensos = dto?.SinDescensos ?? false;
+            bool sinDescensos = cierre?.SinDescensos ?? dto?.SinDescensos ?? false;
 
-            var ok = _tempRepo.FinalizarTemporada(temporada.Id, tablaPrimera, tablaB, sinDescensos);
+            // Aplicar ascensos/descensos manuales si están en el borrador
+            if (cierre != null)
+            {
+                // Reordenar tablas según borrador si hay movimientos manuales
+                if (cierre.Ascenso1Id.HasValue || cierre.Descenso1Id.HasValue)
+                {
+                    // Los movimientos manuales se aplican directamente en FinalizarTemporada
+                }
+            }
 
-            // Registrar títulos de Copa y Supercopa si se indicaron
-            if (ok && dto?.CampeonCopaId > 0)
-            {
-                var tempNom = temporada.Nombre;
-                _tempRepo.AgregarTitulo(dto.CampeonCopaId, "campeon_copa", "Campeón Copa Argentina", temporada.Id, tempNom);
-            }
-            if (ok && dto?.CampeonSupercopaId > 0)
-            {
-                var tempNom = temporada.Nombre;
-                _tempRepo.AgregarTitulo(dto.CampeonSupercopaId, "campeon_supercopa", "Campeón Supercopa Argentina", temporada.Id, tempNom);
-            }
+            var ok = _tempRepo.FinalizarTemporada(temporada.Id, tablaPrimera, tablaB, sinDescensos, cierre);
+
+            // Registrar títulos (usar borrador primero, fallback a DTO)
+            var tempNom = temporada.Nombre;
+            var copaId      = cierre?.CampeonCopaId      ?? (dto?.CampeonCopaId      > 0 ? dto.CampeonCopaId      : 0);
+            var supercopaId = cierre?.CampeonSupercopaId ?? (dto?.CampeonSupercopaId > 0 ? dto.CampeonSupercopaId : 0);
+
+            if (ok && copaId > 0)
+                _tempRepo.AgregarTitulo(copaId, "campeon_copa", "Campeón Copa Argentina", temporada.Id, tempNom);
+            if (ok && supercopaId > 0)
+                _tempRepo.AgregarTitulo(supercopaId, "campeon_supercopa", "Campeón Supercopa Argentina", temporada.Id, tempNom);
 
             return Json(new { ok, msg = ok ? "Temporada finalizada" : "Error al finalizar" });
         }
@@ -307,6 +348,17 @@ namespace TorneoAmigos.Controllers
         public int EquipoId { get; set; }
         public string TipoTitulo { get; set; } = "";
         public string NombreTitulo { get; set; } = "";
+    }
+
+    public class GuardarCierreDto
+    {
+        public int CampeonCopaId { get; set; }
+        public int CampeonSupercopaId { get; set; }
+        public int Ascenso1Id { get; set; }
+        public int Ascenso2Id { get; set; }
+        public int Descenso1Id { get; set; }
+        public int Descenso2Id { get; set; }
+        public bool SinDescensos { get; set; }
     }
 
     public class FinalizarTemporadaDto

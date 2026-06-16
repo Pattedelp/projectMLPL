@@ -354,6 +354,8 @@ namespace TorneoAmigos.Models
         public string? Descenso1Nombre { get; set; }
         public int? Descenso2Id { get; set; }
         public string? Descenso2Nombre { get; set; }
+        public int? CampeonPrimeraId { get; set; }
+        public int? CampeonBId { get; set; }
         public bool SinDescensos { get; set; }
     }
 }

@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(ls \"c:\\\\Users\\\\matil\\\\OneDrive\\\\Escritorio\\\\Practicas\\\\Modulo4\\\\routers\")",
-      "Read(//c/Users/matil/OneDrive/Escritorio/Practicas/Modulo4/routers/**)",
-      "Read(//c/Users/matil/OneDrive/Escritorio/Practicas/Modulo4/**)"
-    ]
-  }
-}

@@ -140,8 +140,22 @@ namespace TorneoAmigos.Models
     public class EstadisticasViewModel
     {
         public PalmaresViewModel Palmares { get; set; } = new();
+        public List<RankingAllTimeEntry> RankingAllTime { get; set; } = new();
     }
-}
+
+    public class RankingAllTimeEntry
+    {
+        public int EquipoId { get; set; }
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int TemporadasJugadas { get; set; }
+        public int PartidosJugados { get; set; }
+        public int Victorias { get; set; }
+        public int Derrotas { get; set; }
+        public int PuntosTotal { get; set; }
+        public int GolesAFavor { get; set; }
+        public int GolesEnContra { get; set; }
+    }
 
     // ── NOTICIAS ─────────────────────────────────────
 
@@ -197,4 +211,129 @@ namespace TorneoAmigos.Models
         public string Autor { get; set; } = "";
         public string? PaisFlag { get; set; }
         public string Contenido { get; set; } = "";
+    }
+
+    // ── DETALLE DE EQUIPO ────────────────────────────
+    public class EquipoDetalleViewModel
+    {
+        public Equipo Equipo { get; set; } = new();
+        public PosicionViewModel? Posicion { get; set; }
+        public List<Titulo> Titulos { get; set; } = new();
+    }
+
+    // ── TROFEOS (VIDRIERA) ───────────────────────────
+    public class Trofeo
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = "";
+        public string? ImagenUrl { get; set; }
+        public string TipoTitulo { get; set; } = "";
+        public int Orden { get; set; }
+        public List<Titulo> Campeones { get; set; } = new();
+    }
+
+    // ── PREDICCIONES ─────────────────────────────────
+    public class Prediccion
+    {
+        public int Id { get; set; }
+        public int PartidoId { get; set; }
+        public int DivisionId { get; set; }
+        public string Autor { get; set; } = "";
+        public string? PaisFlag { get; set; }
+        public string Prediccion1X2 { get; set; } = ""; // L, E, V
+        public int? GolesLocal { get; set; }
+        public int? GolesVisitante { get; set; }
+        public int? Puntos { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class PartidoConPrediccionesViewModel
+    {
+        public Partido Partido { get; set; } = new();
+        public List<Prediccion> Predicciones { get; set; } = new();
+        public Prediccion? MiPrediccion { get; set; }
+    }
+
+    public class PrediccionesViewModel
+    {
+        public int DivisionId { get; set; }
+        public List<PartidoConPrediccionesViewModel> ProximosPartidos { get; set; } = new();
+        public List<RankingPronosticador> Ranking { get; set; } = new();
+    }
+
+    public class RankingPronosticador
+    {
+        public string Autor { get; set; } = "";
+        public string? PaisFlag { get; set; }
+        public int TotalPuntos { get; set; }
+        public int Predicciones { get; set; }
+        public int Aciertos1X2 { get; set; }
+        public int AciertosExactos { get; set; }
+    }
+
+    // ── HEAD TO HEAD ─────────────────────────────────
+    public class HeadToHeadViewModel
+    {
+        public Equipo EquipoA { get; set; } = new();
+        public Equipo EquipoB { get; set; } = new();
+        public List<EnfrentamientoDirecto> Enfrentamientos { get; set; } = new();
+        public int VictoriasA { get; set; }
+        public int VictoriasB { get; set; }
+        public int Empates { get; set; }
+        // Stats generales para comparar
+        public PosicionViewModel? StatsA { get; set; }
+        public PosicionViewModel? StatsB { get; set; }
+        public List<Titulo> TitulosA { get; set; } = new();
+        public List<Titulo> TitulosB { get; set; } = new();
+    }
+
+    public class EnfrentamientoDirecto
+    {
+        public DateTime? Fecha { get; set; }
+        public int GolesA { get; set; }
+        public int GolesB { get; set; }
+        public string TemporadaNombre { get; set; } = "";
+        public bool ALocal { get; set; } // true si EquipoA jugó de local
+    }
+}
+
+    // ── HISTORIAL LEGACY ─────────────────────────────
+    public class LegacyTemporada
+    {
+        public int Numero { get; set; }
+        public string NombreTorneo { get; set; } = "Primera División";
+        public List<LegacyPosicion> Tabla { get; set; } = new();
+        public List<LegacyFecha> Fechas { get; set; } = new();
+        public int TotalPartidos { get; set; }
+    }
+
+    public class LegacyPosicion
+    {
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int EquipoId { get; set; }
+        public int PJ { get; set; }
+        public int V { get; set; }
+        public int D { get; set; }
+        public int GF { get; set; }
+        public int GC { get; set; }
+        public int Pts { get; set; }
+    }
+
+    public class LegacyFecha
+    {
+        public int Numero { get; set; }
+        public List<LegacyPartido> Partidos { get; set; } = new();
+    }
+
+    public class LegacyPartido
+    {
+        public string NombreLocal { get; set; } = "";
+        public string NombreVisitante { get; set; } = "";
+        public string FlagLocal { get; set; } = "";
+        public string FlagVisitante { get; set; } = "";
+        public int EquipoLocalId { get; set; }
+        public int EquipoVisitanteId { get; set; }
+        public int GolesLocal { get; set; }
+        public int GolesVisitante { get; set; }
     }

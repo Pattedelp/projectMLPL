@@ -6,7 +6,17 @@
     <title>@ViewBag.Title - Torneo Chapitas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" href="~/favicon.ico" type="image/x-icon" />
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="~/img/apple-touch-icon.png" />
+
+    <!-- Open Graph / WhatsApp preview -->
+    <meta property="og:title" content="@ViewBag.Title - Torneo Chapitas" />
+    <meta property="og:description" content="Torneo Chapitas - AAC" />
+    <meta property="og:image" content="https://torneochapitas.up.railway.app/img/og-image.jpg" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
     <link rel="stylesheet" href="~/css/torneo.css" />
 </head>
 <body>
@@ -54,10 +64,13 @@
                class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
 
             <div class="nav-dropdown">
-                <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas")?"active":"")">Más ▾</span>
+                <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"||ViewBag.ActivePage=="trofeos"||ViewBag.ActivePage=="predicciones"||ViewBag.ActivePage=="legacy")?"active":"")">Más ▾</span>
                 <div class="dropdown-menu">
-                    <a asp-controller="Historial" asp-action="Index">📚 Historial</a>
+                    <a asp-controller="Historial" asp-action="Index">📚 Historial de Temporadas</a>
                     <a asp-controller="Estadisticas" asp-action="Index">📈 Estadísticas</a>
+                    <a asp-controller="Trofeos" asp-action="Index">🏆 Vidriera de Copas</a>
+                    <a asp-controller="Predicciones" asp-action="Index">🔮 Predicciones</a>
+                    <a asp-controller="Legacy" asp-action="Index">📜 Amateurismo</a>
                 </div>
             </div>
         </nav>
@@ -125,8 +138,11 @@
 
         <div class="drawer-divider"></div>
         <a asp-controller="Noticias" asp-action="Index" class="drawer-item">📰 Noticias</a>
-        <a asp-controller="Historial" asp-action="Index" class="drawer-item">📚 Historial</a>
+        <a asp-controller="Historial" asp-action="Index" class="drawer-item">📚 Historial de Temporadas</a>
         <a asp-controller="Estadisticas" asp-action="Index" class="drawer-item">📈 Estadísticas</a>
+        <a asp-controller="Trofeos" asp-action="Index" class="drawer-item">🏆 Vidriera de Copas</a>
+        <a asp-controller="Predicciones" asp-action="Index" class="drawer-item">🔮 Predicciones</a>
+        <a asp-controller="Legacy" asp-action="Index" class="drawer-item">📜 Amateurismo</a>
 
         <div class="drawer-divider"></div>
         @if (User.IsInRole("Admin"))

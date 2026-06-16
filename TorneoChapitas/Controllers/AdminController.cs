@@ -47,6 +47,8 @@ namespace TorneoAmigos.Controllers
                 TemporadaId        = temporada.Id,
                 CampeonCopaId      = dto.CampeonCopaId      > 0 ? dto.CampeonCopaId      : null,
                 CampeonSupercopaId = dto.CampeonSupercopaId > 0 ? dto.CampeonSupercopaId : null,
+                CampeonPrimeraId   = dto.CampeonPrimeraId   > 0 ? dto.CampeonPrimeraId   : null,
+                CampeonBId         = dto.CampeonBId         > 0 ? dto.CampeonBId         : null,
                 Ascenso1Id         = dto.Ascenso1Id         > 0 ? dto.Ascenso1Id         : null,
                 Ascenso2Id         = dto.Ascenso2Id         > 0 ? dto.Ascenso2Id         : null,
                 Descenso1Id        = dto.Descenso1Id        > 0 ? dto.Descenso1Id        : null,
@@ -55,6 +57,21 @@ namespace TorneoAmigos.Controllers
             };
 
             var ok = _tempRepo.GuardarCierre(cierre);
+
+            // Registrar en palmarés inmediatamente (ON CONFLICT DO NOTHING evita duplicados)
+            if (ok)
+            {
+                var tempNom = temporada.Nombre;
+                if (cierre.CampeonCopaId.HasValue)
+                    _tempRepo.AgregarTitulo(cierre.CampeonCopaId.Value, "campeon_copa", "Campeón Copa Argentina", temporada.Id, tempNom);
+                if (cierre.CampeonSupercopaId.HasValue)
+                    _tempRepo.AgregarTitulo(cierre.CampeonSupercopaId.Value, "campeon_supercopa", "Campeón Supercopa Argentina", temporada.Id, tempNom);
+                if (cierre.CampeonPrimeraId.HasValue)
+                    _tempRepo.AgregarTitulo(cierre.CampeonPrimeraId.Value, "campeon_torneo", "Campeón Primera División", temporada.Id, tempNom);
+                if (cierre.CampeonBId.HasValue)
+                    _tempRepo.AgregarTitulo(cierre.CampeonBId.Value, "campeon_primera_b", "Campeón Primera Nacional", temporada.Id, tempNom);
+            }
+
             return Json(new { ok });
         }
 
@@ -86,7 +103,9 @@ namespace TorneoAmigos.Controllers
 
             // Registrar títulos (usar borrador primero, fallback a DTO)
             var tempNom = temporada.Nombre;
-            var copaId      = cierre?.CampeonCopaId      ?? (dto?.CampeonCopaId      > 0 ? dto.CampeonCopaId      : 0);
+            var copaId      = cierre?.CampeonCopaId      ?? (dto?.CampeonCopaId      > 0 ? dto.CampeonCopaId : 0);
+            var primeraId   = cierre?.CampeonPrimeraId   ?? 0;
+            var bId         = cierre?.CampeonBId         ?? 0;
             var supercopaId = cierre?.CampeonSupercopaId ?? (dto?.CampeonSupercopaId > 0 ? dto.CampeonSupercopaId : 0);
 
             if (ok && copaId > 0)
@@ -358,6 +377,8 @@ namespace TorneoAmigos.Controllers
         public int Ascenso2Id { get; set; }
         public int Descenso1Id { get; set; }
         public int Descenso2Id { get; set; }
+        public int CampeonPrimeraId { get; set; }
+        public int CampeonBId { get; set; }
         public bool SinDescensos { get; set; }
     }
 

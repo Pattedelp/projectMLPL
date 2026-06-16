@@ -40,7 +40,7 @@ namespace TorneoAmigos.Data
         public List<TemporadaResultado> GetResultadosTemporada(int temporadaId)
         {
             var lista = new List<TemporadaResultado>();
-            const string sql = @"
+            var sql = @"
                 SELECT tr.id, tr.temporada_id, tr.equipo_id, e.nombre, tr.division_id, d.nombre,
                        tr.posicion, tr.puntos, tr.partidos_jugados, tr.ganados, tr.perdidos,
                        tr.goles_favor, tr.goles_contra, tr.campeon, tr.ascendio, tr.descendio
@@ -49,6 +49,14 @@ namespace TorneoAmigos.Data
                 INNER JOIN divisiones d ON tr.division_id = d.id
                 WHERE tr.temporada_id = @T
                 ORDER BY tr.division_id, tr.posicion";
+            var unionHistorico = tablaHistoricoExiste ? @"
+                    UNION ALL
+                    SELECT eh.equipo_local_id, eh.equipo_visitante_id, eh.goles_local, eh.goles_visitante
+                    FROM enfrentamientos_historicos eh
+                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1" : "";
+
+            sql = sql.Replace("@UNION_HISTORICO@", unionHistorico);
+
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@T", temporadaId);
@@ -312,7 +320,7 @@ namespace TorneoAmigos.Data
             using var conn = GetConnection();
             conn.Open();
 
-            const string sql = @"
+            var sql = @"
                 SELECT cp.id, cp.ronda_id, cp.copa_id,
                        cp.equipo_local_id, cp.equipo_visitante_id,
                        el.nombre, COALESCE(el.pais_code,''),
@@ -412,7 +420,7 @@ namespace TorneoAmigos.Data
         private List<CopaPartido> GetPartidosCopa(int copaId, int rondaId, NpgsqlConnection conn)
         {
             var lista = new List<CopaPartido>();
-            const string sql = @"
+            var sql = @"
                 SELECT cp.id, cp.ronda_id, cp.copa_id,
                        cp.equipo_local_id, COALESCE(el.nombre, 'Por definir'),
                        COALESCE(el.pais_code, '') as flag_local,
@@ -890,12 +898,22 @@ namespace TorneoAmigos.Data
         // ── TROFEOS (VIDRIERA) ──────────────────────────
         public List<RankingAllTimeEntry> GetRankingAllTime()
         {
+            // Verificar si existe la tabla de histórico antes de usarla
+            bool tablaHistoricoExiste = false;
+            using (var connChk = GetConnection())
+            {
+                connChk.Open();
+                using var chk = new NpgsqlCommand(
+                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='enfrentamientos_historicos')", connChk);
+                tablaHistoricoExiste = (bool)(chk.ExecuteScalar() ?? false);
+            }
+
             // Sistema de puntos:
             // Victoria 5-0/5-1/5-2/5-3 = 3pts ganador, 0pts perdedor
             // Victoria 5-4             = 2pts ganador, 1pt  perdedor
             // Fuentes: tabla 'partidos' (div=1, excluyendo histórico y copas)
-            //          tabla 'enfrentamientos_historicos' (torneo = 'Liga')
-            const string sql = @"
+            //          tabla 'enfrentamientos_historicos' (torneo = 'Liga', division_id=1) si existe
+            var sql = @"
                 WITH todos_los_partidos AS (
                     -- Partidos del sistema (Primera División, excluyendo fecha histórica)
                     SELECT
@@ -908,16 +926,7 @@ namespace TorneoAmigos.Data
                       AND p.jugado = true
                       AND p.fechaid NOT IN (SELECT id FROM fechas WHERE nombre = 'Histórico Pre-App')
 
-                    UNION ALL
-
-                    -- Partidos históricos pre-app (solo torneos de Primera División)
-                    SELECT
-                        eh.equipo_local_id,
-                        eh.equipo_visitante_id,
-                        eh.goles_local,
-                        eh.goles_visitante
-                    FROM enfrentamientos_historicos eh
-                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1
+                    @UNION_HISTORICO@
                 ),
                 puntos_por_partido AS (
                     SELECT
@@ -963,6 +972,14 @@ namespace TorneoAmigos.Data
                 ORDER BY puntos_total DESC, victorias DESC, goles_a_favor DESC";
 
             var lista = new List<RankingAllTimeEntry>();
+            var unionHistorico = tablaHistoricoExiste ? @"
+                    UNION ALL
+                    SELECT eh.equipo_local_id, eh.equipo_visitante_id, eh.goles_local, eh.goles_visitante
+                    FROM enfrentamientos_historicos eh
+                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1" : "";
+
+            sql = sql.Replace("@UNION_HISTORICO@", unionHistorico);
+
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
             conn.Open();
@@ -985,6 +1002,113 @@ namespace TorneoAmigos.Data
                 });
             }
             return lista;
+        }
+
+        // ── HISTORIAL LEGACY ─────────────────────────────
+        public List<LegacyTemporada> GetLegacyTemporadas()
+        {
+            const string sql = @"
+                SELECT
+                    eh.equipo_local_id, eh.equipo_visitante_id,
+                    eh.goles_local, eh.goles_visitante,
+                    eh.temporada_nombre,
+                    el.nombre as nombre_local, COALESCE(el.pais_code,'') as flag_local,
+                    ev.nombre as nombre_visit, COALESCE(ev.pais_code,'') as flag_visit
+                FROM enfrentamientos_historicos eh
+                JOIN equipos el ON eh.equipo_local_id = el.id
+                JOIN equipos ev ON eh.equipo_visitante_id = ev.id
+                WHERE eh.torneo = 'Liga' AND eh.division_id = 1
+                  AND eh.temporada_nombre LIKE 'Temporada %'
+                ORDER BY eh.temporada_nombre, eh.id";
+
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+
+            var dict = new Dictionary<string, List<(int lId, int vId, string lN, string lF, string vN, string vF, int gl, int gv)>>();
+            while (r.Read())
+            {
+                var tempNombre = r.GetString(4);
+                if (!dict.ContainsKey(tempNombre)) dict[tempNombre] = new();
+                dict[tempNombre].Add((
+                    r.GetInt32(0), r.GetInt32(1),
+                    r.GetString(5), r.GetString(6),
+                    r.GetString(7), r.GetString(8),
+                    r.GetInt32(2), r.GetInt32(3)
+                ));
+            }
+            r.Close();
+
+            var resultado = new List<LegacyTemporada>();
+            foreach (var (tempNombre, partidos) in dict.OrderBy(x => x.Key))
+            {
+                var numMatch = System.Text.RegularExpressions.Regex.Match(tempNombre, @"\d+");
+                int numero = numMatch.Success ? int.Parse(numMatch.Value) : 0;
+
+                var stats = new Dictionary<int, (string nombre, string flag, int pj, int v, int d, int gf, int gc, int pts)>();
+
+                void AddStats(int id, string nombre, string flag, int gf, int gc)
+                {
+                    if (!stats.ContainsKey(id)) stats[id] = (nombre, flag, 0,0,0,0,0,0);
+                    var s = stats[id];
+                    stats[id] = (s.nombre, s.flag, s.pj+1, s.v, s.d, s.gf+gf, s.gc+gc, s.pts);
+                }
+
+                var fechas = new Dictionary<int, List<LegacyPartido>>();
+                int fechaNum = 1;
+                foreach (var p in partidos)
+                {
+                    AddStats(p.lId, p.lN, p.lF, p.gl, p.gv);
+                    AddStats(p.vId, p.vN, p.vF, p.gv, p.gl);
+
+                    int diff = Math.Abs(p.gl - p.gv);
+                    var sl = stats[p.lId]; var sv = stats[p.vId];
+                    if (p.gl > p.gv)
+                    {
+                        stats[p.lId] = (sl.nombre, sl.flag, sl.pj, sl.v+1, sl.d, sl.gf, sl.gc, sl.pts + (diff >= 2 ? 3 : 2));
+                        stats[p.vId] = (sv.nombre, sv.flag, sv.pj, sv.v, sv.d+1, sv.gf, sv.gc, sv.pts + (diff == 1 ? 1 : 0));
+                    }
+                    else
+                    {
+                        stats[p.vId] = (sv.nombre, sv.flag, sv.pj, sv.v+1, sv.d, sv.gf, sv.gc, sv.pts + (diff >= 2 ? 3 : 2));
+                        stats[p.lId] = (sl.nombre, sl.flag, sl.pj, sl.v, sl.d+1, sl.gf, sl.gc, sl.pts + (diff == 1 ? 1 : 0));
+                    }
+
+                    if (!fechas.ContainsKey(fechaNum)) fechas[fechaNum] = new();
+                    fechas[fechaNum].Add(new LegacyPartido
+                    {
+                        EquipoLocalId = p.lId, NombreLocal = p.lN, FlagLocal = p.lF,
+                        EquipoVisitanteId = p.vId, NombreVisitante = p.vN, FlagVisitante = p.vF,
+                        GolesLocal = p.gl, GolesVisitante = p.gv
+                    });
+                    if (fechas[fechaNum].Count >= 5) fechaNum++;
+                }
+
+                var tabla = stats.Values
+                    .Select(s => new LegacyPosicion
+                    {
+                        EquipoId = stats.First(x => x.Value.nombre == s.nombre).Key,
+                        NombreEquipo = s.nombre,
+                        FlagCode = !string.IsNullOrEmpty(s.flag) ? s.flag : BanderaMap.GetCode(s.nombre),
+                        PJ = s.pj, V = s.v, D = s.d, GF = s.gf, GC = s.gc, Pts = s.pts
+                    })
+                    .OrderByDescending(x => x.Pts).ThenByDescending(x => x.V)
+                    .ThenByDescending(x => x.GF - x.GC).ToList();
+
+                resultado.Add(new LegacyTemporada
+                {
+                    Numero = numero,
+                    Tabla = tabla,
+                    TotalPartidos = partidos.Count,
+                    Fechas = fechas.OrderBy(f => f.Key).Select(f => new LegacyFecha
+                    {
+                        Numero = f.Key,
+                        Partidos = f.Value
+                    }).ToList()
+                });
+            }
+            return resultado.OrderBy(t => t.Numero).ToList();
         }
 
         public List<Trofeo> GetTrofeos()
@@ -1054,12 +1178,20 @@ namespace TorneoAmigos.Data
         {
             var titulos = new List<TorneoAmigos.Models.Titulo>();
             // Buscar coincidencia exacta O variantes históricas (ej: "Pato" también matchea "Pato L")
-            const string sql = @"
+            var sql = @"
                 SELECT id, tipo_titulo, nombre_titulo, temporada_id, temporada_nombre, nombre_equipo
                 FROM palmares
                 WHERE LOWER(TRIM(nombre_equipo)) = LOWER(TRIM(@N))
                    OR LOWER(TRIM(nombre_equipo)) LIKE LOWER(TRIM(@N)) || ' %'
                 ORDER BY created_at DESC";
+            var unionHistorico = tablaHistoricoExiste ? @"
+                    UNION ALL
+                    SELECT eh.equipo_local_id, eh.equipo_visitante_id, eh.goles_local, eh.goles_visitante
+                    FROM enfrentamientos_historicos eh
+                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1" : "";
+
+            sql = sql.Replace("@UNION_HISTORICO@", unionHistorico);
+
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@N", nombreEquipo);
@@ -1083,7 +1215,7 @@ namespace TorneoAmigos.Data
         {
             var titulos = new List<TorneoAmigos.Models.Titulo>();
             // nombre_equipo puede venir directo de la tabla (histórico) o de JOIN con equipos
-            const string sql = @"
+            var sql = @"
                 SELECT p.id,
                        COALESCE(p.equipo_id, 0),
                        COALESCE(p.nombre_equipo, e.nombre, 'Desconocido'),
@@ -1092,6 +1224,14 @@ namespace TorneoAmigos.Data
                 FROM palmares p
                 LEFT JOIN equipos e ON p.equipo_id = e.id
                 ORDER BY p.created_at DESC";
+            var unionHistorico = tablaHistoricoExiste ? @"
+                    UNION ALL
+                    SELECT eh.equipo_local_id, eh.equipo_visitante_id, eh.goles_local, eh.goles_visitante
+                    FROM enfrentamientos_historicos eh
+                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1" : "";
+
+            sql = sql.Replace("@UNION_HISTORICO@", unionHistorico);
+
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
             conn.Open();

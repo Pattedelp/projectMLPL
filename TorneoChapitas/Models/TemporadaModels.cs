@@ -296,3 +296,44 @@ namespace TorneoAmigos.Models
         public bool ALocal { get; set; } // true si EquipoA jugó de local
     }
 }
+
+    // ── HISTORIAL LEGACY ─────────────────────────────
+    public class LegacyTemporada
+    {
+        public int Numero { get; set; }
+        public string NombreTorneo { get; set; } = "Primera División";
+        public List<LegacyPosicion> Tabla { get; set; } = new();
+        public List<LegacyFecha> Fechas { get; set; } = new();
+        public int TotalPartidos { get; set; }
+    }
+
+    public class LegacyPosicion
+    {
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int EquipoId { get; set; }
+        public int PJ { get; set; }
+        public int V { get; set; }
+        public int D { get; set; }
+        public int GF { get; set; }
+        public int GC { get; set; }
+        public int Pts { get; set; }
+    }
+
+    public class LegacyFecha
+    {
+        public int Numero { get; set; }
+        public List<LegacyPartido> Partidos { get; set; } = new();
+    }
+
+    public class LegacyPartido
+    {
+        public string NombreLocal { get; set; } = "";
+        public string NombreVisitante { get; set; } = "";
+        public string FlagLocal { get; set; } = "";
+        public string FlagVisitante { get; set; } = "";
+        public int EquipoLocalId { get; set; }
+        public int EquipoVisitanteId { get; set; }
+        public int GolesLocal { get; set; }
+        public int GolesVisitante { get; set; }
+    }

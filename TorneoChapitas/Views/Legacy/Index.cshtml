@@ -1,6 +1,27 @@
 @model List<LegacyTemporada>
 @{
     ViewBag.Title = "Historial de Temporadas AMATEURISMO";
+
+    // Campeones reales confirmados (algunos ya no juegan)
+    var campeonesReales = new Dictionary<int, (string nombre, bool retirado)>
+    {
+        { 4,  ("Nacho G",  false) },  // retirado pero confirmado
+        { 5,  ("Pato",     false) },  // confirmado
+        { 6,  ("Lucas M",  false) },  // confirmado
+        { 7,  ("Nacho G",  false) },  // confirmado
+        { 8,  ("Valen M",  false) },  // confirmado
+        { 9,  ("Juani",    false) },  // confirmado
+        { 10, ("Valen M",  false) },  // confirmado
+        { 11, ("Valen M",  false) },  // confirmado
+        { 12, ("Valen M",  false) },  // confirmado
+    };
+    // T4,5,7,9,10,11 el campeón real puede ser un retirado — marcamos según lo indicado
+    campeonesReales[4]  = ("Equipo retirado", true);
+    campeonesReales[5]  = ("Equipo retirado", true);
+    campeonesReales[7]  = ("Equipo retirado", true);
+    campeonesReales[9]  = ("Equipo retirado", true);
+    campeonesReales[10] = ("Equipo retirado", true);
+    campeonesReales[11] = ("Equipo retirado", true);
 }
 
 <div class="page-hero">
@@ -24,7 +45,7 @@ else
             <button onclick="showTemp(@t.Numero)"
                     id="tab-t@(t.Numero)"
                     class="tab-btn @(t == Model.First() ? "active" : "")">
-                T@t.Numero
+                T@(t.Numero)
             </button>
         }
     </div>
@@ -41,29 +62,52 @@ else
             </div>
 
             <!-- CAMPEÓN -->
-            @if (t.Tabla.Any())
-            {
-                var camp = t.Tabla.First();
-                <div style="background:linear-gradient(135deg,rgba(240,192,64,0.15),rgba(240,192,64,0.05));
-                            border:1px solid rgba(240,192,64,0.4);border-radius:12px;
-                            padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
-                    <span style="font-size:24px;">🏆</span>
-                    <div>
-                        <div style="font-size:11px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;">Campeón</div>
-                        <div style="font-family:var(--font-heading);font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;">
-                            @if (!string.IsNullOrEmpty(camp.FlagCode) && camp.FlagCode != "retired")
-                            {
-                                <img src="https://flagcdn.com/24x18/@(camp.FlagCode).png" style="border-radius:2px;" alt="" onerror="this.style.display='none'" />
-                            }
-                            <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@camp.EquipoId"
-                               style="color:var(--color-text);text-decoration:none;">@camp.NombreEquipo</a>
-                        </div>
-                        <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">
-                            @camp.Pts pts · @camp.V victorias · @camp.PJ partidos jugados
-                        </div>
-                    </div>
-                </div>
+            @{
+                campeonesReales.TryGetValue(t.Numero, out var campReal);
+                var campNombre   = campReal.nombre ?? t.Tabla.FirstOrDefault()?.NombreEquipo ?? "Desconocido";
+                var campRetirado = campReal.retirado;
+                var campData     = t.Tabla.FirstOrDefault(x => x.NombreEquipo == campNombre);
             }
+            <div style="background:linear-gradient(135deg,rgba(240,192,64,0.15),rgba(240,192,64,0.05));
+                        border:1px solid rgba(240,192,64,0.4);border-radius:12px;
+                        padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+                <span style="font-size:24px;">🏆</span>
+                <div>
+                    <div style="font-size:11px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;">Campeón</div>
+                    <div style="font-family:var(--font-heading);font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;">
+                        @if (campRetirado)
+                        {
+                            <span style="color:var(--color-muted);font-size:14px;">✝</span>
+                            <span style="color:var(--color-muted);">@campNombre</span>
+                        }
+                        else if (campData != null)
+                        {
+                            @if (!string.IsNullOrEmpty(campData.FlagCode) && campData.FlagCode != "retired")
+                            {
+                                <img src="https://flagcdn.com/24x18/@(campData.FlagCode).png" style="border-radius:2px;" alt="" onerror="this.style.display='none'" />
+                            }
+                            <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@campData.EquipoId"
+                               style="color:var(--color-text);text-decoration:none;">@campNombre</a>
+                        }
+                        else
+                        {
+                            <span>@campNombre</span>
+                        }
+                    </div>
+                    @if (!campRetirado && campData != null)
+                    {
+                        <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">
+                            @campData.Pts pts · @campData.V victorias en datos registrados
+                        </div>
+                    }
+                    else if (campRetirado)
+                    {
+                        <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">
+                            Campeón confirmado · ya no participa en el torneo
+                        </div>
+                    }
+                </div>
+            </div>
 
             <!-- TABLA POSICIONES -->
             <div class="tabla-wrapper" style="margin-bottom:28px;">

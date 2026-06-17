@@ -39,7 +39,7 @@ else
 
             <a asp-action="Detalle" asp-route-id="@t.Id"
                style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;text-decoration:none;display:block;transition:all .2s;">
-                <div style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-gold);">T@(t.Numero)</div>
+                <div style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-gold);">@t.Nombre</div>
                 <div style="font-size:14px;font-weight:500;color:var(--color-text);margin:4px 0;">@t.Nombre</div>
                 <div style="font-size:11px;color:var(--color-muted);margin-bottom:12px;">
                     @t.FechaInicio?.ToString("MMM yyyy") — @t.FechaFin?.ToString("MMM yyyy")

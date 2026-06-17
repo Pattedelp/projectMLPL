@@ -134,6 +134,23 @@ namespace TorneoAmigos.Data
             };
         }
 
+        public int GetMaxNumeroTemporadaLegacy()
+        {
+            // Extrae el número más alto de temporada_nombre en enfrentamientos_historicos
+            // ej: "Temporada 16" → 16
+            try
+            {
+                using var conn = GetConnection();
+                using var cmd  = new NpgsqlCommand(@"
+                    SELECT COALESCE(MAX(CAST(REGEXP_REPLACE(temporada_nombre, '[^0-9]', '', 'g') AS INT)), 0)
+                    FROM enfrentamientos_historicos
+                    WHERE temporada_nombre ~ '^\s*Temporada\s+\d+'", conn);
+                conn.Open();
+                return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+            }
+            catch { return 0; }
+        }
+
         public bool GuardarCierre(TemporadaCierre cierre)
         {
             const string sql = @"

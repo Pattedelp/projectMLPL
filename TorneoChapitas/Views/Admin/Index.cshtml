@@ -376,21 +376,9 @@ else
         <input type="text" id="enc-pregunta" placeholder="¿Pregunta para los participantes?" class="form-control" style="margin-bottom:10px;font-size:13px;" />
 
         <div style="font-size:11px;color:var(--color-muted);margin-bottom:6px;">Opciones:</div>
-        @{ var todosEquipos = ViewBag.EquiposTodos as List<Equipo> ?? new(); }
         <div id="enc-opciones-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-            @for (int oi = 0; oi < 2; oi++)
-            {
-                <div class="enc-opcion-row" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-                    <select class="enc-sel form-control" style="font-size:12px;" onchange="onSelChange(this)">
-                        <option value="">-- Texto libre --</option>
-                        @foreach (var eq in todosEquipos)
-                        {
-                            <option value="@eq.Nombre" data-flag="@eq.FlagCode">@eq.Nombre</option>
-                        }
-                    </select>
-                    <input type="text" class="enc-txt form-control" placeholder="o escribí texto libre..." style="font-size:12px;" />
-                </div>
-            }
+            <input type="text" class="enc-opcion form-control" placeholder="Opción 1" style="font-size:13px;" />
+            <input type="text" class="enc-opcion form-control" placeholder="Opción 2" style="font-size:13px;" />
         </div>
 
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -506,38 +494,24 @@ else
 @section Scripts {
 <script>
 // ── ENCUESTA ────────────────────────────────────────
-function onSelChange(sel) {
-    const row = sel.closest('.enc-opcion-row');
-    const txt = row.querySelector('.enc-txt');
-    if (sel.value) { txt.value = sel.value; txt.style.display = 'none'; }
-    else { txt.value = ''; txt.style.display = ''; txt.focus(); }
-}
-
 function agregarOpcion() {
     const list = document.getElementById('enc-opciones-list');
-    const opciones = list.querySelector('.enc-sel')?.innerHTML || '';
-    const div = document.createElement('div');
-    div.className = 'enc-opcion-row';
-    div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
-    div.innerHTML = `<select class="enc-sel form-control" style="font-size:12px;" onchange="onSelChange(this)">${opciones}</select>
-        <input type="text" class="enc-txt form-control" placeholder="o escribí texto libre..." style="font-size:12px;" />`;
-    list.appendChild(div);
+    const n = list.querySelectorAll('.enc-opcion').length + 1;
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'enc-opcion form-control';
+    inp.placeholder = `Opción ${n}`; inp.style.fontSize = '13px';
+    list.appendChild(inp);
 }
 
 async function crearEncuestaManual() {
     const msg = document.getElementById('msg-enc-crear');
     const pregunta = document.getElementById('enc-pregunta').value.trim();
     const maxVotos = parseInt(document.getElementById('enc-maxvotos').value) || 1;
-    const opciones = [];
-    document.querySelectorAll('#enc-opciones-list .enc-opcion-row').forEach(row => {
-        const sel = row.querySelector('.enc-sel');
-        const txt = row.querySelector('.enc-txt');
-        const val = (sel?.value || txt?.value || '').trim();
-        if (val) opciones.push(val);
-    });
+    const opciones = [...document.querySelectorAll('#enc-opciones-list .enc-opcion')]
+        .map(i => i.value.trim()).filter(v => v.length > 0);
     if (!pregunta || opciones.length < 2) {
         msg.style.display = 'block'; msg.style.color = 'var(--color-red)';
-        msg.textContent = `Completá la pregunta y al menos 2 opciones. (Detectadas: ${opciones.length})`;
+        msg.textContent = 'Completá la pregunta y al menos 2 opciones.';
         return;
     }
     const r = await fetch('/Encuestas/CrearManual', {

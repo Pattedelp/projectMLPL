@@ -609,13 +609,14 @@ async function crearEncuestaManual() {
     const msg = document.getElementById('msg-enc-crear');
     const pregunta = document.getElementById('enc-pregunta').value.trim();
     const maxVotos = parseInt(document.getElementById('enc-maxvotos').value) || 1;
-    const opciones = [...document.querySelectorAll('#enc-opciones-list .enc-opcion-row')]
-        .map(row => {
-            const hidden = row.querySelector('input[type="hidden"].enc-opcion-texto');
-            const txt    = row.querySelector('input[type="text"]');
-            // Prefer hidden value (set by dropdown), fallback to visible text input
-            return (hidden?.value || txt?.value || '').trim();
-        }).filter(Boolean);
+    const opciones = [];
+    document.querySelectorAll('#enc-opciones-list .enc-opcion-row').forEach(row => {
+        // Try all inputs in the row, pick first non-empty value
+        const inputs = row.querySelectorAll('input');
+        let val = '';
+        inputs.forEach(inp => { if (!val && inp.value.trim()) val = inp.value.trim(); });
+        if (val) opciones.push(val);
+    });
     if (!pregunta || opciones.length < 2) {
         msg.style.display='block'; msg.style.color='var(--color-red)';
         msg.textContent='Completá la pregunta y al menos 2 opciones.'; return;

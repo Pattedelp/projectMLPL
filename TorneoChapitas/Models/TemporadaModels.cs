@@ -9,6 +9,12 @@ namespace TorneoAmigos.Models
         public DateTime? FechaFin { get; set; }
         public bool Activa { get; set; }
         public bool Finalizada { get; set; }
+        // Configuración de movimientos
+        public int CantDescensos { get; set; } = 2;
+        public int CantAscensos { get; set; } = 2;
+        public bool TienePromocion { get; set; } = false;
+        public int? PosPromocionPrimera { get; set; }  // ej: 8 (8vo de Primera va a promoción)
+        public int? PosPromocionB { get; set; }         // ej: 3 (3ro de B va a promoción)
     }
 
     public class TemporadaResultado
@@ -50,6 +56,12 @@ namespace TorneoAmigos.Models
         public int NumeroTemporada { get; set; }
         public List<EquipoCheckbox> EquiposPrimera { get; set; } = new();
         public List<EquipoCheckbox> EquiposNacionalB { get; set; } = new();
+        // Configuración de movimientos
+        public int CantDescensos { get; set; } = 2;
+        public int CantAscensos { get; set; } = 2;
+        public bool TienePromocion { get; set; } = false;
+        public int PosPromocionPrimera { get; set; } = 8;
+        public int PosPromocionB { get; set; } = 3;
     }
 
     public class EquipoCheckbox

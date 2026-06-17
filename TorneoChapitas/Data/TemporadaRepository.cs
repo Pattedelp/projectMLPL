@@ -19,7 +19,7 @@ namespace TorneoAmigos.Data
         {
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(
-                "SELECT id, numero, nombre, fecha_inicio, fecha_fin, activa, finalizada FROM temporadas WHERE activa = true LIMIT 1", conn);
+                "SELECT id, numero, nombre, fecha_inicio, fecha_fin, activa, finalizada, cant_descensos, cant_ascensos, tiene_promocion, pos_promocion_primera, pos_promocion_b FROM temporadas WHERE activa = true LIMIT 1", conn);
             conn.Open();
             using var r = cmd.ExecuteReader();
             return r.Read() ? MapTemporada(r) : null;
@@ -30,7 +30,7 @@ namespace TorneoAmigos.Data
             var lista = new List<Temporada>();
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(
-                "SELECT id, numero, nombre, fecha_inicio, fecha_fin, activa, finalizada FROM temporadas ORDER BY numero DESC", conn);
+                "SELECT id, numero, nombre, fecha_inicio, fecha_fin, activa, finalizada, cant_descensos, cant_ascensos, tiene_promocion, pos_promocion_primera, pos_promocion_b FROM temporadas ORDER BY numero DESC", conn);
             conn.Open();
             using var r = cmd.ExecuteReader();
             while (r.Read()) lista.Add(MapTemporada(r));
@@ -132,6 +132,25 @@ namespace TorneoAmigos.Data
                 CampeonPrimeraId       = r.IsDBNull(15) ? null : r.GetInt32(15),
                 CampeonBId             = r.IsDBNull(17) ? null : r.GetInt32(17)
             };
+        }
+
+        public bool ActualizarConfigTemporada(int temporadaId, int cantDescensos, int cantAscensos,
+            bool tienePromocion, int? posPromocionPrimera, int? posPromocionB)
+        {
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(@"
+                UPDATE temporadas SET
+                    cant_descensos = @CD, cant_ascensos = @CA, tiene_promocion = @TP,
+                    pos_promocion_primera = @PP, pos_promocion_b = @PB
+                WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@CD", cantDescensos);
+            cmd.Parameters.AddWithValue("@CA", cantAscensos);
+            cmd.Parameters.AddWithValue("@TP", tienePromocion);
+            cmd.Parameters.AddWithValue("@PP", (object?)posPromocionPrimera ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@PB", (object?)posPromocionB       ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Id", temporadaId);
+            conn.Open();
+            return cmd.ExecuteNonQuery() > 0;
         }
 
         public int GetMaxNumeroTemporadaLegacy()
@@ -283,7 +302,9 @@ namespace TorneoAmigos.Data
         // ── NUEVA TEMPORADA ─────────────────────────────
 
         public int CrearNuevaTemporada(string nombre, List<int> equiposPrimera, List<int> equiposB,
-            List<(string nombre, int divisionId)> equiposNuevos)
+            List<(string nombre, int divisionId)> equiposNuevos,
+            int cantDescensos = 2, int cantAscensos = 2, bool tienePromocion = false,
+            int? posPromocionPrimera = null, int? posPromocionB = null)
         {
             using var conn = GetConnection();
             conn.Open();
@@ -298,10 +319,15 @@ namespace TorneoAmigos.Data
                 // Crear temporada
                 int tempId;
                 using (var cmd = new NpgsqlCommand(
-                    "INSERT INTO temporadas (numero, nombre, fecha_inicio, activa, finalizada) VALUES (@N, @Nom, NOW(), true, false) RETURNING id", conn, tx))
+                    "INSERT INTO temporadas (numero, nombre, fecha_inicio, activa, finalizada, cant_descensos, cant_ascensos, tiene_promocion, pos_promocion_primera, pos_promocion_b) VALUES (@N, @Nom, NOW(), true, false, @CD, @CA, @TP, @PP, @PB) RETURNING id", conn, tx))
                 {
                     cmd.Parameters.AddWithValue("@N",   numero);
                     cmd.Parameters.AddWithValue("@Nom", nombre);
+                    cmd.Parameters.AddWithValue("@CD",  cantDescensos);
+                    cmd.Parameters.AddWithValue("@CA",  cantAscensos);
+                    cmd.Parameters.AddWithValue("@TP",  tienePromocion);
+                    cmd.Parameters.AddWithValue("@PP",  (object?)posPromocionPrimera ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@PB",  (object?)posPromocionB       ?? DBNull.Value);
                     tempId = Convert.ToInt32(cmd.ExecuteScalar());
                 }
 
@@ -977,7 +1003,12 @@ namespace TorneoAmigos.Data
             Id = r.GetInt32(0), Numero = r.GetInt32(1), Nombre = r.GetString(2),
             FechaInicio = r.IsDBNull(3) ? null : r.GetDateTime(3),
             FechaFin    = r.IsDBNull(4) ? null : r.GetDateTime(4),
-            Activa = r.GetBoolean(5), Finalizada = r.GetBoolean(6)
+            Activa = r.GetBoolean(5), Finalizada = r.GetBoolean(6),
+            CantDescensos       = r.FieldCount > 7  && !r.IsDBNull(7)  ? r.GetInt32(7)  : 2,
+            CantAscensos        = r.FieldCount > 8  && !r.IsDBNull(8)  ? r.GetInt32(8)  : 2,
+            TienePromocion      = r.FieldCount > 9  && !r.IsDBNull(9)  && r.GetBoolean(9),
+            PosPromocionPrimera = r.FieldCount > 10 && !r.IsDBNull(10) ? r.GetInt32(10) : null,
+            PosPromocionB       = r.FieldCount > 11 && !r.IsDBNull(11) ? r.GetInt32(11) : null,
         };
 
         private static Copa MapCopa(IDataReader r) => new()

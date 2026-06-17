@@ -73,6 +73,55 @@
         <button type="button" class="btn-outline" onclick="agregarNuevo()">+ Agregar jugador</button>
     </div>
 
+    <!-- CONFIGURACIÓN DE MOVIMIENTOS -->
+    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;margin-top:20px;">
+        <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:16px;">
+            ⚙️ Configuración de Descensos y Ascensos
+        </h3>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div>
+                <label style="font-size:12px;color:var(--color-muted);display:block;margin-bottom:6px;">Descensos directos</label>
+                <select name="cantDescensos" class="form-control" style="font-size:13px;">
+                    <option value="0">Sin descensos</option>
+                    <option value="1">1 descenso</option>
+                    <option value="2" selected>2 descensos</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--color-muted);display:block;margin-bottom:6px;">Ascensos directos</label>
+                <select name="cantAscensos" class="form-control" style="font-size:13px;">
+                    <option value="1">1 ascenso</option>
+                    <option value="2" selected>2 ascensos</option>
+                </select>
+            </div>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
+            <input type="checkbox" name="tienePromocion" id="chk-promocion" value="true"
+                   style="accent-color:var(--color-gold);width:16px;height:16px;" onchange="togglePromocion(this)" />
+            <span style="font-size:13px;">
+                🔁 <strong>Partido de promoción</strong>
+                <span style="color:var(--color-muted);font-size:11px;display:block;">Un equipo de Primera juega contra uno de la B — el ganador queda en Primera.</span>
+            </span>
+        </label>
+
+        <div id="config-promocion" style="display:none;background:var(--color-bg3);border-radius:8px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+                <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:6px;">Posición en Primera que va a promoción</label>
+                <input type="number" name="posPromocionPrimera" value="8" min="1" max="20"
+                       class="form-control" style="font-size:13px;" />
+                <span style="font-size:10px;color:var(--color-muted);">ej: 8 = el 8vo de Primera</span>
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:6px;">Posición en la B que va a promoción</label>
+                <input type="number" name="posPromocionB" value="3" min="1" max="20"
+                       class="form-control" style="font-size:13px;" />
+                <span style="font-size:10px;color:var(--color-muted);">ej: 3 = el 3ro de la B</span>
+            </div>
+        </div>
+    </div>
+
     <div style="display:flex;gap:12px;margin-top:24px;">
         <button type="submit" class="btn-primary" onclick="return confirm('¿Generar el fixture para esta temporada?')">
             🎲 Generar Fixture
@@ -83,6 +132,9 @@
 
 @section Scripts {
 <script>
+function togglePromocion(chk) {
+    document.getElementById('config-promocion').style.display = chk.checked ? 'grid' : 'none';
+}
 // Países disponibles
 const PAISES = [
     {code:'se',name:'Suecia 🇸🇪'},{code:'rs',name:'Serbia 🇷🇸'},{code:'sn',name:'Senegal 🇸🇳'},{code:'cm',name:'Camerún 🇨🇲'},

@@ -32,10 +32,14 @@ namespace TorneoAmigos.Data
     public class TorneoRepository
     {
         private readonly string _connectionString;
+        private readonly TemporadaRepository? _tempRepo;
 
-        public TorneoRepository(IConfiguration cfg) =>
+        public TorneoRepository(IConfiguration cfg, TemporadaRepository? tempRepo = null)
+        {
             _connectionString = cfg.GetConnectionString("TorneoAmigosDB")
                 ?? throw new InvalidOperationException("Connection string not found.");
+            _tempRepo = tempRepo;
+        }
 
         private NpgsqlConnection GetConnection() => new(_connectionString);
 
@@ -122,8 +126,19 @@ namespace TorneoAmigos.Data
 
                     UNION ALL
 
+                    SELECT cp.goles_local, cp.goles_visitante, cp.equipo_local_id, cp.equipo_visitante_id,
+                           CONCAT(c.nombre, ' - ', cr.nombre) as temporada_nombre, -cp.id as ord
+                    FROM copa_partidos cp
+                    JOIN copa_rondas cr ON cp.ronda_id = cr.id
+                    JOIN copas c ON cp.copa_id = c.id
+                    WHERE cp.jugado = true
+                      AND ((cp.equipo_local_id = @A AND cp.equipo_visitante_id = @B)
+                        OR (cp.equipo_local_id = @B AND cp.equipo_visitante_id = @A))
+
+                    UNION ALL
+
                     SELECT eh.goles_local, eh.goles_visitante, eh.equipo_local_id, eh.equipo_visitante_id,
-                           COALESCE(eh.temporada_nombre, 'Histórico') as temporada_nombre, -eh.id as ord
+                           COALESCE(eh.temporada_nombre, 'Histórico') as temporada_nombre, -1000000 - eh.id as ord
                     FROM enfrentamientos_historicos eh
                     WHERE (eh.equipo_local_id = @A AND eh.equipo_visitante_id = @B)
                        OR (eh.equipo_local_id = @B AND eh.equipo_visitante_id = @A)
@@ -234,13 +249,40 @@ namespace TorneoAmigos.Data
                 .ToList();
 
             bool esPrimera = divisionId == 1;
+
+            // Obtener configuración de la temporada activa
+            var tempActiva = _tempRepo?.GetTemporadaActiva();
+            int cantDescensos   = tempActiva?.CantDescensos   ?? 2;
+            int cantAscensos    = tempActiva?.CantAscensos    ?? 2;
+            bool tienePromocion = tempActiva?.TienePromocion  ?? false;
+            int posPromPrimera  = tempActiva?.PosPromocionPrimera ?? 8;
+            int posPromB        = tempActiva?.PosPromocionB       ?? 3;
+
             for (int i = 0; i < ordenada.Count; i++)
             {
                 ordenada[i].Posicion = i + 1;
+                int pos1 = i + 1; // posición 1-based
+
                 if (esPrimera)
-                    ordenada[i].Zona = i == 0 ? "campeon" : i >= ordenada.Count - 2 ? "descenso" : "";
-                else
-                    ordenada[i].Zona = i < 2 ? "ascenso" : "";
+                {
+                    if (pos1 == 1)
+                        ordenada[i].Zona = "campeon";
+                    else if (tienePromocion && pos1 == posPromPrimera)
+                        ordenada[i].Zona = "promocion";
+                    else if (cantDescensos > 0 && pos1 > ordenada.Count - cantDescensos)
+                        ordenada[i].Zona = "descenso";
+                    else
+                        ordenada[i].Zona = "";
+                }
+                else // Nacional B
+                {
+                    if (pos1 <= cantAscensos)
+                        ordenada[i].Zona = "ascenso";
+                    else if (tienePromocion && pos1 == posPromB)
+                        ordenada[i].Zona = "promocion-b";
+                    else
+                        ordenada[i].Zona = "";
+                }
             }
             return ordenada;
         }

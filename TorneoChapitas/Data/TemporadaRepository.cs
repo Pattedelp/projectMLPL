@@ -170,6 +170,91 @@ namespace TorneoAmigos.Data
             catch { return 0; }
         }
 
+        public bool GenerarFinalOPromocion(int localId, int visitanteId, string tipo)
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            int fechaId;
+            using (var cmd = new NpgsqlCommand(
+                "SELECT id FROM fechas WHERE divisionid = 2 ORDER BY numero DESC LIMIT 1", conn))
+            {
+                var r = cmd.ExecuteScalar();
+                if (r == null) return false;
+                fechaId = Convert.ToInt32(r);
+            }
+            using var ins = new NpgsqlCommand(@"
+                INSERT INTO partidos (fechaid, divisionid, equipolocalid, equipovisitanteid, jugado, tipo_partido)
+                VALUES (@F, 2, @L, @V, false, @T)", conn);
+            ins.Parameters.AddWithValue("@F", fechaId);
+            ins.Parameters.AddWithValue("@L", localId);
+            ins.Parameters.AddWithValue("@V", visitanteId);
+            ins.Parameters.AddWithValue("@T", tipo);
+            return ins.ExecuteNonQuery() > 0;
+        }
+
+        public bool TodosLosPartidosRegularesJugados(int divisionId)
+        {
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(@"
+                SELECT COUNT(*) FROM partidos 
+                WHERE divisionid = @D AND jugado = false 
+                AND COALESCE(tipo_partido,'regular') = 'regular'", conn);
+            cmd.Parameters.AddWithValue("@D", divisionId);
+            conn.Open();
+            return Convert.ToInt32(cmd.ExecuteScalar()) == 0;
+        }
+
+        public (bool ok, string msg) GenerarReducido(List<PosicionViewModel> tablaB)
+        {
+            // Necesitamos al menos 6 equipos
+            if (tablaB.Count < 6)
+                return (false, "Se necesitan al menos 6 equipos en la tabla para el reducido.");
+
+            // Verificar que no existan ya partidos del reducido
+            using var conn = GetConnection();
+            conn.Open();
+            using (var chk = new NpgsqlCommand(
+                "SELECT COUNT(*) FROM partidos WHERE tipo_partido IN ('reducido_semi','reducido_final','promocion') AND divisionid = 2", conn))
+            {
+                if (Convert.ToInt32(chk.ExecuteScalar()) > 0)
+                    return (false, "Ya existe un reducido generado para esta temporada.");
+            }
+
+            // Obtener la última fecha de la B para agregar los partidos después
+            int fechaId;
+            using (var cmdF = new NpgsqlCommand(
+                "SELECT id FROM fechas WHERE divisionid = 2 ORDER BY numero DESC LIMIT 1", conn))
+            {
+                var result = cmdF.ExecuteScalar();
+                if (result == null) return (false, "No hay fechas en la Primera Nacional.");
+                fechaId = Convert.ToInt32(result);
+            }
+
+            // 3° vs 6° y 4° vs 5°
+            var eq3 = tablaB[2]; var eq6 = tablaB[5];
+            var eq4 = tablaB[3]; var eq5 = tablaB[4];
+
+            using var tx = conn.BeginTransaction();
+            void InsertarPartidoReducido(int localId, int visitanteId, string tipo)
+            {
+                using var cmd = new NpgsqlCommand(@"
+                    INSERT INTO partidos (fechaid, divisionid, equipolocalid, equipovisitanteid, jugado, tipo_partido)
+                    VALUES (@F, 2, @L, @V, false, @T)", conn, tx);
+                cmd.Parameters.AddWithValue("@F", fechaId);
+                cmd.Parameters.AddWithValue("@L", localId);
+                cmd.Parameters.AddWithValue("@V", visitanteId);
+                cmd.Parameters.AddWithValue("@T", tipo);
+                cmd.ExecuteNonQuery();
+            }
+
+            InsertarPartidoReducido(eq3.EquipoId, eq6.EquipoId, "reducido_semi");
+            InsertarPartidoReducido(eq4.EquipoId, eq5.EquipoId, "reducido_semi");
+            // La final y el partido de promoción se agregan después cuando se sepa quiénes pasan
+
+            tx.Commit();
+            return (true, "Semifinales del reducido generadas: 3° vs 6° y 4° vs 5°");
+        }
+
         public bool GuardarCierre(TemporadaCierre cierre)
         {
             const string sql = @"
@@ -367,6 +452,23 @@ namespace TorneoAmigos.Data
                 tx.Rollback();
                 throw new Exception("Error creando temporada: " + ex.Message);
             }
+        }
+
+        public bool BorrarFixtureSinResultados(int temporadaId)
+        {
+            // Solo borra si NO hay ningún partido jugado
+            using var conn = GetConnection();
+            conn.Open();
+            using var check = new NpgsqlCommand(
+                "SELECT COUNT(*) FROM partidos p JOIN fechas f ON p.fechaid = f.id WHERE f.divisionid IN (1,2) AND p.jugado = true", conn);
+            var jugados = Convert.ToInt32(check.ExecuteScalar());
+            if (jugados > 0) return false; // No borrar si hay resultados
+
+            using var tx = conn.BeginTransaction();
+            new NpgsqlCommand("DELETE FROM partidos WHERE fechaid IN (SELECT id FROM fechas WHERE divisionid IN (1,2))", conn, tx).ExecuteNonQuery();
+            new NpgsqlCommand("DELETE FROM fechas WHERE divisionid IN (1,2)", conn, tx).ExecuteNonQuery();
+            tx.Commit();
+            return true;
         }
 
         private void BorrarFixture(NpgsqlConnection conn, NpgsqlTransaction tx)

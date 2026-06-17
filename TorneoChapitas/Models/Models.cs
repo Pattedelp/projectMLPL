@@ -46,6 +46,7 @@ namespace TorneoAmigos.Models
         public int? GolesLocal { get; set; }
         public int? GolesVisitante { get; set; }
         public bool Jugado { get; set; } = false;
+        public string TipoPartido { get; set; } = "regular"; // regular, reducido_semi, reducido_final, promocion
         public DateTime? FechaPartido { get; set; }
         public string? Lugar { get; set; }
         public string? Observaciones { get; set; }

@@ -83,7 +83,20 @@
                         var nomL  = p.EquipoLocal?.Nombre ?? "";
                         var nomV  = p.EquipoVisitante?.Nombre ?? "";
 
-                        <div class="partido-card" id="partido-@p.Id">
+                        <div class="partido-card @(p.TipoPartido != "regular" ? "partido-reducido" : "")" id="partido-@p.Id">
+                            @if (p.TipoPartido != "regular")
+                            {
+                                var badge = p.TipoPartido switch {
+                                    "reducido_semi" => ("🔁 Semifinal Reducido", "#3a82c8"),
+                                    "reducido_final" => ("🔁 Final Reducido", "#7c3aed"),
+                                    "promocion" => ("⚔️ Partido de Promoción", "#e05555"),
+                                    _ => ("", "")
+                                };
+                                <div style="font-size:10px;letter-spacing:1px;text-align:center;color:@badge.Item2;
+                                            font-family:var(--font-heading);padding:4px 0;text-transform:uppercase;">
+                                    @badge.Item1
+                                </div>
+                            }
                             <div class="partido-equipos">
                                 <span class="partido-team right">
                                     @if (!string.IsNullOrEmpty(flagL))

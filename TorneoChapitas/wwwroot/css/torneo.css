@@ -1203,3 +1203,9 @@ a:hover { color: #fff; }
 .tabla-posiciones tbody tr td a:hover {
     color: var(--color-gold) !important;
 }
+
+/* Reducido / Promoción */
+.partido-reducido {
+    border-color: rgba(58,130,200,0.4) !important;
+    background: rgba(58,130,200,0.04) !important;
+}

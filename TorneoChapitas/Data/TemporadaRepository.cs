@@ -1436,7 +1436,7 @@ namespace TorneoAmigos.Data
                     FROM palmares p
                     WHERE p.temporada_id = ANY(@Temps)
                       AND p.equipo_id IS NOT NULL
-                      AND p.tipo_titulo IN ('campeon_copa','campeon_supercopa','campeon_primera_b')
+                      AND p.tipo_titulo IN ('campeon_copa','campeon_supercopa')
                 )
                 SELECT
                     e.id,

@@ -18,15 +18,16 @@ namespace TorneoAmigos.Data
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(@"
                 SELECT e.id, e.pregunta, e.tipo, e.activa, e.max_votos, e.temporada_id,
-                       eo.id, eo.texto, eo.equipo_id, COALESCE(eq.pais_code,''), eo.orden,
+                       eo.id, eo.texto, eo.equipo_id, COALESCE(eq.pais_code, eq2.pais_code, ''), eo.orden,
                        COUNT(ev.id) as votos
                 FROM encuestas e
                 LEFT JOIN encuesta_opciones eo ON eo.encuesta_id = e.id
                 LEFT JOIN equipos eq ON eo.equipo_id = eq.id
+                LEFT JOIN equipos eq2 ON eo.equipo_id IS NULL AND LOWER(eo.texto) = LOWER(eq2.nombre)
                 LEFT JOIN encuesta_votos ev ON ev.opcion_id = eo.id
                 WHERE e.activa = true
                 GROUP BY e.id, e.pregunta, e.tipo, e.activa, e.max_votos, e.temporada_id,
-                         eo.id, eo.texto, eo.equipo_id, eq.pais_code, eo.orden
+                         eo.id, eo.texto, eo.equipo_id, eq.pais_code, eq2.pais_code, eo.orden
                 ORDER BY e.id DESC, eo.orden ASC", conn);
             conn.Open();
             using var r = cmd.ExecuteReader();
@@ -184,14 +185,15 @@ namespace TorneoAmigos.Data
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(@"
                 SELECT e.id, e.pregunta, e.tipo, e.activa, e.max_votos, e.temporada_id,
-                       eo.id, eo.texto, eo.equipo_id, COALESCE(eq.pais_code,''), eo.orden,
+                       eo.id, eo.texto, eo.equipo_id, COALESCE(eq.pais_code, eq2.pais_code, ''), eo.orden,
                        COUNT(ev.id) as votos
                 FROM encuestas e
                 LEFT JOIN encuesta_opciones eo ON eo.encuesta_id = e.id
                 LEFT JOIN equipos eq ON eo.equipo_id = eq.id
+                LEFT JOIN equipos eq2 ON eo.equipo_id IS NULL AND LOWER(eo.texto) = LOWER(eq2.nombre)
                 LEFT JOIN encuesta_votos ev ON ev.opcion_id = eo.id
                 GROUP BY e.id, e.pregunta, e.tipo, e.activa, e.max_votos, e.temporada_id,
-                         eo.id, eo.texto, eo.equipo_id, eq.pais_code, eo.orden
+                         eo.id, eo.texto, eo.equipo_id, eq.pais_code, eq2.pais_code, eo.orden
                 ORDER BY e.id DESC, eo.orden ASC", conn);
             conn.Open();
             using var r = cmd.ExecuteReader();

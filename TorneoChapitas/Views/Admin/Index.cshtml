@@ -123,10 +123,15 @@
                     <div style="font-size:13px;font-weight:500;color:var(--color-text);">🗑️ Borrar Fixture</div>
                     <div style="font-size:11px;color:var(--color-muted);margin-top:2px;">Solo funciona si no hay resultados cargados. Permite agregar jugadores y regenerar.</div>
                 </div>
-                <button onclick="borrarFixture()" style="background:transparent;border:1px solid var(--color-red);color:var(--color-red);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;">
-                    🗑️ Borrar Fixture
-                </button>
-                <p id="msg-borrar-fixture" style="font-size:12px;display:none;width:100%;"></p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button onclick="regenerarFixture()" style="background:var(--color-gold);color:var(--color-bg);border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;">
+                        🎲 Regenerar Fixture
+                    </button>
+                    <button onclick="borrarFixture()" style="background:transparent;border:1px solid var(--color-red);color:var(--color-red);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;">
+                        🗑️ Borrar Fixture
+                    </button>
+                </div>
+                <p id="msg-borrar-fixture" style="font-size:12px;display:none;width:100%;margin-top:6px;"></p>
             </div>
 
             <!-- CONFIG DESCENSOS/ASCENSOS/PROMOCIÓN -->
@@ -471,6 +476,17 @@ async function generarPromocion() {
     msg.style.display = 'block';
     msg.style.color = d.ok ? 'var(--color-green)' : 'var(--color-red)';
     msg.textContent = d.ok ? '✅ Partido de promoción generado.' : '⚠️ Error al generar.';
+    if (d.ok) setTimeout(() => location.reload(), 1500);
+}
+
+async function regenerarFixture() {
+    const msg = document.getElementById('msg-borrar-fixture');
+    if (!confirm('¿Regenerar el fixture con los equipos actuales?\nSolo funciona si no hay partidos jugados.')) return;
+    const r = await fetch('/Admin/RegenerarFixture', { method: 'POST' });
+    const d = await r.json();
+    msg.style.display = 'block';
+    msg.style.color = d.ok ? 'var(--color-green)' : 'var(--color-red)';
+    msg.textContent = d.msg;
     if (d.ok) setTimeout(() => location.reload(), 1500);
 }
 

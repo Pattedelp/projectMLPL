@@ -35,7 +35,7 @@ namespace TorneoAmigos.Data
             string prediccion1x2, int? golesLocal, int? golesVisitante)
         {
             if (string.IsNullOrWhiteSpace(autor) || autor.Length > 50) return false;
-            if (!new[] { "L", "E", "V" }.Contains(prediccion1x2)) return false;
+            if (!new[] { "L", "V" }.Contains(prediccion1x2)) return false;
 
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(@"

@@ -186,6 +186,13 @@ namespace TorneoAmigos.Data
                     "UPDATE temporadas SET finalizada = true, activa = false, fecha_fin = NOW() WHERE id = @Id", conn, tx);
                 cmd.Parameters.AddWithValue("@Id", temporadaId);
                 cmd.ExecuteNonQuery();
+
+                // Marcar copas de esta temporada como finalizadas
+                using var cmdCopas = new NpgsqlCommand(
+                    "UPDATE copas SET finalizada = true WHERE temporada_id = @Id AND finalizada = false", conn, tx);
+                cmdCopas.Parameters.AddWithValue("@Id", temporadaId);
+                cmdCopas.ExecuteNonQuery();
+
                 tx.Commit();
 
                 // Mover equipos entre divisiones

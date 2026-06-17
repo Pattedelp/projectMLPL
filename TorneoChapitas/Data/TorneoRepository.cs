@@ -305,7 +305,8 @@ namespace TorneoAmigos.Data
             const string sql = @"
                 SELECT p.id, p.fechaid, p.divisionid, p.equipolocalid, p.equipovisitanteid,
                        p.goleslocal, p.golesvisitante, p.jugado, p.fechapartido, p.lugar, p.observaciones,
-                       el.nombre, el.colorprincipal, ev.nombre, ev.colorprincipal
+                       el.nombre, el.colorprincipal, ev.nombre, ev.colorprincipal,
+                       COALESCE(el.pais_code,''), COALESCE(ev.pais_code,'')
                 FROM partidos p
                 INNER JOIN equipos el ON p.equipolocalid    = el.id
                 INNER JOIN equipos ev ON p.equipovisitanteid = ev.id
@@ -465,13 +466,17 @@ namespace TorneoAmigos.Data
             {
                 Id = r.GetInt32(3), Nombre = r.GetString(11),
                 ColorPrincipal = r.IsDBNull(12) ? "#003366" : r.GetString(12),
-                FlagCode = BanderaMap.GetCode(r.GetString(11))
+                FlagCode = r.FieldCount > 15 && !r.IsDBNull(15) && !string.IsNullOrEmpty(r.GetString(15))
+                    ? r.GetString(15)
+                    : BanderaMap.GetCode(r.GetString(11))
             },
             EquipoVisitante = new Equipo
             {
                 Id = r.GetInt32(4), Nombre = r.GetString(13),
                 ColorPrincipal = r.IsDBNull(14) ? "#003366" : r.GetString(14),
-                FlagCode = BanderaMap.GetCode(r.GetString(13))
+                FlagCode = r.FieldCount > 16 && !r.IsDBNull(16) && !string.IsNullOrEmpty(r.GetString(16))
+                    ? r.GetString(16)
+                    : BanderaMap.GetCode(r.GetString(13))
             }
         };
     }

@@ -35,6 +35,19 @@ namespace TorneoAmigos.Controllers
             return View(vm);
         }
 
+        // ── CONFIGURACIÓN DE TEMPORADA ───────────────────
+        [HttpPost]
+        public IActionResult ActualizarConfigTemporada([FromBody] ConfigTemporadaDto dto)
+        {
+            var temporada = _tempRepo.GetTemporadaActiva();
+            if (temporada == null) return Json(new { ok = false });
+            var ok = _tempRepo.ActualizarConfigTemporada(temporada.Id,
+                dto.CantDescensos, dto.CantAscensos, dto.TienePromocion,
+                dto.TienePromocion ? dto.PosPromocionPrimera : null,
+                dto.TienePromocion ? dto.PosPromocionB : null);
+            return Json(new { ok });
+        }
+
         // ── GUARDAR BORRADOR CIERRE ─────────────────────
         [HttpPost]
         public IActionResult GuardarCierre([FromBody] GuardarCierreDto dto)
@@ -159,7 +172,12 @@ namespace TorneoAmigos.Controllers
             List<int>? equiposPrimera,
             List<int>? equiposB,
             List<string>? nuevosNombres,
-            List<int>? nuevasDivisiones)
+            List<int>? nuevasDivisiones,
+            int cantDescensos = 2,
+            int cantAscensos = 2,
+            bool tienePromocion = false,
+            int posPromocionPrimera = 8,
+            int posPromocionB = 3)
         {
             equiposPrimera ??= new();
             equiposB       ??= new();
@@ -172,7 +190,10 @@ namespace TorneoAmigos.Controllers
 
             try
             {
-                _tempRepo.CrearNuevaTemporada(nombreTemporada, equiposPrimera, equiposB, nuevos);
+                _tempRepo.CrearNuevaTemporada(nombreTemporada, equiposPrimera, equiposB, nuevos,
+                    cantDescensos, cantAscensos, tienePromocion,
+                    tienePromocion ? posPromocionPrimera : null,
+                    tienePromocion ? posPromocionB : null);
                 TempData["Mensaje"] = "¡Nueva temporada creada con fixture generado!";
                 return RedirectToAction("Index", "Home");
             }
@@ -377,6 +398,15 @@ namespace TorneoAmigos.Controllers
         public int EquipoId { get; set; }
         public string TipoTitulo { get; set; } = "";
         public string NombreTitulo { get; set; } = "";
+    }
+
+    public class ConfigTemporadaDto
+    {
+        public int CantDescensos { get; set; } = 2;
+        public int CantAscensos { get; set; } = 2;
+        public bool TienePromocion { get; set; } = false;
+        public int PosPromocionPrimera { get; set; } = 8;
+        public int PosPromocionB { get; set; } = 3;
     }
 
     public class GuardarCierreDto

@@ -156,6 +156,7 @@ a:hover { color: #fff; }
 .zona-campeon    td:nth-child(2) { border-left: 3px solid var(--color-gold) !important; padding-left: 9px; }
 .zona-campeonato td:nth-child(2) { border-left: 3px solid var(--color-green) !important; padding-left: 9px; }
 .zona-promocion  td:nth-child(2) { border-left: 3px solid #3a82c8 !important; padding-left: 9px; }
+.zona-promocion-b td:nth-child(2) { border-left: 3px solid #3a82c8 !important; padding-left: 9px; }
 .zona-descenso   td:nth-child(2) { border-left: 3px solid var(--color-red) !important; padding-left: 9px; }
 .zona-ascenso    td:nth-child(2) { border-left: 3px solid var(--color-green) !important; padding-left: 9px; }
 
@@ -163,6 +164,8 @@ a:hover { color: #fff; }
 .zona-campeon td { background: rgba(240,192,64,.05) !important; }
 .zona-descenso td { background: rgba(224,85,85,.04) !important; }
 .zona-ascenso td { background: rgba(76,175,130,.05) !important; }
+.zona-promocion td { background: rgba(58,130,200,.05) !important; }
+.zona-promocion-b td { background: rgba(58,130,200,.05) !important; }
 
 .col-pos { color: var(--color-muted); font-size: 13px; width: 32px; }
 .col-equipo { min-width: 160px; }

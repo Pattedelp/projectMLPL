@@ -1396,6 +1396,100 @@ namespace TorneoAmigos.Data
             return resultado.OrderBy(t => t.Numero).ToList();
         }
 
+        public List<RankingFifaEntry> GetRankingFifa(int ultimasTemporadas = 5)
+        {
+            // Obtener IDs de las últimas N temporadas finalizadas
+            const string sqlTemps = @"
+                SELECT id FROM temporadas 
+                WHERE finalizada = true 
+                ORDER BY numero DESC 
+                LIMIT @N";
+
+            const string sqlPuntos = @"
+                WITH puntos_base AS (
+                    -- Puntos por posición en tabla final (solo Primera División)
+                    SELECT
+                        tr.equipo_id,
+                        tr.temporada_id,
+                        CASE
+                            WHEN tr.division_id = 1 AND tr.posicion = 1 THEN 30
+                            WHEN tr.division_id = 1 AND tr.posicion = 2 THEN 10
+                            WHEN tr.division_id = 1 AND tr.posicion = 3 THEN 5
+                            ELSE 0
+                        END as pts_posicion
+                    FROM temporada_resultados tr
+                    WHERE tr.temporada_id = ANY(@Temps)
+                      AND tr.division_id = 1
+
+                    UNION ALL
+
+                    -- Puntos por títulos en palmares
+                    SELECT
+                        p.equipo_id,
+                        p.temporada_id,
+                        CASE p.tipo_titulo
+                            WHEN 'campeon_copa'      THEN 25
+                            WHEN 'campeon_supercopa' THEN 20
+                            WHEN 'campeon_primera_b' THEN 5
+                            ELSE 0
+                        END as pts_posicion
+                    FROM palmares p
+                    WHERE p.temporada_id = ANY(@Temps)
+                      AND p.equipo_id IS NOT NULL
+                      AND p.tipo_titulo IN ('campeon_copa','campeon_supercopa','campeon_primera_b')
+                )
+                SELECT
+                    e.id,
+                    e.nombre,
+                    COALESCE(e.pais_code,'') as pais_code,
+                    COALESCE(SUM(pb.pts_posicion), 0) as puntos_total,
+                    COUNT(*) FILTER (WHERE pb.pts_posicion = 30) as titulos_liga,
+                    COUNT(*) FILTER (WHERE pb.pts_posicion = 25) as titulos_copa,
+                    COUNT(*) FILTER (WHERE pb.pts_posicion = 20) as titulos_supercopa
+                FROM equipos e
+                JOIN puntos_base pb ON pb.equipo_id = e.id
+                GROUP BY e.id, e.nombre, e.pais_code
+                HAVING SUM(pb.pts_posicion) > 0
+                ORDER BY puntos_total DESC, titulos_liga DESC";
+
+            using var conn = GetConnection();
+            conn.Open();
+
+            // Get temporada IDs
+            var tempIds = new List<int>();
+            using (var cmd = new NpgsqlCommand(sqlTemps, conn))
+            {
+                cmd.Parameters.AddWithValue("@N", ultimasTemporadas);
+                using var r = cmd.ExecuteReader();
+                while (r.Read()) tempIds.Add(r.GetInt32(0));
+            }
+            if (!tempIds.Any()) return new();
+
+            var lista = new List<RankingFifaEntry>();
+            using (var cmd = new NpgsqlCommand(sqlPuntos, conn))
+            {
+                cmd.Parameters.AddWithValue("@Temps", tempIds.ToArray());
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    var nombre = r.GetString(1);
+                    var paisCode = r.GetString(2);
+                    lista.Add(new RankingFifaEntry
+                    {
+                        EquipoId              = r.GetInt32(0),
+                        NombreEquipo          = nombre,
+                        FlagCode              = !string.IsNullOrEmpty(paisCode) ? paisCode : BanderaMap.GetCode(nombre),
+                        PuntosTotal           = Convert.ToInt32(r.GetInt64(3)),
+                        TitulosLiga           = Convert.ToInt32(r.GetInt64(4)),
+                        TitulosCopa           = Convert.ToInt32(r.GetInt64(5)),
+                        TitulosSupercopa      = Convert.ToInt32(r.GetInt64(6)),
+                        TemporadasConsideradas = tempIds.Count
+                    });
+                }
+            }
+            return lista;
+        }
+
         public List<Trofeo> GetTrofeos()
         {
             var lista = new List<Trofeo>();
@@ -1423,10 +1517,11 @@ namespace TorneoAmigos.Data
             foreach (var trofeo in lista)
             {
                 using var cmd = new NpgsqlCommand(@"
-                    SELECT id, nombre_equipo, COALESCE(equipo_id,0), tipo_titulo, nombre_titulo, temporada_id, temporada_nombre
-                    FROM palmares
-                    WHERE tipo_titulo = @T
-                    ORDER BY created_at DESC", conn);
+                    SELECT p.id, p.nombre_equipo, COALESCE(p.equipo_id,0), p.tipo_titulo, p.nombre_titulo, p.temporada_id, p.temporada_nombre
+                    FROM palmares p
+                    LEFT JOIN temporadas t ON p.temporada_id = t.id
+                    WHERE p.tipo_titulo = @T
+                    ORDER BY COALESCE(t.numero, 0) DESC, p.created_at DESC", conn);
                 cmd.Parameters.AddWithValue("@T", trofeo.TipoTitulo);
                 using var r = cmd.ExecuteReader();
                 while (r.Read())

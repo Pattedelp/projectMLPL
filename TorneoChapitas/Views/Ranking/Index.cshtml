@@ -1,0 +1,114 @@
+@model List<RankingFifaEntry>
+@{
+    ViewBag.Title = "Ranking AAC";
+    int temporadas = ViewBag.Temporadas ?? 5;
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🌍</div>
+    <div class="page-hero-text">
+        <h1>Ranking AAC</h1>
+        <p>Clasificación histórica de equipos · Últimas @temporadas temporadas</p>
+    </div>
+</div>
+
+<!-- Selector de temporadas -->
+<div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;align-items:center;">
+    <span style="font-size:13px;color:var(--color-muted);">Ver últimas:</span>
+    @foreach (var n in new[] { 3, 5, 10, 99 })
+    {
+        var label = n == 99 ? "Todas" : n.ToString();
+        <a href="/Ranking?temporadas=@n"
+           class="tab-btn @(temporadas == n ? "active" : "")"
+           style="padding:6px 14px;font-size:12px;">@label temp.</a>
+    }
+</div>
+
+<!-- Tabla de puntos -->
+<div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+    <div style="font-size:11px;color:var(--color-muted);display:flex;gap:16px;flex-wrap:wrap;">
+        <span>🏆 Campeón Liga = <strong style="color:var(--color-gold)">30 pts</strong></span>
+        <span>🥈 Subcampeón = <strong>10 pts</strong></span>
+        <span>🥉 3° puesto = <strong>5 pts</strong></span>
+        <span>🥇 Copa Argentina = <strong style="color:var(--color-gold)">25 pts</strong></span>
+        <span>⭐ Supercopa = <strong style="color:var(--color-gold)">20 pts</strong></span>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div style="text-align:center;padding:60px;color:var(--color-muted);">
+        <div style="font-size:48px;margin-bottom:16px;">📊</div>
+        <p>No hay temporadas finalizadas todavía. El ranking aparecerá cuando finalice la primera temporada.</p>
+    </div>
+}
+else
+{
+    <div class="tabla-wrapper">
+        <table class="tabla-posiciones">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Equipo</th>
+                    <th title="Puntos totales">PTS</th>
+                    <th title="Títulos de Liga">🏆 Liga</th>
+                    <th title="Títulos de Copa Argentina">🥇 Copa</th>
+                    <th title="Títulos de Supercopa">⭐ SC</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int pos = 1; }
+                @foreach (var r in Model)
+                {
+                    <tr style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@r.EquipoId'">
+                        <td class="col-pos">
+                            @if (pos == 1) { <span style="color:var(--color-gold);font-size:16px;">🥇</span> }
+                            else if (pos == 2) { <span style="font-size:16px;">🥈</span> }
+                            else if (pos == 3) { <span style="font-size:16px;">🥉</span> }
+                            else { @pos }
+                        </td>
+                        <td class="col-equipo">
+                            @if (r.FlagCode == "retired")
+                            {
+                                <span style="margin-right:4px;color:var(--color-muted);">✝</span>
+                            }
+                            else if (!string.IsNullOrEmpty(r.FlagCode))
+                            {
+                                <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" />
+                            }
+                            <strong>@r.NombreEquipo</strong>
+                        </td>
+                        <td class="col-pts" style="color:var(--color-gold);font-weight:700;font-size:18px;">@r.PuntosTotal</td>
+                        <td class="col-num">
+                            @if (r.TitulosLiga > 0)
+                            {
+                                <span style="color:var(--color-gold);">@r.TitulosLiga</span>
+                            }
+                            else { <span style="color:var(--color-muted);">-</span> }
+                        </td>
+                        <td class="col-num">
+                            @if (r.TitulosCopa > 0)
+                            {
+                                <span style="color:#c0c0c0;">@r.TitulosCopa</span>
+                            }
+                            else { <span style="color:var(--color-muted);">-</span> }
+                        </td>
+                        <td class="col-num">
+                            @if (r.TitulosSupercopa > 0)
+                            {
+                                <span style="color:#3a82c8;">@r.TitulosSupercopa</span>
+                            }
+                            else { <span style="color:var(--color-muted);">-</span> }
+                        </td>
+                    </tr>
+                    pos++;
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<style>
+.tab-btn { padding:8px 16px;border-radius:8px;background:var(--color-bg2);border:1px solid var(--color-border);color:var(--color-muted);font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-block; }
+.tab-btn.active { background:var(--color-gold);color:var(--color-bg);border-color:var(--color-gold); }
+</style>

@@ -371,3 +371,40 @@ namespace TorneoAmigos.Models
         public bool SinDescensos { get; set; }
     }
 }
+
+    // ── RANKING FIFA ─────────────────────────────────
+    public class RankingFifaEntry
+    {
+        public int EquipoId { get; set; }
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int PuntosTotal { get; set; }
+        public int TitulosLiga { get; set; }
+        public int TitulosCopa { get; set; }
+        public int TitulosSupercopa { get; set; }
+        public int TemporadasConsideradas { get; set; }
+    }
+
+    // ── ENCUESTAS ─────────────────────────────────────
+    public class Encuesta
+    {
+        public int Id { get; set; }
+        public string Pregunta { get; set; } = "";
+        public string Tipo { get; set; } = "opciones";
+        public bool Activa { get; set; } = true;
+        public int MaxVotos { get; set; } = 1;
+        public int? TemporadaId { get; set; }
+        public List<EncuestaOpcion> Opciones { get; set; } = new();
+        public int TotalVotos { get; set; }
+    }
+
+    public class EncuestaOpcion
+    {
+        public int Id { get; set; }
+        public int EncuestaId { get; set; }
+        public string Texto { get; set; } = "";
+        public int? EquipoId { get; set; }
+        public string? FlagCode { get; set; }
+        public int Votos { get; set; }
+        public int Orden { get; set; }
+    }

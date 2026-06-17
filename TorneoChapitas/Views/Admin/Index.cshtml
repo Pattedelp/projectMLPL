@@ -375,22 +375,20 @@ else
         <div style="font-size:13px;font-weight:500;margin-bottom:12px;">Nueva encuesta</div>
         <input type="text" id="enc-pregunta" placeholder="¿Pregunta para los participantes?" class="form-control" style="margin-bottom:10px;font-size:13px;" />
 
-        <div style="font-size:11px;color:var(--color-muted);margin-bottom:6px;">Opciones (podés usar jugadores o texto libre):</div>
-        <div id="enc-opciones-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-            @{ var todosEquipos = ViewBag.EquiposTodos as List<Equipo> ?? new(); }
-            @for (int oi = 0; oi < 2; oi++)
+        <div style="font-size:11px;color:var(--color-muted);margin-bottom:6px;">Opciones:</div>
+        @{ var todosEquipos = ViewBag.EquiposTodos as List<Equipo> ?? new(); }
+        <script>
+        var encEquipos = [
+            {id:'', nombre:'-- Texto libre --', flag:''},
+            @foreach (var eq in todosEquipos)
             {
-                <div class="enc-opcion-row" style="display:flex;gap:6px;align-items:center;">
-                    <select class="enc-sel-equipo form-control" style="flex:1;font-size:12px;" onchange="syncOpcionTexto(this)">
-                        <option value="">-- Texto libre --</option>
-                        @foreach (var eq in todosEquipos)
-                        {
-                            <option value="@eq.Id" data-nombre="@eq.Nombre">@eq.Nombre</option>
-                        }
-                    </select>
-                    <input type="text" class="enc-opcion-texto form-control" placeholder="o escribí una opción..." style="flex:1;font-size:12px;" />
-                </div>
+                @:{ id:'@eq.Id', nombre:'@eq.Nombre', flag:'@eq.FlagCode' },
             }
+        ];
+        </script>
+        <div id="enc-opciones-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+            <div class="enc-opcion-row" style="display:flex;gap:6px;align-items:center;" data-index="0"></div>
+            <div class="enc-opcion-row" style="display:flex;gap:6px;align-items:center;" data-index="1"></div>
         </div>
 
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -505,42 +503,114 @@ else
 
 @section Scripts {
 <script>
-function syncOpcionTexto(sel) {
-    const row = sel.closest('.enc-opcion-row');
-    const txt = row.querySelector('.enc-opcion-texto');
-    const nombre = sel.options[sel.selectedIndex]?.dataset?.nombre || '';
-    if (nombre) txt.value = nombre;
+// ── ENCUESTA DROPDOWN CON BANDERAS ──────────────────
+function crearDropdownEquipo(row) {
+    const idx = row.dataset.index;
+    row.innerHTML = '';
+
+    // Hidden input para el texto final
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.className = 'enc-opcion-texto'; hidden.value = '';
+    row.appendChild(hidden);
+
+    // Trigger button
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'form-control';
+    btn.style.cssText = 'flex:1;font-size:12px;text-align:left;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--color-bg3);border:1px solid var(--color-border);';
+    btn.innerHTML = '<span class="dd-flag" style="font-size:14px;"></span><span class="dd-nombre" style="flex:1;">-- Texto libre --</span><span>▾</span>';
+    row.appendChild(btn);
+
+    // Text input for free text
+    const txt = document.createElement('input');
+    txt.type = 'text'; txt.placeholder = 'o escribí texto libre...';
+    txt.className = 'form-control'; txt.style.cssText = 'flex:1;font-size:12px;display:none;';
+    txt.addEventListener('input', () => { hidden.value = txt.value; });
+    row.appendChild(txt);
+
+    // Dropdown list
+    const list = document.createElement('div');
+    list.style.cssText = 'position:absolute;z-index:999;background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;max-height:220px;overflow-y:auto;min-width:220px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+    list.style.display = 'none';
+    document.body.appendChild(list);
+
+    function buildList() {
+        list.innerHTML = '';
+        encEquipos.forEach(eq => {
+            const item = document.createElement('div');
+            item.style.cssText = 'padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;';
+            item.onmouseenter = () => item.style.background = 'var(--color-bg3)';
+            item.onmouseleave = () => item.style.background = '';
+            if (eq.flag) {
+                const img = document.createElement('img');
+                img.src = `https://flagcdn.com/20x15/${eq.flag}.png`;
+                img.style.cssText = 'width:20px;height:15px;border-radius:2px;';
+                img.onerror = () => img.style.display = 'none';
+                item.appendChild(img);
+            } else {
+                const sp = document.createElement('span'); sp.style.width = '20px'; item.appendChild(sp);
+            }
+            const name = document.createElement('span'); name.textContent = eq.nombre; item.appendChild(name);
+            item.onclick = () => {
+                if (!eq.id) {
+                    // Text libre
+                    btn.style.display = 'none';
+                    txt.style.display = 'block';
+                    txt.focus();
+                    hidden.value = txt.value;
+                } else {
+                    btn.style.display = 'flex';
+                    txt.style.display = 'none';
+                    btn.querySelector('.dd-nombre').textContent = eq.nombre;
+                    if (eq.flag) {
+                        btn.querySelector('.dd-flag').innerHTML = `<img src="https://flagcdn.com/20x15/${eq.flag}.png" style="width:20px;height:15px;border-radius:2px;" onerror="this.style.display='none'" />`;
+                    } else {
+                        btn.querySelector('.dd-flag').innerHTML = '';
+                    }
+                    hidden.value = eq.nombre;
+                }
+                list.style.display = 'none';
+            };
+            list.appendChild(item);
+        });
+    }
+
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        buildList();
+        const rect = btn.getBoundingClientRect();
+        list.style.top  = (rect.bottom + window.scrollY) + 'px';
+        list.style.left = rect.left + 'px';
+        list.style.width = rect.width + 'px';
+        list.style.display = list.style.display === 'none' ? 'block' : 'none';
+    };
+    document.addEventListener('click', () => list.style.display = 'none');
 }
 
 function agregarOpcion() {
     const list = document.getElementById('enc-opciones-list');
-    const n = list.querySelectorAll('.enc-opcion-row').length + 1;
-    const equiposHtml = Array.from(document.querySelectorAll('.enc-sel-equipo')[0]?.options || [])
-        .map(o => `<option value="${o.value}" data-nombre="${o.dataset.nombre || ''}">${o.text}</option>`)
-        .join('');
+    const n = list.querySelectorAll('.enc-opcion-row').length;
     const div = document.createElement('div');
     div.className = 'enc-opcion-row';
-    div.style.cssText = 'display:flex;gap:6px;align-items:center;';
-    div.innerHTML = `
-        <select class="enc-sel-equipo form-control" style="flex:1;font-size:12px;" onchange="syncOpcionTexto(this)">
-            ${equiposHtml}
-        </select>
-        <input type="text" class="enc-opcion-texto form-control" placeholder="o escribí una opción..." style="flex:1;font-size:12px;" />`;
+    div.style.cssText = 'display:flex;gap:6px;align-items:center;position:relative;';
+    div.dataset.index = n;
     list.appendChild(div);
+    crearDropdownEquipo(div);
+}
+
+function initEncuestaDropdowns() {
+    document.querySelectorAll('.enc-opcion-row').forEach(row => {
+        row.style.position = 'relative';
+        crearDropdownEquipo(row);
+    });
 }
 
 async function crearEncuestaManual() {
     const msg = document.getElementById('msg-enc-crear');
     const pregunta = document.getElementById('enc-pregunta').value.trim();
-    const maxVotos = parseInt(document.getElementById('enc-maxvotos').value);
-    const rows = document.querySelectorAll('.enc-opcion-row');
-    const opciones = [];
-    rows.forEach(row => {
-        const sel = row.querySelector('.enc-sel-equipo');
-        const txt = row.querySelector('.enc-opcion-texto').value.trim();
-        const texto = txt || sel?.options[sel.selectedIndex]?.dataset?.nombre || '';
-        if (texto) opciones.push(texto);
-    });
+    const maxVotos = parseInt(document.getElementById('enc-maxvotos').value) || 1;
+    const opciones = [...document.querySelectorAll('.enc-opcion-texto')]
+        .map(i => i.value.trim()).filter(Boolean);
     if (!pregunta || opciones.length < 2) {
         msg.style.display='block'; msg.style.color='var(--color-red)';
         msg.textContent='Completá la pregunta y al menos 2 opciones.'; return;
@@ -553,6 +623,8 @@ async function crearEncuestaManual() {
     if (d.ok) location.reload();
     else { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Error al crear.'; }
 }
+
+document.addEventListener('DOMContentLoaded', initEncuestaDropdowns);
 
 async function toggleEncuesta(id, activa) {
     await fetch(`/Encuestas/Toggle?id=${id}&activa=${activa}`, { method: 'POST' });

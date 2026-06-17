@@ -17,6 +17,8 @@ namespace TorneoAmigos.Controllers
             {
                 Temporadas = _repo.GetTodasLasTemporadas()
             };
+            var palmares = _repo.GetPalmares();
+            ViewBag.TodosLosTitulos = palmares.Equipos.SelectMany(e => e.Titulos).ToList();
             return View(vm);
         }
 

@@ -2,6 +2,8 @@
 @{
     ViewBag.Title = "Historial de Temporadas";
     ViewBag.ActivePage = "historial";
+    var palmares = ViewBag.Palmares as PalmaresViewModel;
+    var todosTitulos = ViewBag.TodosLosTitulos as List<Titulo> ?? new();
 }
 
 <div class="page-hero">
@@ -24,17 +26,51 @@
 }
 else
 {
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;">
         @foreach (var t in Model.Temporadas.Where(t => t.Finalizada).OrderByDescending(t => t.Numero))
         {
+            var titulos = todosTitulos
+                .Where(x => x.TemporadaNombre == t.Nombre)
+                .ToList();
+
+            var campLiga      = titulos.FirstOrDefault(x => x.TipoTitulo == "campeon_torneo");
+            var campCopa      = titulos.FirstOrDefault(x => x.TipoTitulo == "campeon_copa");
+            var campSupercopa = titulos.FirstOrDefault(x => x.TipoTitulo == "campeon_supercopa");
+
             <a asp-action="Detalle" asp-route-id="@t.Id"
-               style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:24px;text-decoration:none;display:block;transition:all .2s;">
-                <div style="font-family:var(--font-heading);font-size:32px;font-weight:700;color:var(--color-gold);">T@t.Numero</div>
-                <div style="font-size:15px;font-weight:500;color:var(--color-text);margin:6px 0;">@t.Nombre</div>
-                <div style="font-size:12px;color:var(--color-muted);">
+               style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;text-decoration:none;display:block;transition:all .2s;">
+                <div style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-gold);">T@(t.Numero)</div>
+                <div style="font-size:14px;font-weight:500;color:var(--color-text);margin:4px 0;">@t.Nombre</div>
+                <div style="font-size:11px;color:var(--color-muted);margin-bottom:12px;">
                     @t.FechaInicio?.ToString("MMM yyyy") — @t.FechaFin?.ToString("MMM yyyy")
                 </div>
-                <div style="font-size:12px;color:var(--color-gold);margin-top:14px;">Ver resultados →</div>
+
+                @if (campLiga != null)
+                {
+                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;">
+                        <span>🏆</span>
+                        <span style="color:var(--color-muted);">Liga:</span>
+                        <span style="color:var(--color-text);font-weight:500;">@campLiga.NombreEquipo</span>
+                    </div>
+                }
+                @if (campCopa != null)
+                {
+                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;">
+                        <span>🥇</span>
+                        <span style="color:var(--color-muted);">Copa:</span>
+                        <span style="color:var(--color-text);font-weight:500;">@campCopa.NombreEquipo</span>
+                    </div>
+                }
+                @if (campSupercopa != null)
+                {
+                    <div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;">
+                        <span>⭐</span>
+                        <span style="color:var(--color-muted);">Supercopa:</span>
+                        <span style="color:var(--color-text);font-weight:500;">@campSupercopa.NombreEquipo</span>
+                    </div>
+                }
+
+                <div style="font-size:12px;color:var(--color-gold);margin-top:10px;">Ver resultados →</div>
             </a>
         }
     </div>

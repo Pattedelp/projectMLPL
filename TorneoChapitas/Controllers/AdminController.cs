@@ -35,6 +35,16 @@ namespace TorneoAmigos.Controllers
             return View(vm);
         }
 
+        // ── BORRAR FIXTURE ──────────────────────────────
+        [HttpPost]
+        public IActionResult BorrarFixture()
+        {
+            var temporada = _tempRepo.GetTemporadaActiva();
+            if (temporada == null) return Json(new { ok = false, msg = "No hay temporada activa" });
+            var ok = _tempRepo.BorrarFixtureSinResultados(temporada.Id);
+            return Json(new { ok, msg = ok ? "Fixture borrado. Podés generar uno nuevo desde Nueva Temporada." : "No se puede borrar: ya hay partidos jugados." });
+        }
+
         // ── CONFIGURACIÓN DE TEMPORADA ───────────────────
         [HttpPost]
         public IActionResult ActualizarConfigTemporada([FromBody] ConfigTemporadaDto dto)

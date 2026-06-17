@@ -369,6 +369,23 @@ namespace TorneoAmigos.Data
             }
         }
 
+        public bool BorrarFixtureSinResultados(int temporadaId)
+        {
+            // Solo borra si NO hay ningún partido jugado
+            using var conn = GetConnection();
+            conn.Open();
+            using var check = new NpgsqlCommand(
+                "SELECT COUNT(*) FROM partidos p JOIN fechas f ON p.fechaid = f.id WHERE f.divisionid IN (1,2) AND p.jugado = true", conn);
+            var jugados = Convert.ToInt32(check.ExecuteScalar());
+            if (jugados > 0) return false; // No borrar si hay resultados
+
+            using var tx = conn.BeginTransaction();
+            new NpgsqlCommand("DELETE FROM partidos WHERE fechaid IN (SELECT id FROM fechas WHERE divisionid IN (1,2))", conn, tx).ExecuteNonQuery();
+            new NpgsqlCommand("DELETE FROM fechas WHERE divisionid IN (1,2)", conn, tx).ExecuteNonQuery();
+            tx.Commit();
+            return true;
+        }
+
         private void BorrarFixture(NpgsqlConnection conn, NpgsqlTransaction tx)
         {
             new NpgsqlCommand("DELETE FROM partidos", conn, tx).ExecuteNonQuery();

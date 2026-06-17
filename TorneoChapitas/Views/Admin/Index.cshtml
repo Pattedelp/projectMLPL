@@ -27,6 +27,18 @@
         <div style="display:flex;flex-direction:column;gap:12px;">
 
             <!-- FINALIZAR TEMPORADA -->
+            <!-- BORRAR FIXTURE -->
+            <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <div>
+                    <div style="font-size:13px;font-weight:500;color:var(--color-text);">🗑️ Borrar Fixture</div>
+                    <div style="font-size:11px;color:var(--color-muted);margin-top:2px;">Solo funciona si no hay resultados cargados. Permite agregar jugadores y regenerar.</div>
+                </div>
+                <button onclick="borrarFixture()" style="background:transparent;border:1px solid var(--color-red);color:var(--color-red);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;">
+                    🗑️ Borrar Fixture
+                </button>
+                <p id="msg-borrar-fixture" style="font-size:12px;display:none;width:100%;"></p>
+            </div>
+
             <!-- CONFIG DESCENSOS/ASCENSOS/PROMOCIÓN -->
             @{
                 var tempActiva = Model.TemporadaActiva;
@@ -317,7 +329,7 @@ else
             {
                 <a asp-action="TemporadaDetalle" asp-route-id="@t.Id"
                    style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;text-decoration:none;display:block;">
-                    <div style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-gold);">T@t.Numero</div>
+                    <div style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-gold);">T@(t.Numero)</div>
                     <div style="font-size:14px;font-weight:500;color:var(--color-text);margin:4px 0;">@t.Nombre</div>
                     <div style="font-size:12px;color:var(--color-muted);">@t.FechaFin?.ToString("MMM yyyy")</div>
                     <div style="font-size:12px;color:var(--color-gold);margin-top:12px;">Ver detalle →</div>
@@ -329,6 +341,17 @@ else
 
 @section Scripts {
 <script>
+async function borrarFixture() {
+    if (!confirm('¿Borrar el fixture completo?\nSolo funciona si no hay partidos jugados.')) return;
+    const msg = document.getElementById('msg-borrar-fixture');
+    const r = await fetch('/Admin/BorrarFixture', { method: 'POST' });
+    const d = await r.json();
+    msg.style.display = 'block';
+    msg.style.color = d.ok ? 'var(--color-green)' : 'var(--color-red)';
+    msg.textContent = d.msg;
+    if (d.ok) setTimeout(() => location.reload(), 1500);
+}
+
 async function guardarConfigTemporada() {
     const msg = document.getElementById('msg-config');
     const data = {

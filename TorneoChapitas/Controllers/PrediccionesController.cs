@@ -49,11 +49,12 @@ namespace TorneoAmigos.Controllers
             }
             else
             {
-                // Próximos partidos de liga sin jugar
+                // Próximos partidos de liga sin jugar — solo de fechas VISIBLES
                 var fixture = _repo.GetFixture(division);
                 var proximos = fixture
+                    .Where(g => g.Fecha.Visible)
                     .SelectMany(g => g.Partidos)
-                    .Where(p => !p.Jugado)
+                    .Where(p => !p.Jugado && p.TipoPartido == "regular")
                     .Take(10)
                     .ToList();
 

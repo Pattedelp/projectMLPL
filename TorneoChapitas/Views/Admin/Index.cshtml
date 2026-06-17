@@ -41,16 +41,16 @@
                         <div>
                             <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Descensos directos</label>
                             <select id="cfg-descensos" class="form-control" style="font-size:13px;">
-                                <option value="0" @(tempActiva.CantDescensos==0?"selected":"")>Sin descensos</option>
-                                <option value="1" @(tempActiva.CantDescensos==1?"selected":"")>1 descenso</option>
-                                <option value="2" @(tempActiva.CantDescensos==2?"selected":"")>2 descensos</option>
+                                <option value="0" selected="@(tempActiva.CantDescensos==0)">Sin descensos</option>
+                                <option value="1" selected="@(tempActiva.CantDescensos==1)">1 descenso</option>
+                                <option value="2" selected="@(tempActiva.CantDescensos==2)">2 descensos</option>
                             </select>
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Ascensos directos</label>
                             <select id="cfg-ascensos" class="form-control" style="font-size:13px;">
-                                <option value="1" @(tempActiva.CantAscensos==1?"selected":"")>1 ascenso</option>
-                                <option value="2" @(tempActiva.CantAscensos==2?"selected":"")>2 ascensos</option>
+                                <option value="1" selected="@(tempActiva.CantAscensos==1)">1 ascenso</option>
+                                <option value="2" selected="@(tempActiva.CantAscensos==2)">2 ascensos</option>
                             </select>
                         </div>
                     </div>

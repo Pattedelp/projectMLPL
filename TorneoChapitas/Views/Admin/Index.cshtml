@@ -27,6 +27,96 @@
         <div style="display:flex;flex-direction:column;gap:12px;">
 
             <!-- FINALIZAR TEMPORADA -->
+            <!-- REDUCIDO -->
+            @{
+                var tablaB = ViewBag.TablaBReducido as List<PosicionViewModel> ?? new List<PosicionViewModel>();
+                var todosjugados = ViewBag.TodosJugadosB == true;
+            }
+            @if (tablaB.Count >= 6)
+            {
+                <div style="background:var(--color-bg2);border:1px solid rgba(58,130,200,0.4);border-radius:12px;padding:16px 24px;margin-bottom:16px;">
+                    <div style="font-family:var(--font-heading);font-size:13px;letter-spacing:1px;color:#3a82c8;margin-bottom:12px;">
+                        🔁 Reducido y Promoción
+                    </div>
+                    <p style="font-size:12px;color:var(--color-muted);margin-bottom:12px;">
+                        3° vs 6° y 4° vs 5°. Se generan automáticamente al completar el fixture regular.
+                        <br/>Posiciones actuales: <strong>3°: @tablaB[2].NombreEquipo</strong> vs <strong>6°: @tablaB[5].NombreEquipo</strong>
+                        · <strong>4°: @tablaB[3].NombreEquipo</strong> vs <strong>5°: @tablaB[4].NombreEquipo</strong>
+                    </p>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button onclick="generarReducido()" style="background:#3a82c8;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;">
+                            🔁 Generar Semifinales del Reducido
+                        </button>
+                    </div>
+
+                    <!-- Final reducido -->
+                    <div style="margin-top:12px;border-top:1px solid var(--color-border);padding-top:12px;">
+                        <div style="font-size:12px;color:var(--color-muted);margin-bottom:8px;">Final del Reducido (elegir ganadores de semis):</div>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <select id="sel-final-local" class="form-control" style="font-size:12px;flex:1;min-width:120px;">
+                                <option value="0">Local...</option>
+                                @foreach (var e in tablaB.Skip(2).Take(4))
+                                {
+                                    <option value="@e.EquipoId">@e.NombreEquipo</option>
+                                }
+                            </select>
+                            <span style="color:var(--color-muted);">vs</span>
+                            <select id="sel-final-visit" class="form-control" style="font-size:12px;flex:1;min-width:120px;">
+                                <option value="0">Visitante...</option>
+                                @foreach (var e in tablaB.Skip(2).Take(4))
+                                {
+                                    <option value="@e.EquipoId">@e.NombreEquipo</option>
+                                }
+                            </select>
+                            <button onclick="generarFinalReducido()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;">
+                                Generar Final
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Promoción -->
+                    @{
+                        var tablaPrimera = ViewBag.TablaPrimeraReducido as List<PosicionViewModel> ?? new List<PosicionViewModel>();
+                        var posPromPrimera = Model.TemporadaActiva?.PosPromocionPrimera ?? 8;
+                        var equipoPromPrimera = tablaPrimera.Count >= posPromPrimera ? tablaPrimera[posPromPrimera - 1] : null;
+                    }
+                    <div style="margin-top:12px;border-top:1px solid var(--color-border);padding-top:12px;">
+                        <div style="font-size:12px;color:var(--color-muted);margin-bottom:8px;">
+                            Partido de Promoción (ganador reducido vs @(equipoPromPrimera?.NombreEquipo ?? $"{posPromPrimera}° de Primera")):
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <select id="sel-prom-local" class="form-control" style="font-size:12px;flex:1;min-width:120px;">
+                                <option value="0">Local...</option>
+                                @foreach (var e in tablaB.Skip(2).Take(4))
+                                {
+                                    <option value="@e.EquipoId">@e.NombreEquipo (B)</option>
+                                }
+                                @if (equipoPromPrimera != null)
+                                {
+                                    <option value="@equipoPromPrimera.EquipoId">@equipoPromPrimera.NombreEquipo (1ra)</option>
+                                }
+                            </select>
+                            <span style="color:var(--color-muted);">vs</span>
+                            <select id="sel-prom-visit" class="form-control" style="font-size:12px;flex:1;min-width:120px;">
+                                <option value="0">Visitante...</option>
+                                @foreach (var e in tablaB.Skip(2).Take(4))
+                                {
+                                    <option value="@e.EquipoId">@e.NombreEquipo (B)</option>
+                                }
+                                @if (equipoPromPrimera != null)
+                                {
+                                    <option value="@equipoPromPrimera.EquipoId">@equipoPromPrimera.NombreEquipo (1ra)</option>
+                                }
+                            </select>
+                            <button onclick="generarPromocion()" style="background:#e05555;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;">
+                                ⚔️ Generar Promoción
+                            </button>
+                        </div>
+                    </div>
+                    <p id="msg-reducido" style="font-size:12px;margin-top:8px;display:none;"></p>
+                </div>
+            }
+
             <!-- BORRAR FIXTURE -->
             <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                 <div>
@@ -341,6 +431,49 @@ else
 
 @section Scripts {
 <script>
+async function generarReducido() {
+    const msg = document.getElementById('msg-reducido');
+    if (!confirm('¿Generar las semifinales del reducido con las posiciones actuales?')) return;
+    const r = await fetch('/Admin/GenerarReducido', { method: 'POST' });
+    const d = await r.json();
+    msg.style.display = 'block';
+    msg.style.color = d.ok ? 'var(--color-green)' : 'var(--color-red)';
+    msg.textContent = d.msg;
+    if (d.ok) setTimeout(() => location.reload(), 1500);
+}
+
+async function generarFinalReducido() {
+    const local = parseInt(document.getElementById('sel-final-local').value);
+    const visit = parseInt(document.getElementById('sel-final-visit').value);
+    const msg = document.getElementById('msg-reducido');
+    if (!local || !visit || local === visit) { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Elegí dos equipos distintos.'; return; }
+    const r = await fetch('/Admin/GenerarFinalReducido', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ local, visitante: visit })
+    });
+    const d = await r.json();
+    msg.style.display = 'block';
+    msg.style.color = d.ok ? 'var(--color-green)' : 'var(--color-red)';
+    msg.textContent = d.ok ? '✅ Final del reducido generada.' : '⚠️ Error al generar.';
+    if (d.ok) setTimeout(() => location.reload(), 1500);
+}
+
+async function generarPromocion() {
+    const local = parseInt(document.getElementById('sel-prom-local').value);
+    const visit = parseInt(document.getElementById('sel-prom-visit').value);
+    const msg = document.getElementById('msg-reducido');
+    if (!local || !visit || local === visit) { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Elegí dos equipos distintos.'; return; }
+    const r = await fetch('/Admin/GenerarPromocion', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ local, visitante: visit })
+    });
+    const d = await r.json();
+    msg.style.display = 'block';
+    msg.style.color = d.ok ? 'var(--color-green)' : 'var(--color-red)';
+    msg.textContent = d.ok ? '✅ Partido de promoción generado.' : '⚠️ Error al generar.';
+    if (d.ok) setTimeout(() => location.reload(), 1500);
+}
+
 async function borrarFixture() {
     if (!confirm('¿Borrar el fixture completo?\nSolo funciona si no hay partidos jugados.')) return;
     const msg = document.getElementById('msg-borrar-fixture');

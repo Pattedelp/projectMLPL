@@ -27,12 +27,43 @@ namespace TorneoAmigos.Controllers
                 TemporadaActiva = temporadaActiva
             };
             if (temporadaActiva != null)
+            {
                 ViewBag.Cierre = _tempRepo.GetCierre(temporadaActiva.Id);
+                var tablaB = _repo.GetTablaPosiciones(2);
+                ViewBag.TablaBReducido = tablaB;
+                ViewBag.TablaPrimeraReducido = _repo.GetTablaPosiciones(1);
+                ViewBag.TodosJugadosB = tablaB.Count >= 6 && _tempRepo.TodosLosPartidosRegularesJugados(2);
+            }
             ViewBag.EquiposTodos = _repo.GetEquiposByDivision(1)
                 .Concat(_repo.GetEquiposByDivision(2))
                 .OrderBy(e => e.Nombre).ToList();
             ViewBag.EquiposB = _repo.GetEquiposByDivision(2).ToList();
             return View(vm);
+        }
+
+        // ── REDUCIDO ─────────────────────────────────────
+        [HttpPost]
+        public IActionResult GenerarReducido()
+        {
+            var tablaB = _repo.GetTablaPosiciones(2);
+            var (ok, msg) = _tempRepo.GenerarReducido(tablaB);
+            return Json(new { ok, msg });
+        }
+
+        [HttpPost]
+        public IActionResult GenerarFinalReducido([FromBody] FinalReducidoDto dto)
+        {
+            // Agrega la final del reducido entre los dos ganadores de semis
+            var ok = _tempRepo.GenerarFinalOPromocion(dto.Local, dto.Visitante, "reducido_final");
+            return Json(new { ok });
+        }
+
+        [HttpPost]
+        public IActionResult GenerarPromocion([FromBody] FinalReducidoDto dto)
+        {
+            // Agrega el partido de promoción: ganador reducido vs 8° de Primera
+            var ok = _tempRepo.GenerarFinalOPromocion(dto.Local, dto.Visitante, "promocion");
+            return Json(new { ok });
         }
 
         // ── BORRAR FIXTURE ──────────────────────────────
@@ -408,6 +439,12 @@ namespace TorneoAmigos.Controllers
         public int EquipoId { get; set; }
         public string TipoTitulo { get; set; } = "";
         public string NombreTitulo { get; set; } = "";
+    }
+
+    public class FinalReducidoDto
+    {
+        public int Local { get; set; }
+        public int Visitante { get; set; }
     }
 
     public class ConfigTemporadaDto

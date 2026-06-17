@@ -306,7 +306,8 @@ namespace TorneoAmigos.Data
                 SELECT p.id, p.fechaid, p.divisionid, p.equipolocalid, p.equipovisitanteid,
                        p.goleslocal, p.golesvisitante, p.jugado, p.fechapartido, p.lugar, p.observaciones,
                        el.nombre, el.colorprincipal, ev.nombre, ev.colorprincipal,
-                       COALESCE(el.pais_code,''), COALESCE(ev.pais_code,'')
+                       COALESCE(el.pais_code,''), COALESCE(ev.pais_code,''),
+                       COALESCE(p.tipo_partido, 'regular')
                 FROM partidos p
                 INNER JOIN equipos el ON p.equipolocalid    = el.id
                 INNER JOIN equipos ev ON p.equipovisitanteid = ev.id
@@ -321,7 +322,9 @@ namespace TorneoAmigos.Data
         }
 
         public List<Partido> GetPartidosJugados(int divisionId) =>
-            GetTodosLosPartidos(divisionId).Where(p => p.Jugado).ToList();
+            GetTodosLosPartidos(divisionId)
+                .Where(p => p.Jugado && p.TipoPartido == "regular")
+                .ToList();
 
         public Partido? GetPartidoById(int id)
         {
@@ -462,6 +465,7 @@ namespace TorneoAmigos.Data
             FechaPartido   = r.IsDBNull(8) ? null : r.GetDateTime(8),
             Lugar          = r.IsDBNull(9) ? null : r.GetString(9),
             Observaciones  = r.IsDBNull(10) ? null : r.GetString(10),
+            TipoPartido    = r.FieldCount > 17 && !r.IsDBNull(17) ? r.GetString(17) : "regular",
             EquipoLocal = new Equipo
             {
                 Id = r.GetInt32(3), Nombre = r.GetString(11),

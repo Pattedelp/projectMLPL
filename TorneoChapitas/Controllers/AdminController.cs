@@ -128,7 +128,13 @@ namespace TorneoAmigos.Controllers
             var equiposPrimera = _repo.GetEquiposByDivision(1);
             var equiposB       = _repo.GetEquiposByDivision(2);
             var temporadas     = _tempRepo.GetTodasLasTemporadas();
-            int siguienteNum   = (temporadas.FirstOrDefault()?.Numero ?? 0) + 1;
+
+            // Calcular el siguiente número considerando el historial legacy
+            // El historial tiene T4-T16 en enfrentamientos_historicos
+            // Tomamos el máximo entre las temporadas del sistema y 16 (último número conocido del legacy)
+            int maxSistema = temporadas.Any() ? temporadas.Max(t => t.Numero) : 0;
+            int maxLegacy  = _tempRepo.GetMaxNumeroTemporadaLegacy();
+            int siguienteNum = Math.Max(maxSistema, maxLegacy) + 1;
 
             var vm = new NuevaTemporadaViewModel
             {

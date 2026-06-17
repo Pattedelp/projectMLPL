@@ -12,7 +12,7 @@
     <div class="tabla-wrapper">
         <table class="tabla-posiciones">
             <thead>
-                <tr><th>#</th><th>Equipo</th><th>PJ</th><th>DIF</th><th>PTS</th></tr>
+                <tr><th>#</th><th>Equipo</th><th>PJ</th><th>DIF</th><th>PTS</th><th></th></tr>
             </thead>
             <tbody>
                 @foreach (var f in Model.TablaPosiciones)
@@ -35,6 +35,14 @@
                             @(f.DiferenciaGoles > 0 ? "+" : "")@f.DiferenciaGoles
                         </td>
                         <td class="col-pts">@f.Puntos</td>
+                        <td style="padding:2px 4px;">
+                            <div style="display:flex;gap:2px;">
+                                @foreach (var r in f.Forma)
+                                {
+                                    <span style="width:14px;height:14px;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;background:@(r=="V" ? "var(--color-green)" : "var(--color-red)");color:#fff;">@r</span>
+                                }
+                            </div>
+                        </td>
                     </tr>
                 }
             </tbody>

@@ -1,4 +1,3 @@
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TorneoAmigos.Data;
@@ -69,6 +68,14 @@ namespace TorneoAmigos.Controllers
             // Agrega el partido de promoción: ganador reducido vs 8° de Primera
             var ok = _tempRepo.GenerarFinalOPromocion(dto.Local, dto.Visitante, "promocion");
             return Json(new { ok });
+        }
+
+        // ── REGENERAR FIXTURE ───────────────────────────
+        [HttpPost]
+        public IActionResult RegenerarFixture()
+        {
+            var ok = _tempRepo.RegenerarFixture();
+            return Json(new { ok, msg = ok ? "Fixture regenerado con los equipos actuales." : "No se puede regenerar: ya hay partidos jugados." });
         }
 
         // ── BORRAR FIXTURE ──────────────────────────────

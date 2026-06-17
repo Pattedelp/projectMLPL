@@ -454,6 +454,38 @@ namespace TorneoAmigos.Data
             }
         }
 
+        public bool RegenerarFixture()
+        {
+            // Solo si no hay partidos jugados
+            using var conn = GetConnection();
+            conn.Open();
+            using var chk = new NpgsqlCommand(
+                "SELECT COUNT(*) FROM partidos WHERE jugado = true", conn);
+            if (Convert.ToInt32(chk.ExecuteScalar()) > 0)
+                return false;
+
+            var equiposPrimera = GetEquiposIdsByDivision(1, conn);
+            var equiposB       = GetEquiposIdsByDivision(2, conn);
+
+            using var tx = conn.BeginTransaction();
+            BorrarFixture(conn, tx);
+            if (equiposPrimera.Any()) GenerarFixture(conn, tx, 1, equiposPrimera);
+            if (equiposB.Any())       GenerarFixture(conn, tx, 2, equiposB);
+            tx.Commit();
+            return true;
+        }
+
+        private List<int> GetEquiposIdsByDivision(int divisionId, NpgsqlConnection conn)
+        {
+            var ids = new List<int>();
+            using var cmd = new NpgsqlCommand(
+                "SELECT id FROM equipos WHERE divisionid = @D AND activo = true ORDER BY id", conn);
+            cmd.Parameters.AddWithValue("@D", divisionId);
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) ids.Add(r.GetInt32(0));
+            return ids;
+        }
+
         public bool BorrarFixtureSinResultados(int temporadaId)
         {
             // Solo borra si NO hay ningún partido jugado

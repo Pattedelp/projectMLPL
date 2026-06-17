@@ -69,6 +69,7 @@ namespace TorneoAmigos.Models
         public int DiferenciaGoles => GolesAFavor - GolesEnContra;
         public int Puntos { get; set; }
         public string? Zona { get; set; }
+        public List<string> Forma { get; set; } = new(); // últimos 5: "V", "D"
     }
 
     public class DivisionViewModel

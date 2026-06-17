@@ -363,6 +363,75 @@ else
     </div>
 }
 
+<!-- ENCUESTAS -->
+<div class="admin-section">
+    <h2 class="admin-section-title">🗳️ Encuestas</h2>
+    @{
+        var todasEncuestas = ViewBag.TodasEncuestas as List<Encuesta> ?? new();
+    }
+
+    <!-- Crear encuesta -->
+    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 24px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;">Nueva encuesta</div>
+        <input type="text" id="enc-pregunta" placeholder="¿Pregunta para los participantes?" class="form-control" style="margin-bottom:10px;font-size:13px;" />
+
+        <div style="font-size:11px;color:var(--color-muted);margin-bottom:6px;">Opciones (podés usar jugadores o texto libre):</div>
+        <div id="enc-opciones-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+            @{ var todosEquipos = ViewBag.EquiposTodos as List<Equipo> ?? new(); }
+            @for (int oi = 0; oi < 2; oi++)
+            {
+                <div class="enc-opcion-row" style="display:flex;gap:6px;align-items:center;">
+                    <select class="enc-sel-equipo form-control" style="flex:1;font-size:12px;" onchange="syncOpcionTexto(this)">
+                        <option value="">-- Texto libre --</option>
+                        @foreach (var eq in todosEquipos)
+                        {
+                            <option value="@eq.Id" data-nombre="@eq.Nombre">@eq.Nombre</option>
+                        }
+                    </select>
+                    <input type="text" class="enc-opcion-texto form-control" placeholder="o escribí una opción..." style="flex:1;font-size:12px;" />
+                </div>
+            }
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button onclick="agregarOpcion()" class="btn-outline" style="font-size:12px;">+ Opción</button>
+            <label style="font-size:12px;color:var(--color-muted);display:flex;align-items:center;gap:6px;">
+                Máx votos por usuario:
+                <input type="number" id="enc-maxvotos" value="1" min="1" max="10" class="form-control" style="width:50px;font-size:12px;" />
+            </label>
+            <button onclick="crearEncuestaManual()" class="btn-primary" style="font-size:12px;padding:8px 16px;">Crear encuesta</button>
+        </div>
+        <p id="msg-enc-crear" style="font-size:11px;margin-top:6px;display:none;"></p>
+    </div>
+
+    <!-- Lista de encuestas -->
+    @if (todasEncuestas.Any())
+    {
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            @foreach (var enc in todasEncuestas)
+            {
+                <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <span style="@(enc.Activa ? "color:var(--color-green)" : "color:var(--color-muted)");font-size:12px;">●</span>
+                    <span style="font-size:13px;flex:1;">@enc.Pregunta</span>
+                    <span style="font-size:11px;color:var(--color-muted);">@enc.TotalVotos votos</span>
+                    <button onclick="toggleEncuesta(@enc.Id, @(!enc.Activa).ToString().ToLower())"
+                            class="btn-outline" style="font-size:11px;padding:4px 10px;">
+                        @(enc.Activa ? "Desactivar" : "Activar")
+                    </button>
+                    <button onclick="eliminarEncuesta(@enc.Id)"
+                            style="background:transparent;border:1px solid var(--color-red);color:var(--color-red);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">
+                        Eliminar
+                    </button>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p style="font-size:13px;color:var(--color-muted);">No hay encuestas creadas todavía.</p>
+    }
+</div>
+
 <!-- AGREGAR JUGADORES -->
 <div class="admin-section">
     <h2 class="admin-section-title">👤 Jugadores</h2>
@@ -436,6 +505,90 @@ else
 
 @section Scripts {
 <script>
+function syncOpcionTexto(sel) {
+    const row = sel.closest('.enc-opcion-row');
+    const txt = row.querySelector('.enc-opcion-texto');
+    const nombre = sel.options[sel.selectedIndex]?.dataset?.nombre || '';
+    if (nombre) txt.value = nombre;
+}
+
+function agregarOpcion() {
+    const list = document.getElementById('enc-opciones-list');
+    const n = list.querySelectorAll('.enc-opcion-row').length + 1;
+    const equiposHtml = Array.from(document.querySelectorAll('.enc-sel-equipo')[0]?.options || [])
+        .map(o => `<option value="${o.value}" data-nombre="${o.dataset.nombre || ''}">${o.text}</option>`)
+        .join('');
+    const div = document.createElement('div');
+    div.className = 'enc-opcion-row';
+    div.style.cssText = 'display:flex;gap:6px;align-items:center;';
+    div.innerHTML = `
+        <select class="enc-sel-equipo form-control" style="flex:1;font-size:12px;" onchange="syncOpcionTexto(this)">
+            ${equiposHtml}
+        </select>
+        <input type="text" class="enc-opcion-texto form-control" placeholder="o escribí una opción..." style="flex:1;font-size:12px;" />`;
+    list.appendChild(div);
+}
+
+async function crearEncuestaManual() {
+    const msg = document.getElementById('msg-enc-crear');
+    const pregunta = document.getElementById('enc-pregunta').value.trim();
+    const maxVotos = parseInt(document.getElementById('enc-maxvotos').value);
+    const rows = document.querySelectorAll('.enc-opcion-row');
+    const opciones = [];
+    rows.forEach(row => {
+        const sel = row.querySelector('.enc-sel-equipo');
+        const txt = row.querySelector('.enc-opcion-texto').value.trim();
+        const texto = txt || sel?.options[sel.selectedIndex]?.dataset?.nombre || '';
+        if (texto) opciones.push(texto);
+    });
+    if (!pregunta || opciones.length < 2) {
+        msg.style.display='block'; msg.style.color='var(--color-red)';
+        msg.textContent='Completá la pregunta y al menos 2 opciones.'; return;
+    }
+    const r = await fetch('/Encuestas/CrearManual', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pregunta, maxVotos, opciones })
+    });
+    const d = await r.json();
+    if (d.ok) location.reload();
+    else { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Error al crear.'; }
+}
+
+async function toggleEncuesta(id, activa) {
+    await fetch(`/Encuestas/Toggle?id=${id}&activa=${activa}`, { method: 'POST' });
+    location.reload();
+}
+
+async function eliminarEncuesta(id) {
+    if (!confirm('¿Eliminar esta encuesta y todos sus votos?')) return;
+    await fetch('/Encuestas/Eliminar?id=' + id, { method: 'POST' });
+    location.reload();
+}
+
+function agregarOpcion() {
+    const list = document.getElementById('enc-opciones-list');
+    const n = list.children.length + 1;
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.placeholder = `Opción ${n}`;
+    inp.className = 'enc-opcion form-control'; inp.style.fontSize = '13px';
+    list.appendChild(inp);
+}
+
+async function crearEncuestaManual() {
+    const msg = document.getElementById('msg-enc-crear');
+    const pregunta = document.getElementById('enc-pregunta').value.trim();
+    const maxVotos = parseInt(document.getElementById('enc-maxvotos').value);
+    const opciones = [...document.querySelectorAll('.enc-opcion')].map(i => i.value.trim()).filter(Boolean);
+    if (!pregunta || opciones.length < 2) { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Completá la pregunta y al menos 2 opciones.'; return; }
+    const r = await fetch('/Encuestas/CrearManual', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pregunta, maxVotos, opciones })
+    });
+    const d = await r.json();
+    if (d.ok) location.reload();
+    else { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Error al crear.'; }
+}
+
 async function generarReducido() {
     const msg = document.getElementById('msg-reducido');
     if (!confirm('¿Generar las semifinales del reducido con las posiciones actuales?')) return;

@@ -14,6 +14,8 @@ namespace TorneoAmigos.Data
             {"Tiago S","ua"},{"Enzo","de"},
             {"Joan","kr"},{"Pocho","ec"},{"Jere","br"},{"Fede O","es"},
             {"Tomás","vn"},{"Carlos","co"},{"Sebas C","ar"},{"Santino","uy"},{"Lucas G","ph"},
+            {"Milton","jp"},{"Pablo","pt"},{"Eze","sa"},{"Yornier","gb-eng"},
+            {"Licha","tr"},{"Mathi R","ng"},
             /// Jugadores históricos activos
             {"Pato L","nl"},{"Nahuel G","us"},{"Juani S","cr"},{"Valen M","ma"},{"Gonza","se"},
             // Jugadores retirados
@@ -247,6 +249,26 @@ namespace TorneoAmigos.Data
                 .ThenByDescending(t => t.GolesAFavor)
                 .ThenBy(t => t.NombreEquipo)
                 .ToList();
+
+            // Calcular forma (últimos 5 partidos por equipo)
+            var partidosPorEquipo = new Dictionary<int, List<string>>();
+            foreach (var p in partidos.OrderBy(x => x.Id)) // cronológico
+            {
+                int gl = p.GolesLocal ?? 0;
+                int gv = p.GolesVisitante ?? 0;
+                string resLocal = gl > gv ? "V" : "D";
+                string resVisit = gv > gl ? "V" : "D";
+
+                if (!partidosPorEquipo.ContainsKey(p.EquipoLocalId))    partidosPorEquipo[p.EquipoLocalId]    = new();
+                if (!partidosPorEquipo.ContainsKey(p.EquipoVisitanteId)) partidosPorEquipo[p.EquipoVisitanteId] = new();
+                partidosPorEquipo[p.EquipoLocalId].Add(resLocal);
+                partidosPorEquipo[p.EquipoVisitanteId].Add(resVisit);
+            }
+            foreach (var eq in ordenada)
+            {
+                if (partidosPorEquipo.TryGetValue(eq.EquipoId, out var resultados))
+                    eq.Forma = resultados.TakeLast(5).ToList();
+            }
 
             bool esPrimera = divisionId == 1;
 

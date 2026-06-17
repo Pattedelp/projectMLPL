@@ -8,13 +8,15 @@ namespace TorneoAmigos.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
-        private readonly TorneoRepository _repo;
-        private readonly TemporadaRepository _tempRepo;
+        private readonly TorneoRepository    _repo;
+        private readonly TemporadaRepository  _tempRepo;
+        private readonly EncuestasRepository  _encuestas;
 
-        public AdminController(TorneoRepository repo, TemporadaRepository tempRepo)
+        public AdminController(TorneoRepository repo, TemporadaRepository tempRepo, EncuestasRepository encuestas)
         {
-            _repo     = repo;
-            _tempRepo = tempRepo;
+            _repo      = repo;
+            _tempRepo  = tempRepo;
+            _encuestas = encuestas;
         }
 
         public IActionResult Index()
@@ -42,6 +44,7 @@ namespace TorneoAmigos.Controllers
                 .Concat(_repo.GetEquiposByDivision(2))
                 .OrderBy(e => e.Nombre).ToList();
             ViewBag.EquiposB = _repo.GetEquiposByDivision(2).ToList();
+            ViewBag.TodasEncuestas = _encuestas.GetTodasLasEncuestas();
             return View(vm);
         }
 

@@ -96,7 +96,84 @@
     @await Html.PartialAsync("_MiniTabla", Model.NacionalB)
 </div>
 
+@{
+    var encuestas   = ViewBag.Encuestas   as List<Encuesta>          ?? new();
+    var banderas    = new Dictionary<string,string> {
+        {"nl","🇳🇱"},{"dk","🇩🇰"},{"cr","🇨🇷"},{"it","🇮🇹"},{"us","🇺🇲"},
+        {"ir","🇮🇷"},{"gb-wls","🏴"},{"be","🇧🇪"},{"ua","🇺🇦"},{"de","🇩🇪"},
+        {"kr","🇰🇷"},{"ec","🇪🇨"},{"br","🇧🇷"},{"es","🇪🇸"},{"vn","🇻🇳"},
+        {"co","🇨🇴"},{"ar","🇦🇷"},{"uy","🇺🇾"},{"ph","🇵🇭"},
+        {"pl","🇵🇱"},{"se","🇸🇪"},{"sa","🇸🇦"},{"ma","🇲🇦"},{"jp","🇯🇵"},
+        {"gb-eng","🏴"},{"pt","🇵🇹"},{"tr","🇹🇷"},{"ng","🇳🇬"}
+    };
+}
+
+<!-- ENCUESTAS + RANKING FIFA -->
+<div style="max-width:960px;margin:32px auto 0;padding:0 16px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+
+    <!-- ENCUESTAS -->
+    <div>
+        @if (encuestas.Any())
+        {
+            <h2 style="font-family:var(--font-heading);font-size:13px;letter-spacing:3px;color:var(--color-gold);text-transform:uppercase;margin-bottom:16px;">🗳️ Encuestas</h2>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                @foreach (var enc in encuestas)
+                {
+                    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:18px;" id="enc-@enc.Id">
+                        <div style="font-size:13px;font-weight:600;color:var(--color-text);margin-bottom:12px;">@enc.Pregunta</div>
+                        @if (enc.MaxVotos > 1)
+                        {
+                            <p style="font-size:11px;color:var(--color-muted);margin-bottom:10px;">Podés elegir hasta @enc.MaxVotos opciones</p>
+                        }
+                        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+                            @foreach (var op in enc.Opciones.OrderByDescending(o => o.Votos))
+                            {
+                                var pct = enc.TotalVotos > 0 ? (int)(100.0 * op.Votos / enc.TotalVotos) : 0;
+                                <div style="cursor:pointer;" onclick="votar(@enc.Id, @op.Id)">
+                                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                                        @if (!string.IsNullOrEmpty(op.FlagCode) && banderas.ContainsKey(op.FlagCode))
+                                        { <span style="font-size:13px;">@banderas[op.FlagCode]</span> }
+                                        <span style="font-size:12px;color:var(--color-text);">@op.Texto</span>
+                                        <span style="font-size:11px;color:var(--color-muted);margin-left:auto;">@pct%</span>
+                                    </div>
+                                    <div style="height:5px;border-radius:3px;background:var(--color-bg3);">
+                                        <div style="width:@(pct)%;height:100%;background:var(--color-gold);border-radius:3px;"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <input type="text" placeholder="Tu nombre" id="autor-@enc.Id" maxlength="30"
+                                   class="form-control" style="flex:1;font-size:12px;" />
+                            <span style="font-size:10px;color:var(--color-muted);white-space:nowrap;">@enc.TotalVotos votos</span>
+                        </div>
+                        <p id="msg-enc-@enc.Id" style="font-size:11px;margin-top:5px;display:none;"></p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
 @section Scripts {
+<script>
+async function votar(encuestaId, opcionId) {
+    const autor = document.getElementById('autor-' + encuestaId)?.value?.trim();
+    const msg   = document.getElementById('msg-enc-' + encuestaId);
+    if (!autor) { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Ingresá tu nombre para votar.'; return; }
+
+    const r = await fetch('/Encuestas/Votar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ encuestaId, opcionId, autor })
+    });
+    const d = await r.json();
+    msg.style.display = 'block';
+    msg.style.color   = d.ok ? 'var(--color-green)' : 'var(--color-red)';
+    msg.textContent   = d.msg;
+    if (d.ok) setTimeout(() => location.reload(), 800);
+}
+</script>
 <script>
 (function() {
     const track = document.getElementById('carruselTrack');

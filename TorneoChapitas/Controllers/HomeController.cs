@@ -6,13 +6,18 @@ namespace TorneoAmigos.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly TorneoRepository  _repo;
-        private readonly NoticiasRepository _noticias;
+        private readonly TorneoRepository    _repo;
+        private readonly NoticiasRepository  _noticias;
+        private readonly EncuestasRepository _encuestas;
+        private readonly TemporadaRepository _tempRepo;
 
-        public HomeController(TorneoRepository repo, NoticiasRepository noticias)
+        public HomeController(TorneoRepository repo, NoticiasRepository noticias,
+            EncuestasRepository encuestas, TemporadaRepository tempRepo)
         {
-            _repo     = repo;
-            _noticias = noticias;
+            _repo      = repo;
+            _noticias  = noticias;
+            _encuestas = encuestas;
+            _tempRepo  = tempRepo;
         }
 
         public IActionResult Index()
@@ -25,6 +30,8 @@ namespace TorneoAmigos.Controllers
                 TotalGoles           = _repo.GetTotalGoles(),
                 UltimasNoticias      = _noticias.GetNoticias(soloPublicadas: true).Take(6).ToList()
             };
+            ViewBag.Encuestas   = _encuestas.GetEncuestasActivas();
+            ViewBag.RankingFifa = null; // Moved to /Ranking page
             return View(vm);
         }
 

@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TorneoAmigos.Data;
@@ -30,7 +31,11 @@ namespace TorneoAmigos.Controllers
             {
                 ViewBag.Cierre = _tempRepo.GetCierre(temporadaActiva.Id);
                 var tablaB = _repo.GetTablaPosiciones(2);
-                ViewBag.TablaBReducido = tablaB;
+                var equiposB = _repo.GetEquiposByDivision(2);
+                ViewBag.TablaBReducido = tablaB.Count >= 6 ? tablaB : equiposB.Select((e, i) => new PosicionViewModel
+                {
+                    EquipoId = e.Id, NombreEquipo = e.Nombre, FlagCode = e.FlagCode, Posicion = i + 1
+                }).ToList();
                 ViewBag.TablaPrimeraReducido = _repo.GetTablaPosiciones(1);
                 ViewBag.TodosJugadosB = tablaB.Count >= 6 && _tempRepo.TodosLosPartidosRegularesJugados(2);
             }

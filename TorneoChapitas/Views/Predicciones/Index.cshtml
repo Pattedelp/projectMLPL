@@ -149,55 +149,18 @@ else
 </h2>
 
 @{
-    var rankingTemp = ViewBag.RankingTemporada as List<RankingPronosticador> ?? new();
-    var tempNombre  = ViewBag.TemporadaNombre as string ?? "";
-}
-
-<!-- Tabs ranking -->
-<div style="display:flex;gap:8px;margin-bottom:16px;">
-    <button onclick="showRanking('temp')" id="tab-rank-temp" class="tab-btn active" style="font-size:12px;padding:6px 14px;">
-        📅 @tempNombre
-    </button>
-    <button onclick="showRanking('all')" id="tab-rank-all" class="tab-btn" style="font-size:12px;padding:6px 14px;">
-        🌍 Histórico
-    </button>
-</div>
-
-<!-- Ranking temporada actual -->
-<div id="rank-temp">
-@if (!rankingTemp.Any())
-{
-    <p style="font-size:13px;color:var(--color-muted);">Aún no hay predicciones con resultados confirmados esta temporada.</p>
-}
-else
-{
-    <div class="tabla-wrapper">
-        <table class="tabla-posiciones">
-            <thead><tr><th>#</th><th>Pronosticador</th><th>Puntos</th><th>1X2 ✓</th><th>Exactos ✓</th></tr></thead>
-            <tbody>
-                @{ int posT = 1; }
-                @foreach (var r in rankingTemp)
-                {
-                    <tr>
-                        <td class="col-pos">@posT</td>
-                        <td class="col-equipo"><strong>@r.Autor</strong></td>
-                        <td class="col-pts"><strong style="color:var(--color-gold);">@r.TotalPuntos</strong></td>
-                        <td class="col-num">@r.Aciertos1X2</td>
-                        <td class="col-num">@r.AciertosExactos</td>
-                    </tr>
-                    posT++;
-                }
-            </tbody>
-        </table>
-    </div>
-}
-</div>
-
-@{
     var rankP = ViewBag.RankingPrimera  as List<RankingPronosticador> ?? new();
     var rankN = ViewBag.RankingNacional as List<RankingPronosticador> ?? new();
     var rankC = ViewBag.RankingCopa     as List<RankingPronosticador> ?? new();
+    var tempNombre = ViewBag.TemporadaNombre as string ?? "";
 }
+
+<!-- Tabs ranking -->
+<div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+    <button onclick="showRanking('primera')"  id="tab-rank-primera"  class="tab-btn active" style="font-size:12px;padding:6px 12px;">🏆 Primera</button>
+    <button onclick="showRanking('nacional')" id="tab-rank-nacional" class="tab-btn"        style="font-size:12px;padding:6px 12px;">🥈 Nacional</button>
+    <button onclick="showRanking('copa')"     id="tab-rank-copa"     class="tab-btn"        style="font-size:12px;padding:6px 12px;">🥇 Copas</button>
+</div>
 
 <div id="rank-primera">
 @if (!rankP.Any())
@@ -297,50 +260,6 @@ else
     </div>
 }
 </div>
-
-<div id="rank-all" style="display:none;">
-@if (!Model.Ranking.Any())
-{
-    <p style="font-size:13px;color:var(--color-muted);">Aún no hay predicciones con resultados confirmados.</p>
-}
-else
-{
-    <div class="tabla-wrapper">
-        <table class="tabla-posiciones">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Pronosticador</th>
-                    <th>Puntos</th>
-                    <th>Predicciones</th>
-                    <th>Aciertos 1X2</th>
-                    <th>Exactos</th>
-                </tr>
-            </thead>
-            <tbody>
-                @{ int pos = 1; }
-                @foreach (var r in Model.Ranking)
-                {
-                    <tr>
-                        <td class="col-pos">@pos</td>
-                        <td class="col-equipo">
-                            @if (!string.IsNullOrEmpty(r.PaisFlag) && banderas.ContainsKey(r.PaisFlag))
-                            {
-                                <span style="margin-right:6px;">@banderas[r.PaisFlag]</span>
-                            }
-                            <strong>@r.Autor</strong>
-                        </td>
-                        <td class="col-pts"><strong style="color:var(--color-gold);">@r.TotalPuntos</strong></td>
-                        <td class="col-num">@r.Predicciones</td>
-                        <td class="col-num">@r.Aciertos1X2</td>
-                        <td class="col-num">@r.AciertosExactos</td>
-                    </tr>
-                    pos++;
-                }
-            </tbody>
-        </table>
-    </div>
-}
 
 <style>
 .tab-btn {
@@ -469,7 +388,7 @@ async function predecir(partidoId, divisionId) {
 }
 
 function showRanking(tab) {
-    ['primera','nacional','copa','all'].forEach(t => {
+    ['primera','nacional','copa'].forEach(t => {
         document.getElementById('rank-' + t).style.display = t === tab ? 'block' : 'none';
         document.getElementById('tab-rank-' + t).classList.toggle('active', t === tab);
     });

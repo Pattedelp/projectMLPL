@@ -408,3 +408,25 @@ namespace TorneoAmigos.Models
         public int Votos { get; set; }
         public int Orden { get; set; }
     }
+
+    // ── MIS PREDICCIONES ─────────────────────────────
+    public class MiPrediccionViewModel
+    {
+        public int PartidoId { get; set; }
+        public int DivisionId { get; set; }
+        public string Prediccion1x2 { get; set; } = "";
+        public int? GolesLocalPred { get; set; }
+        public int? GolesVisitantePred { get; set; }
+        public int Puntos { get; set; }
+        public int? GolesLocalReal { get; set; }
+        public int? GolesVisitanteReal { get; set; }
+        public bool Jugado { get; set; }
+        public string NombreLocal { get; set; } = "";
+        public string FlagLocal { get; set; } = "";
+        public string NombreVisitante { get; set; } = "";
+        public string FlagVisitante { get; set; } = "";
+        public int FechaNumero { get; set; }
+        public string TemporadaNombre { get; set; } = "";
+        public bool? Acerto1x2 { get; set; }
+        public bool? AcertoExacto { get; set; }
+    }

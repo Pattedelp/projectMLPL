@@ -196,6 +196,73 @@ namespace TorneoAmigos.Data
             return lista;
         }
 
+        public List<MiPrediccionViewModel> GetMisPredicciones(string autor)
+        {
+            const string sql = @"
+                SELECT 
+                    p.partido_id, p.division_id, p.prediccion_1x2,
+                    p.goles_local, p.goles_visitante, p.puntos,
+                    pa.goleslocal as real_gl, pa.golesvisitante as real_gv, pa.jugado,
+                    el.nombre as local_nombre, COALESCE(el.pais_code,'') as local_flag,
+                    ev.nombre as visit_nombre, COALESCE(ev.pais_code,'') as visit_flag,
+                    f.numero as fecha_num,
+                    t.nombre as temporada_nombre
+                FROM predicciones p
+                JOIN partidos pa ON p.partido_id = pa.id
+                JOIN equipos el ON pa.equipolocalid = el.id
+                JOIN equipos ev ON pa.equipovisitanteid = ev.id
+                JOIN fechas f ON pa.fechaid = f.id
+                LEFT JOIN temporadas t ON f.temporada_id = t.id
+                WHERE LOWER(TRIM(p.autor)) = LOWER(TRIM(@A))
+                ORDER BY t.numero DESC NULLS LAST, f.numero DESC, pa.id";
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@A", autor.Trim());
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            var lista = new List<MiPrediccionViewModel>();
+            while (r.Read())
+            {
+                int? predGL = r.IsDBNull(3) ? null : r.GetInt32(3);
+                int? predGV = r.IsDBNull(4) ? null : r.GetInt32(4);
+                int? realGL = r.IsDBNull(6) ? null : r.GetInt32(6);
+                int? realGV = r.IsDBNull(7) ? null : r.GetInt32(7);
+                bool jugado = r.GetBoolean(8);
+                string pred1x2 = r.GetString(2);
+
+                bool? acerto1x2 = null;
+                bool? acertoExacto = null;
+                if (jugado && realGL.HasValue && realGV.HasValue)
+                {
+                    string real1x2 = realGL > realGV ? "L" : "V";
+                    acerto1x2 = pred1x2 == real1x2;
+                    acertoExacto = predGL == realGL && predGV == realGV;
+                }
+
+                lista.Add(new MiPrediccionViewModel
+                {
+                    PartidoId     = r.GetInt32(0),
+                    DivisionId    = r.GetInt32(1),
+                    Prediccion1x2 = pred1x2,
+                    GolesLocalPred = predGL,
+                    GolesVisitantePred = predGV,
+                    Puntos        = r.IsDBNull(5) ? 0 : r.GetInt32(5),
+                    GolesLocalReal = realGL,
+                    GolesVisitanteReal = realGV,
+                    Jugado        = jugado,
+                    NombreLocal   = r.GetString(9),
+                    FlagLocal     = r.GetString(10),
+                    NombreVisitante = r.GetString(11),
+                    FlagVisitante = r.GetString(12),
+                    FechaNumero   = r.GetInt32(13),
+                    TemporadaNombre = r.IsDBNull(14) ? "" : r.GetString(14),
+                    Acerto1x2     = acerto1x2,
+                    AcertoExacto  = acertoExacto
+                });
+            }
+            return lista;
+        }
+
         public Prediccion? GetMiPrediccion(int partidoId, int divisionId, string autor)
         {
             using var conn = GetConnection();

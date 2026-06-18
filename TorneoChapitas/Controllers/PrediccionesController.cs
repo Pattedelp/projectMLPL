@@ -79,6 +79,15 @@ namespace TorneoAmigos.Controllers
             return View(vm);
         }
 
+        [HttpGet]
+        public IActionResult MisPredicciones(string autor)
+        {
+            if (string.IsNullOrWhiteSpace(autor))
+                return Json(new { ok = false, msg = "Ingresá tu nombre" });
+            var lista = _prediRepo.GetMisPredicciones(autor);
+            return Json(new { ok = true, data = lista });
+        }
+
         [HttpPost]
         public IActionResult Predecir([FromBody] PredicirDto dto)
         {

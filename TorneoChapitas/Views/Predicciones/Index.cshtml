@@ -34,6 +34,21 @@
     <a href="/Predicciones?division=101" class="tab-btn @(Model.DivisionId==101?"active":"")">⭐ Supercopa</a>
 </div>
 
+<!-- IDENTIDAD DEL PRONOSTICADOR -->
+<div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <span style="font-size:13px;color:var(--color-muted);">Tu identidad:</span>
+    <input type="text" id="pred-autor" placeholder="Tu nombre" maxlength="50"
+           class="form-control" style="width:140px;font-size:13px;" oninput="guardarIdentidad()" />
+    <select id="pred-flag" class="form-control" style="width:150px;font-size:13px;" onchange="guardarIdentidad()">
+        <option value="">Sin bandera</option>
+        @foreach (var b in nombresPaises)
+        {
+            <option value="@b.Key">@b.Value</option>
+        }
+    </select>
+    <span style="font-size:11px;color:var(--color-green);" id="pred-saved-msg">✓ guardado</span>
+</div>
+
 <!-- PRÓXIMOS PARTIDOS -->
 <h2 style="font-family:var(--font-heading);font-size:14px;letter-spacing:2px;color:var(--color-gold);margin-bottom:16px;text-transform:uppercase;">
     📅 Próximos Partidos
@@ -54,7 +69,7 @@ else
             var p = pc.Partido;
             var totalPreds = pc.Predicciones.Count;
             var pctL = totalPreds > 0 ? (int)(100.0 * pc.Predicciones.Count(x => x.Prediccion1X2=="L") / totalPreds) : 0;
-            var pctV = totalPreds > 0 ? (100 - pctL - pctE) : 0;
+            var pctV = totalPreds > 0 ? (100 - pctL) : 0;
 
             <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:18px 20px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
@@ -89,37 +104,22 @@ else
                 }
 
                 <!-- FORMULARIO DE PREDICCIÓN -->
-                <form method="post" asp-action="Predecir" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                    <input type="hidden" name="partidoId" value="@p.Id" />
-                    <input type="hidden" name="divisionId" value="@Model.DivisionId" />
-
-                    <input type="text" name="autor" placeholder="Tu nombre" required maxlength="50"
-                           class="form-control" style="width:120px;font-size:13px;" />
-
-                    <select name="paisFlag" class="form-control" style="width:130px;font-size:13px;">
-                        <option value="">🏴 Sin bandera</option>
-                        @foreach (var b in nombresPaises)
-                        {
-                            <option value="@b.Key">@b.Value</option>
-                        }
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <select id="pred-@p.Id-1x2" class="form-control" style="width:130px;font-size:13px;">
+                        <option value="">¿Quién gana?</option>
+                        <option value="L">🏠 Gana @pc.Partido.EquipoLocal.Nombre</option>
+                        <option value="V">✈️ Gana @pc.Partido.EquipoVisitante.Nombre</option>
                     </select>
-
-                    <select name="prediccion1x2" required class="form-control" style="width:110px;font-size:13px;">
-                        <option value="">1X2...</option>
-                        <option value="L">Gana Local</option>
-                        <option value="V">Gana Visit.</option>
-                    </select>
-
-                    <input type="number" name="golesLocal" min="0" max="20" placeholder="GL"
-                           class="form-control" style="width:60px;font-size:13px;text-align:center;" />
+                    <input type="number" id="pred-@p.Id-gl" min="0" max="20" placeholder="GL"
+                           class="form-control" style="width:55px;font-size:13px;text-align:center;" />
                     <span style="color:var(--color-muted);">-</span>
-                    <input type="number" name="golesVisitante" min="0" max="20" placeholder="GV"
-                           class="form-control" style="width:60px;font-size:13px;text-align:center;" />
-
-                    <button type="submit" class="btn-primary" style="font-size:12px;padding:8px 16px;">
+                    <input type="number" id="pred-@p.Id-gv" min="0" max="20" placeholder="GV"
+                           class="form-control" style="width:55px;font-size:13px;text-align:center;" />
+                    <button onclick="predecir(@p.Id, @Model.DivisionId)" class="btn-primary" style="font-size:12px;padding:8px 14px;">
                         🔮 Predecir
                     </button>
-                </form>
+                    <span id="pred-@p.Id-msg" style="font-size:12px;display:none;"></span>
+                </div>
                 <p style="font-size:11px;color:var(--color-muted);margin-top:6px;">
                     💡 1X2 correcto = 1 pto · Resultado exacto = 3 ptos
                 </p>
@@ -133,6 +133,53 @@ else
     🏅 Ranking de Pronosticadores
 </h2>
 
+@{
+    var rankingTemp = ViewBag.RankingTemporada as List<RankingPronosticador> ?? new();
+    var tempNombre  = ViewBag.TemporadaNombre as string ?? "";
+}
+
+<!-- Tabs ranking -->
+<div style="display:flex;gap:8px;margin-bottom:16px;">
+    <button onclick="showRanking('temp')" id="tab-rank-temp" class="tab-btn active" style="font-size:12px;padding:6px 14px;">
+        📅 @tempNombre
+    </button>
+    <button onclick="showRanking('all')" id="tab-rank-all" class="tab-btn" style="font-size:12px;padding:6px 14px;">
+        🌍 Histórico
+    </button>
+</div>
+
+<!-- Ranking temporada actual -->
+<div id="rank-temp">
+@if (!rankingTemp.Any())
+{
+    <p style="font-size:13px;color:var(--color-muted);">Aún no hay predicciones con resultados confirmados esta temporada.</p>
+}
+else
+{
+    <div class="tabla-wrapper">
+        <table class="tabla-posiciones">
+            <thead><tr><th>#</th><th>Pronosticador</th><th>Puntos</th><th>1X2 ✓</th><th>Exactos ✓</th></tr></thead>
+            <tbody>
+                @{ int posT = 1; }
+                @foreach (var r in rankingTemp)
+                {
+                    <tr>
+                        <td class="col-pos">@posT</td>
+                        <td class="col-equipo"><strong>@r.Autor</strong></td>
+                        <td class="col-pts"><strong style="color:var(--color-gold);">@r.TotalPuntos</strong></td>
+                        <td class="col-num">@r.Aciertos1X2</td>
+                        <td class="col-num">@r.AciertosExactos</td>
+                    </tr>
+                    posT++;
+                }
+            </tbody>
+        </table>
+    </div>
+}
+</div>
+
+<!-- Ranking histórico -->
+<div id="rank-all" style="display:none;">
 @if (!Model.Ranking.Any())
 {
     <p style="font-size:13px;color:var(--color-muted);">Aún no hay predicciones con resultados confirmados.</p>
@@ -193,3 +240,63 @@ else
     border-color: var(--color-gold);
 }
 </style>
+</div>
+
+@section Scripts {
+<script>
+// Cargar identidad guardada
+(function() {
+    const autor = localStorage.getItem('pred_autor') || '';
+    const flag  = localStorage.getItem('pred_flag')  || '';
+    const el = document.getElementById('pred-autor');
+    const fl = document.getElementById('pred-flag');
+    if (el) el.value = autor;
+    if (fl) fl.value = flag;
+    document.getElementById('pred-saved-msg').style.display = autor ? 'inline' : 'none';
+})();
+
+function guardarIdentidad() {
+    const autor = document.getElementById('pred-autor').value.trim();
+    const flag  = document.getElementById('pred-flag').value;
+    localStorage.setItem('pred_autor', autor);
+    localStorage.setItem('pred_flag',  flag);
+    document.getElementById('pred-saved-msg').style.display = autor ? 'inline' : 'none';
+}
+
+async function predecir(partidoId, divisionId) {
+    const autor = document.getElementById('pred-autor').value.trim();
+    const flag  = document.getElementById('pred-flag').value;
+    const pred  = document.getElementById(`pred-${partidoId}-1x2`).value;
+    const gl    = document.getElementById(`pred-${partidoId}-gl`).value;
+    const gv    = document.getElementById(`pred-${partidoId}-gv`).value;
+    const msg   = document.getElementById(`pred-${partidoId}-msg`);
+
+    if (!autor) { msg.style.display='inline'; msg.style.color='var(--color-red)'; msg.textContent='Ingresá tu nombre arriba.'; return; }
+    if (!pred)  { msg.style.display='inline'; msg.style.color='var(--color-red)'; msg.textContent='Elegí quién gana.'; return; }
+
+    guardarIdentidad();
+
+    const r = await fetch('/Predicciones/Predecir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            partidoId, divisionId, autor, paisFlag: flag || null,
+            prediccion1x2: pred,
+            golesLocal:      gl !== '' ? parseInt(gl) : null,
+            golesVisitante:  gv !== '' ? parseInt(gv) : null
+        })
+    });
+    const d = await r.json();
+    msg.style.display = 'inline';
+    msg.style.color   = d.ok ? 'var(--color-green)' : 'var(--color-red)';
+    msg.textContent   = d.msg;
+}
+
+function showRanking(tab) {
+    document.getElementById('rank-temp').style.display = tab === 'temp' ? 'block' : 'none';
+    document.getElementById('rank-all').style.display  = tab === 'all'  ? 'block' : 'none';
+    document.getElementById('tab-rank-temp').classList.toggle('active', tab === 'temp');
+    document.getElementById('tab-rank-all').classList.toggle('active',  tab === 'all');
+}
+</script>
+}

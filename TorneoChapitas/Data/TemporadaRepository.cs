@@ -524,7 +524,7 @@ namespace TorneoAmigos.Data
             {
                 int fechaId;
                 using var cmd = new NpgsqlCommand(
-                    "INSERT INTO fechas (divisionid, numero, nombre, activa, habilitada) VALUES (@D, @N, @Nom, true, false) RETURNING id", conn, tx);
+                    "INSERT INTO fechas (divisionid, numero, nombre, activa, habilitada, temporada_id) VALUES (@D, @N, @Nom, true, false, (SELECT id FROM temporadas WHERE activa = true ORDER BY id DESC FETCH FIRST 1 ROW ONLY)) RETURNING id", conn, tx);
                 cmd.Parameters.AddWithValue("@D",   divisionId);
                 cmd.Parameters.AddWithValue("@N",   f);
                 cmd.Parameters.AddWithValue("@Nom", $"Fecha {f}");

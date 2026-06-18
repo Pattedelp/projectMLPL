@@ -52,7 +52,7 @@ namespace TorneoAmigos.Controllers
                 // Próximos partidos de liga sin jugar — solo de fechas VISIBLES
                 var fixture = _repo.GetFixture(division);
                 var proximos = fixture
-                    .Where(g => g.Fecha.Visible)
+                    .Where(g => g.Fecha.Habilitada)
                     .SelectMany(g => g.Partidos)
                     .Where(p => !p.Jugado && p.TipoPartido == "regular")
                     .Take(10)
@@ -70,18 +70,35 @@ namespace TorneoAmigos.Controllers
 
             vm.Ranking = _prediRepo.GetRanking();
 
+            // Ranking por temporada activa
+            var tempActiva = _tempRepo.GetTemporadaActiva();
+            if (tempActiva != null)
+                ViewBag.RankingTemporada = _prediRepo.GetRankingPorTemporada(tempActiva.Id);
+            ViewBag.TemporadaNombre = tempActiva?.Nombre ?? "";
+
             return View(vm);
         }
 
         [HttpPost]
-        public IActionResult Predecir(int partidoId, int divisionId, string autor, string? paisFlag,
-            string prediccion1x2, int? golesLocal, int? golesVisitante)
+        public IActionResult Predecir([FromBody] PredicirDto dto)
         {
-            if (string.IsNullOrWhiteSpace(autor))
-                return RedirectToAction("Index", new { division = divisionId });
+            if (string.IsNullOrWhiteSpace(dto.Autor))
+                return Json(new { ok = false, msg = "Nombre requerido" });
 
-            _prediRepo.GuardarPrediccion(partidoId, divisionId, autor, paisFlag, prediccion1x2, golesLocal, golesVisitante);
-            return RedirectToAction("Index", new { division = divisionId });
+            var ok = _prediRepo.GuardarPrediccion(dto.PartidoId, dto.DivisionId, dto.Autor,
+                dto.PaisFlag, dto.Prediccion1x2, dto.GolesLocal, dto.GolesVisitante);
+            return Json(new { ok, msg = ok ? "✅ Predicción guardada" : "Ya predijiste este partido" });
         }
+    }
+
+    public class PredicirDto
+    {
+        public int PartidoId { get; set; }
+        public int DivisionId { get; set; }
+        public string Autor { get; set; } = "";
+        public string? PaisFlag { get; set; }
+        public string Prediccion1x2 { get; set; } = "";
+        public int? GolesLocal { get; set; }
+        public int? GolesVisitante { get; set; }
     }
 }

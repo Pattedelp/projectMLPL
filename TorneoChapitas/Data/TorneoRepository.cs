@@ -256,8 +256,9 @@ namespace TorneoAmigos.Data
             {
                 int gl = p.GolesLocal ?? 0;
                 int gv = p.GolesVisitante ?? 0;
-                string resLocal = gl > gv ? "V" : "D";
-                string resVisit = gv > gl ? "V" : "D";
+                int diff = Math.Abs(gl - gv);
+                string resLocal = gl > gv ? "V" : (diff == 1 ? "C" : "D");
+                string resVisit = gv > gl ? "V" : (diff == 1 ? "C" : "D");
 
                 if (!partidosPorEquipo.ContainsKey(p.EquipoLocalId))    partidosPorEquipo[p.EquipoLocalId]    = new();
                 if (!partidosPorEquipo.ContainsKey(p.EquipoVisitanteId)) partidosPorEquipo[p.EquipoVisitanteId] = new();
@@ -393,8 +394,11 @@ namespace TorneoAmigos.Data
         public List<Fecha> GetFechasByDivision(int divisionId)
         {
             var lista = new List<Fecha>();
-            const string sql = @"SELECT id, divisionid, numero, nombre, fechainicio, fechafin, activa, habilitada
-                                 FROM fechas WHERE divisionid = @D ORDER BY numero";
+            const string sql = @"SELECT f.id, f.divisionid, f.numero, f.nombre, f.fechainicio, f.fechafin, f.activa, f.habilitada
+                                 FROM fechas f
+                                 WHERE f.divisionid = @D
+                                 AND (f.temporada_id IS NULL OR f.temporada_id = (SELECT id FROM temporadas WHERE activa = true ORDER BY id DESC FETCH FIRST 1 ROW ONLY))
+                                 ORDER BY f.numero";
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@D", divisionId);

@@ -93,6 +93,65 @@ namespace TorneoAmigos.Data
             }
         }
 
+        public List<(string TemporadaNombre, int Puntos, int Aciertos1X2, int AciertosExactos, int Total)> GetHistorialPronosticador(string autor)
+        {
+            const string sql = @"
+                SELECT t.nombre, 
+                       COALESCE(SUM(p.puntos), 0) as puntos,
+                       COUNT(*) FILTER (WHERE p.acerto_1x2 = true) as aciertos_1x2,
+                       COUNT(*) FILTER (WHERE p.acerto_exacto = true) as aciertos_exacto,
+                       COUNT(*) as total
+                FROM predicciones p
+                JOIN partidos pa ON p.partido_id = pa.id
+                JOIN fechas f ON pa.fechaid = f.id
+                JOIN temporadas t ON f.temporada_id = t.id
+                WHERE LOWER(TRIM(p.autor)) = LOWER(TRIM(@A))
+                GROUP BY t.id, t.nombre, t.numero
+                ORDER BY t.numero DESC";
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@A", autor.Trim());
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            var lista = new List<(string, int, int, int, int)>();
+            while (r.Read())
+                lista.Add((r.GetString(0), Convert.ToInt32(r.GetInt64(1)),
+                    Convert.ToInt32(r.GetInt64(2)), Convert.ToInt32(r.GetInt64(3)),
+                    Convert.ToInt32(r.GetInt64(4))));
+            return lista;
+        }
+
+        public List<RankingPronosticador> GetRankingPorTemporada(int temporadaId)
+        {
+            const string sql = @"
+                SELECT p.autor,
+                       COALESCE(SUM(p.puntos), 0) as puntos,
+                       COUNT(*) FILTER (WHERE p.acerto_1x2 = true) as aciertos_1x2,
+                       COUNT(*) FILTER (WHERE p.acerto_exacto = true) as aciertos_exacto
+                FROM predicciones p
+                JOIN partidos pa ON p.partido_id = pa.id
+                JOIN fechas f ON pa.fechaid = f.id
+                WHERE f.temporada_id = @T
+                GROUP BY p.autor
+                ORDER BY puntos DESC, aciertos_1x2 DESC
+                LIMIT 20";
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@T", temporadaId);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            var lista = new List<RankingPronosticador>();
+            while (r.Read())
+                lista.Add(new RankingPronosticador
+                {
+                    Autor = r.GetString(0),
+                    TotalPuntos = Convert.ToInt32(r.GetInt64(1)),
+                    Aciertos1X2 = Convert.ToInt32(r.GetInt64(2)),
+                    AciertosExactos = Convert.ToInt32(r.GetInt64(3))
+                });
+            return lista;
+        }
+
         public List<RankingPronosticador> GetRanking(int limit = 20)
         {
             var lista = new List<RankingPronosticador>();

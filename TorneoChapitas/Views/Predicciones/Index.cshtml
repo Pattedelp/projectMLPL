@@ -193,7 +193,103 @@ else
 }
 </div>
 
-<!-- Ranking histórico -->
+<!-- Rankings por división -->
+<div id="rank-primera">
+@{
+    var _rk = rankingPrimera;
+    if (!_rk.Any()) {
+        <p style="font-size:13px;color:var(--color-muted);">Sin predicciones confirmadas.</p>
+    } else {
+        <div class="tabla-wrapper">
+            <table class="tabla-posiciones">
+                <thead><tr><th>#</th><th>Pronosticador</th><th>PTS</th><th>1X2 ✓</th><th>Exactos ✓</th></tr></thead>
+                <tbody>
+                    @{ int _pos = 1; }
+                    @foreach (var _r in _rk) {
+                        <tr>
+                            <td class="col-pos">@_pos</td>
+                            <td class="col-equipo">
+                                @if (!string.IsNullOrEmpty(_r.PaisFlag) && banderas.ContainsKey(_r.PaisFlag)) {
+                                    <span style="margin-right:4px;">@banderas[_r.PaisFlag]</span>
+                                }
+                                <strong>@_r.Autor</strong>
+                            </td>
+                            <td class="col-pts"><strong style="color:var(--color-gold);">@_r.TotalPuntos</strong></td>
+                            <td class="col-num">@_r.Aciertos1X2</td>
+                            <td class="col-num">@_r.AciertosExactos</td>
+                        </tr>
+                        _pos++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+</div>
+<div id="rank-nacional" style="display:none;">
+@{
+    var _rk = rankingNacional;
+    if (!_rk.Any()) {
+        <p style="font-size:13px;color:var(--color-muted);">Sin predicciones confirmadas.</p>
+    } else {
+        <div class="tabla-wrapper">
+            <table class="tabla-posiciones">
+                <thead><tr><th>#</th><th>Pronosticador</th><th>PTS</th><th>1X2 ✓</th><th>Exactos ✓</th></tr></thead>
+                <tbody>
+                    @{ int _pos = 1; }
+                    @foreach (var _r in _rk) {
+                        <tr>
+                            <td class="col-pos">@_pos</td>
+                            <td class="col-equipo">
+                                @if (!string.IsNullOrEmpty(_r.PaisFlag) && banderas.ContainsKey(_r.PaisFlag)) {
+                                    <span style="margin-right:4px;">@banderas[_r.PaisFlag]</span>
+                                }
+                                <strong>@_r.Autor</strong>
+                            </td>
+                            <td class="col-pts"><strong style="color:var(--color-gold);">@_r.TotalPuntos</strong></td>
+                            <td class="col-num">@_r.Aciertos1X2</td>
+                            <td class="col-num">@_r.AciertosExactos</td>
+                        </tr>
+                        _pos++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+</div>
+<div id="rank-copa" style="display:none;">
+@{
+    var _rk = rankingCopa;
+    if (!_rk.Any()) {
+        <p style="font-size:13px;color:var(--color-muted);">Sin predicciones confirmadas.</p>
+    } else {
+        <div class="tabla-wrapper">
+            <table class="tabla-posiciones">
+                <thead><tr><th>#</th><th>Pronosticador</th><th>PTS</th><th>1X2 ✓</th><th>Exactos ✓</th></tr></thead>
+                <tbody>
+                    @{ int _pos = 1; }
+                    @foreach (var _r in _rk) {
+                        <tr>
+                            <td class="col-pos">@_pos</td>
+                            <td class="col-equipo">
+                                @if (!string.IsNullOrEmpty(_r.PaisFlag) && banderas.ContainsKey(_r.PaisFlag)) {
+                                    <span style="margin-right:4px;">@banderas[_r.PaisFlag]</span>
+                                }
+                                <strong>@_r.Autor</strong>
+                            </td>
+                            <td class="col-pts"><strong style="color:var(--color-gold);">@_r.TotalPuntos</strong></td>
+                            <td class="col-num">@_r.Aciertos1X2</td>
+                            <td class="col-num">@_r.AciertosExactos</td>
+                        </tr>
+                        _pos++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+</div>
 <div id="rank-all" style="display:none;">
 @if (!Model.Ranking.Any())
 {
@@ -365,10 +461,10 @@ async function predecir(partidoId, divisionId) {
 }
 
 function showRanking(tab) {
-    document.getElementById('rank-temp').style.display = tab === 'temp' ? 'block' : 'none';
-    document.getElementById('rank-all').style.display  = tab === 'all'  ? 'block' : 'none';
-    document.getElementById('tab-rank-temp').classList.toggle('active', tab === 'temp');
-    document.getElementById('tab-rank-all').classList.toggle('active',  tab === 'all');
+    ['primera','nacional','copa','all'].forEach(t => {
+        document.getElementById('rank-' + t).style.display = t === tab ? 'block' : 'none';
+        document.getElementById('tab-rank-' + t).classList.toggle('active', t === tab);
+    });
 }
 </script>
 }

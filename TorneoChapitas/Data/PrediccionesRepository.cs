@@ -162,11 +162,15 @@ namespace TorneoAmigos.Data
             return lista;
         }
 
-        public List<RankingPronosticador> GetRanking(int limit = 20)
+        public List<RankingPronosticador> GetRanking(int limit = 20) =>
+            GetRankingPorDivision(null, limit);
+
+        public List<RankingPronosticador> GetRankingPorDivision(int? divisionId, int limit = 20)
         {
             var lista = new List<RankingPronosticador>();
+            var where = divisionId.HasValue ? "WHERE puntos IS NOT NULL AND division_id = @D" : "WHERE puntos IS NOT NULL";
             using var conn = GetConnection();
-            using var cmd = new NpgsqlCommand(@"
+            using var cmd = new NpgsqlCommand($@"
                 SELECT autor,
                        MAX(pais_flag) as pais_flag,
                        COALESCE(SUM(puntos), 0) as total_puntos,
@@ -174,15 +178,15 @@ namespace TorneoAmigos.Data
                        COUNT(*) FILTER (WHERE puntos >= 1) as aciertos_1x2,
                        COUNT(*) FILTER (WHERE puntos = 3) as aciertos_exactos
                 FROM predicciones
-                WHERE puntos IS NOT NULL
+                {where}
                 GROUP BY autor
                 ORDER BY total_puntos DESC, aciertos_exactos DESC
                 LIMIT @L", conn);
+            if (divisionId.HasValue) cmd.Parameters.AddWithValue("@D", divisionId.Value);
             cmd.Parameters.AddWithValue("@L", limit);
             conn.Open();
             using var r = cmd.ExecuteReader();
             while (r.Read())
-            {
                 lista.Add(new RankingPronosticador
                 {
                     Autor           = r.GetString(0),
@@ -192,7 +196,6 @@ namespace TorneoAmigos.Data
                     Aciertos1X2     = Convert.ToInt32(r.GetInt64(4)),
                     AciertosExactos = Convert.ToInt32(r.GetInt64(5))
                 });
-            }
             return lista;
         }
 

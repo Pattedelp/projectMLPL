@@ -69,6 +69,9 @@ namespace TorneoAmigos.Controllers
             }
 
             vm.Ranking = _prediRepo.GetRanking();
+            ViewBag.RankingPrimera  = _prediRepo.GetRankingPorDivision(1);
+            ViewBag.RankingNacional = _prediRepo.GetRankingPorDivision(2);
+            ViewBag.RankingCopa     = _prediRepo.GetRankingPorDivision(100);
 
             // Ranking por temporada activa
             var tempActiva = _tempRepo.GetTemporadaActiva();

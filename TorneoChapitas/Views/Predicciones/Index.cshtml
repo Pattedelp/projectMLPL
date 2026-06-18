@@ -130,6 +130,21 @@ else
 
 <!-- RANKING -->
 <h2 style="font-family:var(--font-heading);font-size:14px;letter-spacing:2px;color:var(--color-gold);margin-bottom:16px;text-transform:uppercase;">
+<!-- MIS PREDICCIONES -->
+<h2 style="font-family:var(--font-heading);font-size:14px;letter-spacing:2px;color:var(--color-gold);margin-bottom:12px;text-transform:uppercase;">
+    🔍 Mis Predicciones
+</h2>
+<div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:10px;padding:14px 16px;margin-bottom:28px;">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+        <input type="text" id="mis-pred-autor" placeholder="Tu nombre" maxlength="50"
+               class="form-control" style="width:160px;font-size:13px;" />
+        <button onclick="cargarMisPredicciones()" class="btn-primary" style="font-size:12px;padding:8px 14px;">
+            Ver mis predicciones
+        </button>
+    </div>
+    <div id="mis-pred-resultado"></div>
+</div>
+
     🏅 Ranking de Pronosticadores
 </h2>
 
@@ -262,6 +277,63 @@ function guardarIdentidad() {
     localStorage.setItem('pred_flag',  flag);
     document.getElementById('pred-saved-msg').style.display = autor ? 'inline' : 'none';
 }
+
+async function cargarMisPredicciones() {
+    const autor = document.getElementById('mis-pred-autor').value.trim()
+                || document.getElementById('pred-autor')?.value?.trim();
+    const cont = document.getElementById('mis-pred-resultado');
+    if (!autor) { cont.innerHTML = '<p style="color:var(--color-red);font-size:12px;">Ingresá tu nombre.</p>'; return; }
+
+    cont.innerHTML = '<p style="color:var(--color-muted);font-size:12px;">Cargando...</p>';
+    const r = await fetch('/Predicciones/MisPredicciones?autor=' + encodeURIComponent(autor));
+    const d = await r.json();
+    if (!d.ok || !d.data.length) { cont.innerHTML = '<p style="color:var(--color-muted);font-size:12px;">No encontramos predicciones para ese nombre.</p>'; return; }
+
+    let html = '<div style="display:flex;flex-direction:column;gap:6px;">';
+    let tempActual = '';
+    d.data.forEach(p => {
+        if (p.temporadaNombre !== tempActual) {
+            tempActual = p.temporadaNombre;
+            html += `<div style="font-size:11px;letter-spacing:1px;color:var(--color-gold);text-transform:uppercase;margin-top:8px;">${tempActual || 'Sin temporada'}</div>`;
+        }
+        const pred1x2 = p.prediccion1x2 === 'L' ? p.nombreLocal : p.nombreVisitante;
+        const predScore = (p.golesLocalPred !== null && p.golesVisitantePred !== null)
+            ? `${p.golesLocalPred}-${p.golesVisitantePred}` : '';
+        const realScore = p.jugado && p.golesLocalReal !== null
+            ? `${p.golesLocalReal}-${p.golesVisitanteReal}` : 'Pendiente';
+
+        let badge = '';
+        if (p.jugado) {
+            if (p.acertoExacto) badge = '<span style="background:var(--color-gold);color:var(--color-bg);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;">+3</span>';
+            else if (p.acerto1x2) badge = '<span style="background:var(--color-green);color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;">+1</span>';
+            else badge = '<span style="background:var(--color-red);color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;">✗</span>';
+        }
+
+        html += `<div style="background:var(--color-bg3);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;">
+            <span style="flex:1;min-width:120px;">${p.nombreLocal} vs ${p.nombreVisitante}</span>
+            <span style="color:var(--color-muted);">F${p.fechaNumero}</span>
+            <span>🔮 <strong>${pred1x2}</strong> ${predScore ? `(${predScore})` : ''}</span>
+            <span style="color:var(--color-muted);">→ ${realScore}</span>
+            ${badge}
+        </div>`;
+    });
+    html += '</div>';
+
+    const total = d.data.reduce((s, p) => s + (p.puntos || 0), 0);
+    cont.innerHTML = `<p style="font-size:12px;color:var(--color-muted);margin-bottom:8px;">${d.data.length} predicciones · <strong style="color:var(--color-gold);">${total} pts totales</strong></p>` + html;
+
+    // También prellenar el nombre en la identidad
+    const autorInput = document.getElementById('pred-autor');
+    if (autorInput && !autorInput.value) autorInput.value = autor;
+}
+
+// Auto-cargar si hay nombre en localStorage
+document.addEventListener('DOMContentLoaded', () => {
+    const autor = localStorage.getItem('pred_autor');
+    if (autor) {
+        document.getElementById('mis-pred-autor').value = autor;
+    }
+});
 
 async function predecir(partidoId, divisionId) {
     const autor = document.getElementById('pred-autor').value.trim();

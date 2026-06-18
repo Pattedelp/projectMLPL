@@ -96,10 +96,15 @@ namespace TorneoAmigos.Data
         public List<(string TemporadaNombre, int Puntos, int Aciertos1X2, int AciertosExactos, int Total)> GetHistorialPronosticador(string autor)
         {
             const string sql = @"
-                SELECT t.nombre, 
+                SELECT t.nombre,
                        COALESCE(SUM(p.puntos), 0) as puntos,
-                       COUNT(*) FILTER (WHERE p.acerto_1x2 = true) as aciertos_1x2,
-                       COUNT(*) FILTER (WHERE p.acerto_exacto = true) as aciertos_exacto,
+                       COUNT(*) FILTER (WHERE pa.jugado = true AND (
+                           (p.prediccion_1x2 = 'L' AND pa.goleslocal > pa.golesvisitante) OR
+                           (p.prediccion_1x2 = 'V' AND pa.golesvisitante > pa.goleslocal)
+                       )) as aciertos_1x2,
+                       COUNT(*) FILTER (WHERE pa.jugado = true AND
+                           p.goles_local = pa.goleslocal AND p.goles_visitante = pa.golesvisitante
+                       ) as aciertos_exacto,
                        COUNT(*) as total
                 FROM predicciones p
                 JOIN partidos pa ON p.partido_id = pa.id
@@ -126,8 +131,13 @@ namespace TorneoAmigos.Data
             const string sql = @"
                 SELECT p.autor,
                        COALESCE(SUM(p.puntos), 0) as puntos,
-                       COUNT(*) FILTER (WHERE p.acerto_1x2 = true) as aciertos_1x2,
-                       COUNT(*) FILTER (WHERE p.acerto_exacto = true) as aciertos_exacto
+                       COUNT(*) FILTER (WHERE pa.jugado = true AND (
+                           (p.prediccion_1x2 = 'L' AND pa.goleslocal > pa.golesvisitante) OR
+                           (p.prediccion_1x2 = 'V' AND pa.golesvisitante > pa.goleslocal)
+                       )) as aciertos_1x2,
+                       COUNT(*) FILTER (WHERE pa.jugado = true AND
+                           p.goles_local = pa.goleslocal AND p.goles_visitante = pa.golesvisitante
+                       ) as aciertos_exacto
                 FROM predicciones p
                 JOIN partidos pa ON p.partido_id = pa.id
                 JOIN fechas f ON pa.fechaid = f.id

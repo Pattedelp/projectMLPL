@@ -389,8 +389,7 @@ namespace TorneoAmigos.Data
                     if (descenso2 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", descenso2);
                 }
 
-                // Registrar títulos en el palmarés
-                var temporadaNombre = GetTodasLasTemporadas().FirstOrDefault(t => t.Id == temporadaId)?.Nombre ?? $"Temporada {temporadaId}";
+                // Registrar títulos en el palmarés (temporadaNombre ya fue obtenido arriba)
 
                 // Campeón Primera División: usar borrador si existe, si no el 1° de tabla
                 var campeonPrimId = cierre?.CampeonPrimeraId ?? (tablaPrimera.Any() ? tablaPrimera.First().EquipoId : 0);

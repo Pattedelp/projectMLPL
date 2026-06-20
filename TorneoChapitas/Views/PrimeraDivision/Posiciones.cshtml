@@ -72,8 +72,8 @@
                             {
                                 <span style="width:18px;height:18px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;
                                              font-size:10px;font-weight:700;
-                                             background:@(r=="V" ? "var(--color-green)" : r=="C" ? "#3a82c8" : "var(--color-red)");
-                                             color:#fff;">@(r=="C" ? "D" : r)</span>
+                                             background:@(r.EndsWith("C") ? "#3a82c8" : r=="V" ? "var(--color-green)" : "var(--color-red)");
+                                             color:#fff;">@(r.Substring(0,1))</span>
                             }
                         </div>
                     </td>

@@ -298,6 +298,63 @@ namespace TorneoAmigos.Data
             using var tx = conn.BeginTransaction();
             try
             {
+                // Obtener el nombre de la temporada para el historial
+                string temporadaNombre;
+                using (var cmdNom = new NpgsqlCommand("SELECT nombre FROM temporadas WHERE id = @Id", conn, tx))
+                {
+                    cmdNom.Parameters.AddWithValue("@Id", temporadaId);
+                    temporadaNombre = (cmdNom.ExecuteScalar() as string) ?? $"Temporada {temporadaId}";
+                }
+
+                // ── MIGRAR PARTIDOS JUGADOS A enfrentamientos_historicos ──
+                // Esto preserva el historial partido por partido para el Mano a Mano y Tabla Histórica
+                using (var cmdMigrar = new NpgsqlCommand(@"
+                    INSERT INTO enfrentamientos_historicos
+                        (equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, torneo, temporada_nombre, division_id)
+                    SELECT p.equipolocalid, p.equipovisitanteid, p.goleslocal, p.golesvisitante,
+                           'Liga', @TNom, p.divisionid
+                    FROM partidos p
+                    WHERE p.jugado = true
+                      AND COALESCE(p.tipo_partido, 'regular') = 'regular'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM enfrentamientos_historicos eh
+                          WHERE eh.equipo_local_id = p.equipolocalid
+                            AND eh.equipo_visitante_id = p.equipovisitanteid
+                            AND eh.temporada_nombre = @TNom
+                            AND eh.goles_local = p.goleslocal
+                            AND eh.goles_visitante = p.golesvisitante
+                      )", conn, tx))
+                {
+                    cmdMigrar.Parameters.AddWithValue("@TNom", temporadaNombre);
+                    cmdMigrar.ExecuteNonQuery();
+                }
+
+                // ── MIGRAR PARTIDOS DE COPA Y SUPERCOPA (de esta temporada) ──
+                using (var cmdMigrarCopas = new NpgsqlCommand(@"
+                    INSERT INTO enfrentamientos_historicos
+                        (equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, torneo, temporada_nombre, division_id)
+                    SELECT cp.equipo_local_id, cp.equipo_visitante_id, cp.goles_local, cp.goles_visitante,
+                           CASE c.tipo WHEN 'copa_argentina' THEN 'Copa Argentina' ELSE 'Supercopa Argentina' END,
+                           @TNom, 0
+                    FROM copa_partidos cp
+                    JOIN copas c ON cp.copa_id = c.id
+                    WHERE c.temporada_id = @T
+                      AND cp.jugado = true
+                      AND cp.equipo_local_id IS NOT NULL AND cp.equipo_visitante_id IS NOT NULL
+                      AND NOT EXISTS (
+                          SELECT 1 FROM enfrentamientos_historicos eh
+                          WHERE eh.equipo_local_id = cp.equipo_local_id
+                            AND eh.equipo_visitante_id = cp.equipo_visitante_id
+                            AND eh.temporada_nombre = @TNom
+                            AND eh.goles_local = cp.goles_local
+                            AND eh.goles_visitante = cp.goles_visitante
+                      )", conn, tx))
+                {
+                    cmdMigrarCopas.Parameters.AddWithValue("@T", temporadaId);
+                    cmdMigrarCopas.Parameters.AddWithValue("@TNom", temporadaNombre);
+                    cmdMigrarCopas.ExecuteNonQuery();
+                }
+
                 // Guardar resultados Primera División
                 GuardarResultados(conn, tx, temporadaId, 1, tablaPrimera);
                 // Guardar resultados Primera Nacional
@@ -741,6 +798,39 @@ namespace TorneoAmigos.Data
             using var tx = conn.BeginTransaction();
             try
             {
+                // Obtener nombre de temporada para el historial
+                string temporadaNombreCopa;
+                using (var cmdNom = new NpgsqlCommand("SELECT nombre FROM temporadas WHERE id = @Id", conn, tx))
+                {
+                    cmdNom.Parameters.AddWithValue("@Id", temporadaId);
+                    temporadaNombreCopa = (cmdNom.ExecuteScalar() as string) ?? $"Temporada {temporadaId}";
+                }
+
+                // ── MIGRAR PARTIDOS DE COPA JUGADOS ANTES DE BORRAR (resortear) ──
+                using (var cmdMigrarCopa = new NpgsqlCommand(@"
+                    INSERT INTO enfrentamientos_historicos
+                        (equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, torneo, temporada_nombre, division_id)
+                    SELECT cp.equipo_local_id, cp.equipo_visitante_id, cp.goles_local, cp.goles_visitante,
+                           'Copa Argentina', @TNom, 0
+                    FROM copa_partidos cp
+                    JOIN copas c ON cp.copa_id = c.id
+                    WHERE c.tipo = 'copa_argentina' AND c.temporada_id = @T
+                      AND cp.jugado = true
+                      AND cp.equipo_local_id IS NOT NULL AND cp.equipo_visitante_id IS NOT NULL
+                      AND NOT EXISTS (
+                          SELECT 1 FROM enfrentamientos_historicos eh
+                          WHERE eh.equipo_local_id = cp.equipo_local_id
+                            AND eh.equipo_visitante_id = cp.equipo_visitante_id
+                            AND eh.temporada_nombre = @TNom
+                            AND eh.goles_local = cp.goles_local
+                            AND eh.goles_visitante = cp.goles_visitante
+                      )", conn, tx))
+                {
+                    cmdMigrarCopa.Parameters.AddWithValue("@T", temporadaId);
+                    cmdMigrarCopa.Parameters.AddWithValue("@TNom", temporadaNombreCopa);
+                    cmdMigrarCopa.ExecuteNonQuery();
+                }
+
                 // Limpiar copa previa
                 using (var del = new NpgsqlCommand(@"
                     DELETE FROM copa_partidos WHERE copa_id IN

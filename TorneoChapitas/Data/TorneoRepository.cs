@@ -257,8 +257,8 @@ namespace TorneoAmigos.Data
                 int gl = p.GolesLocal ?? 0;
                 int gv = p.GolesVisitante ?? 0;
                 int diff = Math.Abs(gl - gv);
-                string resLocal = gl > gv ? "V" : (diff == 1 ? "C" : "D");
-                string resVisit = gv > gl ? "V" : (diff == 1 ? "C" : "D");
+                string resLocal = (gl > gv ? "V" : "D") + (diff == 1 ? "C" : "");
+                string resVisit = (gv > gl ? "V" : "D") + (diff == 1 ? "C" : "");
 
                 if (!partidosPorEquipo.ContainsKey(p.EquipoLocalId))    partidosPorEquipo[p.EquipoLocalId]    = new();
                 if (!partidosPorEquipo.ContainsKey(p.EquipoVisitanteId)) partidosPorEquipo[p.EquipoVisitanteId] = new();

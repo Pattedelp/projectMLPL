@@ -797,7 +797,7 @@ namespace TorneoAmigos.Data
             using var tx = conn.BeginTransaction();
             try
             {
-                // Obtener nombre de temporada para el historial
+                // Migrar partidos anteriores al historial
                 string temporadaNombreCopa;
                 using (var cmdNom = new NpgsqlCommand("SELECT nombre FROM temporadas WHERE id = @Id", conn, tx))
                 {
@@ -805,7 +805,6 @@ namespace TorneoAmigos.Data
                     temporadaNombreCopa = (cmdNom.ExecuteScalar() as string) ?? $"Temporada {temporadaId}";
                 }
 
-                // ── MIGRAR PARTIDOS DE COPA JUGADOS ANTES DE BORRAR (resortear) ──
                 using (var cmdMigrarCopa = new NpgsqlCommand(@"
                     INSERT INTO enfrentamientos_historicos
                         (equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, torneo, temporada_nombre, division_id)
@@ -850,170 +849,136 @@ namespace TorneoAmigos.Data
                     copaId = Convert.ToInt32(cmd.ExecuteScalar());
                 }
 
-                int total = equiposPrimera.Count + equiposB.Count; // total de equipos
+                // ── LÓGICA DEL SORTEO ──────────────────────────────────────────
+                // Objetivos:
+                // 1. Octavos siempre tiene 16 equipos (8 partidos)
+                // 2. Los primeros 8 de Primera pasan directo a Octavos
+                // 3. El resto juega fases previas mezclando Primera (peores) y Nacional (todos)
+                // 4. Primera nunca vs Primera en fases previas
+                // 5. El orden es según tabla de posiciones al momento del sorteo
 
-                // Calcular la potencia de 2 más cercana POR ARRIBA al total
-                // que será el tamaño de la ronda principal (16, 8, 4, 2)
-                int tamañoBracket = 2;
-                while (tamañoBracket < total) tamañoBracket *= 2;
-                // Si el total ya es justo una potencia de 2 menor permitida, usarla
-                // (ej: si total=10, tamañoBracket=16; si total=8, tamañoBracket=8)
+                var rng = new Random();
+                int nP = equiposPrimera.Count; // ej: 12
+                int nS = equiposB.Count;        // ej: 15
 
-                // Si tamañoBracket == total, no hay fase previa
-                int equiposEnPrevia = 0;
-                int avanzanDirecto;
+                // Primeros 8 de Primera → directo a Octavos
+                int directosOctavos = Math.Min(8, nP);
+                var P_octavos = equiposPrimera.Take(directosOctavos).ToList();      // P1-P8
+                var P_previa  = equiposPrimera.Skip(directosOctavos).ToList();      // P9-P12 (los que juegan fase previa)
 
-                if (tamañoBracket == total)
+                // Necesitamos 8 ganadores para completar Octavos → 8 partidos en FP2
+                // Total en FP2: P_previa.Count + algunos de S completando hasta 16 participantes (8 partidos)
+                // Participantes FP2 = 16 → P_previa + S necesarios = 16
+                // S que entran directo a FP2 = 16 - P_previa.Count (si sobran S, van a FP1)
+                int participantesFP2 = 16; // siempre 8 partidos
+                int sDirectosFP2     = participantesFP2 - P_previa.Count; // S1 a S(sDirectosFP2)
+                var S_fp2    = equiposB.Take(sDirectosFP2).ToList();      // S mejores que van directo a FP2
+                var S_fp1    = equiposB.Skip(sDirectosFP2).ToList();      // S peores que van a FP1
+
+                // FP1: equipos restantes de S (necesitan salir pares)
+                // Si son impares, el último pasa directo a FP2
+                if (S_fp1.Count % 2 != 0)
                 {
-                    avanzanDirecto = total;
-                }
-                else
-                {
-                    // Necesitamos reducir 'total' a 'tamañoBracket' (la potencia de 2 inferior)
-                    // tamañoBracketInferior = tamañoBracket / 2
-                    int tamañoInferior = tamañoBracket / 2;
-                    // sobran = total - tamañoInferior equipos que deben jugar fase previa
-                    // de los cuales la mitad gana y se suma a los que ya pasan directo
-                    int sobran = total - tamañoInferior;
-                    // sobran equipos juegan entre sí: sobran/2 partidos -> sobran/2 ganadores
-                    // Pero sobran puede ser impar; en ese caso ajustamos
-                    if (sobran % 2 != 0) sobran++; // forzar par (uno deberá pasar directo "gratis")
-                    equiposEnPrevia = sobran;
-                    int gPreviaTmp = equiposEnPrevia / 2;
-                    avanzanDirecto = total - equiposEnPrevia + gPreviaTmp;
-                    // avanzanDirecto debería ser igual a tamañoInferior, pero puede ser tamañoInferior
-                    // Ajustamos tamañoBracket a tamañoInferior * 2 si corresponde, o usamos el inferior directamente
-                    tamañoBracket = avanzanDirecto <= tamañoInferior ? tamañoInferior :
-                                    (avanzanDirecto <= tamañoInferior * 2 ? tamañoInferior * 2 : tamañoBracket);
-                    // Simplificación: la ronda principal tiene 'avanzanDirecto' partidos/2... 
-                    // En la práctica, fijamos tamañoBracket = siguiente potencia de 2 >= avanzanDirecto
-                    tamañoBracket = 2;
-                    while (tamañoBracket < avanzanDirecto) tamañoBracket *= 2;
+                    S_fp2.Add(S_fp1.Last());
+                    S_fp1 = S_fp1.Take(S_fp1.Count - 1).ToList();
                 }
 
-                int nP = equiposPrimera.Count;
-                int nB = equiposB.Count;
+                // Calcular ganadores de FP1 que van a FP2
+                int ganFP1 = S_fp1.Count / 2;
 
-                // Separar B: nuevos primero para fase previa, luego peores veteranos
-                var nuevos    = (equiposNuevosB ?? new List<int>()).Where(id => equiposB.Contains(id)).ToList();
-                var veteranos = equiposB.Except(nuevos).ToList();
-
-                // Armar lista de TODOS los equipos para decidir fase previa
-                // Priorizamos que los de Primera NUNCA jueguen fase previa si hay suficientes de B
-                var paraPrevia = new List<int>();
-                if (equiposEnPrevia > 0)
+                // Si los ganadores de FP1 + S_fp2 + P_previa != 16, ajustar
+                // En la práctica con los números actuales (12P, 15S):
+                // P_previa = 4, S_fp2 = 12, S_fp1 = 3 (impar→ par=2 + 1 directo), ganFP1 = 1
+                // Verificar: 4 + 12 + 1 = 17 → necesitamos ajuste
+                // La regla: total FP2 = 16 participantes → ganFP1 slots disponibles = 16 - P_previa - S_fp2
+                int slotsFP1enFP2 = 16 - P_previa.Count - S_fp2.Count;
+                // Si S_fp1 > slotsFP1enFP2 * 2, mover el exceso a S_fp2
+                while (S_fp1.Count > slotsFP1enFP2 * 2 && S_fp1.Any())
                 {
-                    paraPrevia.AddRange(nuevos.Take(equiposEnPrevia));
-                    if (paraPrevia.Count < equiposEnPrevia)
-                        paraPrevia.AddRange(veteranos.TakeLast(equiposEnPrevia - paraPrevia.Count));
-                    // Si aún falta (B muy chico), completar con los últimos de Primera
-                    if (paraPrevia.Count < equiposEnPrevia)
-                    {
-                        var faltan = equiposEnPrevia - paraPrevia.Count;
-                        paraPrevia.AddRange(equiposPrimera.TakeLast(faltan));
-                    }
-                    paraPrevia = paraPrevia.Take(equiposEnPrevia).OrderBy(_ => Guid.NewGuid()).ToList();
+                    S_fp2.Add(S_fp1.Last());
+                    S_fp1 = S_fp1.Take(S_fp1.Count - 1).ToList();
+                    slotsFP1enFP2 = 16 - P_previa.Count - S_fp2.Count;
                 }
-
-                // Equipos que pasan directo a la ronda principal (todos menos los de previa)
-                var directos = equiposPrimera.Concat(equiposB).Except(paraPrevia).OrderBy(_ => Guid.NewGuid()).ToList();
-                var primeraDirectos = directos.Where(id => equiposPrimera.Contains(id)).ToList();
-                var bDirectos       = directos.Where(id => equiposB.Contains(id)).ToList();
-
-                int ganadoresPrevia = equiposEnPrevia / 2;
-
-                // ── NOMBRE de la ronda principal según tamañoBracket ──
-                string ronPrincipal = tamañoBracket switch {
-                    >= 16 => "Dieciseisavos de Final",
-                    8     => "Octavos de Final",
-                    4     => "Cuartos de Final",
-                    2     => "Semifinales",
-                    _     => "Final"
-                };
-
-                // ── Construir lista de rondas EN ORDEN ──
-                var secuencia = new[] { "Dieciseisavos de Final", "Octavos de Final", "Cuartos de Final", "Semifinales", "Final" };
-                var rondas = new List<string>();
-                if (equiposEnPrevia > 0) rondas.Add("Fase Previa");
-                bool agregar = false;
-                foreach (var r in secuencia)
+                if (S_fp1.Count % 2 != 0 && S_fp1.Any())
                 {
-                    if (r == ronPrincipal) agregar = true;
-                    if (agregar) rondas.Add(r);
+                    S_fp2.Add(S_fp1.Last());
+                    S_fp1 = S_fp1.Take(S_fp1.Count - 1).ToList();
                 }
-                if (!rondas.Contains("Final")) rondas.Add("Final");
+                ganFP1 = S_fp1.Count / 2;
 
-                // Insertar rondas
+                // ── CREAR RONDAS ─────────────────────────────────────────────
+                var rondas = new List<(string nombre, int orden, bool habilitada)>();
+                if (S_fp1.Any())      rondas.Add(("Fase Previa 1", 1, true));
+                if (P_previa.Any() || S_fp2.Any()) rondas.Add(("Fase Previa 2", 2, !S_fp1.Any()));
+                rondas.Add(("Octavos de Final", 3, !S_fp1.Any() && !P_previa.Any()));
+                rondas.Add(("Cuartos de Final", 4, false));
+                rondas.Add(("Semifinales",      5, false));
+                rondas.Add(("Final",            6, false));
+
                 var rondaIds = new Dictionary<string, int>();
-                for (int i = 0; i < rondas.Count; i++)
+                foreach (var (nombre, orden, habilitada) in rondas)
                 {
                     using var cmd = new NpgsqlCommand(
                         "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, @N, @O, @H) RETURNING id", conn, tx);
                     cmd.Parameters.AddWithValue("@C", copaId);
-                    cmd.Parameters.AddWithValue("@N", rondas[i]);
-                    cmd.Parameters.AddWithValue("@O", i + 1);
-                    cmd.Parameters.AddWithValue("@H", i == 0);
-                    rondaIds[rondas[i]] = Convert.ToInt32(cmd.ExecuteScalar());
+                    cmd.Parameters.AddWithValue("@N", nombre);
+                    cmd.Parameters.AddWithValue("@O", orden);
+                    cmd.Parameters.AddWithValue("@H", habilitada);
+                    rondaIds[nombre] = Convert.ToInt32(cmd.ExecuteScalar());
                 }
 
-                // ── FASE PREVIA ──
-                if (equiposEnPrevia > 0 && rondaIds.ContainsKey("Fase Previa"))
+                int pos = 0;
+
+                // ── FASE PREVIA 1: S_fp1 entre sí (sorteo aleatorio) ─────────
+                if (S_fp1.Any() && rondaIds.ContainsKey("Fase Previa 1"))
                 {
-                    for (int i = 0; i + 1 < paraPrevia.Count; i += 2)
-                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa"], copaId,
-                            paraPrevia[i], paraPrevia[i + 1], i / 2);
+                    var fp1 = S_fp1.OrderBy(_ => rng.Next()).ToList();
+                    for (int i = 0; i + 1 < fp1.Count; i += 2)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 1"], copaId, fp1[i], fp1[i + 1], i / 2);
                 }
 
-                // ── RONDA PRINCIPAL (tamañoBracket/2 partidos) ──
-                int partidosPrincipal = tamañoBracket / 2;
-                if (rondaIds.ContainsKey(ronPrincipal))
+                // ── FASE PREVIA 2: P_previa vs S, + slots FP1 (sorteo aleatorio) ──
+                if (rondaIds.ContainsKey("Fase Previa 2"))
                 {
-                    int pos = 0;
-                    // Cruces directos: Primera vs B (mientras haya de ambos)
-                    int crucesDirectos = Math.Min(primeraDirectos.Count, bDirectos.Count);
-                    for (int i = 0; i < crucesDirectos; i++)
-                        InsertarPartidoCopa(conn, tx, rondaIds[ronPrincipal], copaId,
-                            primeraDirectos[i], bDirectos[i], pos++);
+                    pos = 0;
+                    // Construir 16 participantes de FP2:
+                    // - P_previa (los peores de Primera) → cada uno vs alguien de S
+                    // - S_fp2 (los mejores de S que no van a FP1)
+                    // - ganFP1 slots vacíos (se completan cuando se sepa el ganador de FP1)
 
-                    // Equipos restantes (si Primera o B tienen de más) entre sí
-                    var restantesPrimera = primeraDirectos.Skip(crucesDirectos).ToList();
-                    var restantesB       = bDirectos.Skip(crucesDirectos).ToList();
-                    var restantes = restantesPrimera.Concat(restantesB).ToList();
-                    for (int i = 0; i + 1 < restantes.Count && pos < partidosPrincipal - ganadoresPrevia; i += 2)
-                        InsertarPartidoCopa(conn, tx, rondaIds[ronPrincipal], copaId,
-                            restantes[i], restantes[i+1], pos++);
-                    // Si queda 1 equipo suelto, le damos un slot con ganador de previa
-                    var sueltoIdx = restantes.Count % 2 == 1 ? restantes.Count - 1 : -1;
+                    var fp2P = P_previa.OrderBy(_ => rng.Next()).ToList();
+                    var fp2S = S_fp2.OrderBy(_ => rng.Next()).ToList();
 
-                    // Slots para ganadores de fase previa
-                    for (int i = 0; i < ganadoresPrevia && pos < partidosPrincipal; i++)
+                    // Cruzar cada P_previa con un S (no P vs P)
+                    for (int i = 0; i < fp2P.Count; i++)
                     {
-                        if (sueltoIdx >= 0)
-                        {
-                            InsertarPartidoCopaConUnEquipo(conn, tx, rondaIds[ronPrincipal], copaId, restantes[sueltoIdx], pos++);
-                            sueltoIdx = -1;
-                        }
-                        else
-                        {
-                            InsertarPartidoCopaVacio(conn, tx, rondaIds[ronPrincipal], copaId, pos++);
-                        }
+                        int sOponente = fp2S[i]; // se emparejan en orden aleatorio
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, fp2P[i], sOponente, pos++);
                     }
 
-                    // Completar slots vacíos restantes si faltan
-                    while (pos < partidosPrincipal)
-                        InsertarPartidoCopaVacio(conn, tx, rondaIds[ronPrincipal], copaId, pos++);
+                    // Partidos entre S restantes (los que no juegan vs P_previa)
+                    var sRestantes = fp2S.Skip(fp2P.Count).ToList();
+                    // sRestantes se emparejan entre sí, dejando ganFP1 slots vacíos
+                    // Los slots vacíos se insertan con equipo_visitante_id = NULL (placeholder FP1)
+                    for (int i = 0; i + 1 < sRestantes.Count && pos < 8; i += 2)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, sRestantes[i], sRestantes[i + 1], pos++);
+
+                    // Slots FP1: partidos con placeholder (local = S, visitante = null → ganador FP1)
+                    for (int i = 0; i < ganFP1 && pos < 8; i++)
+                    {
+                        var sOponente2 = sRestantes.Count > (pos - fp2P.Count - (sRestantes.Count / 2)) * 2
+                            ? sRestantes.Skip(sRestantes.Count - ganFP1 + i).First()
+                            : (sRestantes.LastOrDefault() != 0 ? sRestantes.Last() : fp2S.Last());
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, sOponente2, 0, pos++);
+                    }
                 }
 
-                // ── RONDAS SIGUIENTES vacías ──
-                int partAnterior = partidosPrincipal;
-                int idxPrincipal = rondas.IndexOf(ronPrincipal);
-                for (int ri = idxPrincipal + 1; ri < rondas.Count; ri++)
+                // ── OCTAVOS: P_octavos (P1-P8) vs slots FP2 (placeholders) ───
+                if (rondaIds.ContainsKey("Octavos de Final"))
                 {
-                    var ronNom = rondas[ri];
-                    if (!rondaIds.ContainsKey(ronNom)) continue;
-                    partAnterior = Math.Max(1, partAnterior / 2);
-                    for (int i = 0; i < partAnterior; i++)
-                        InsertarPartidoCopaVacio(conn, tx, rondaIds[ronNom], copaId, i);
+                    var octP = P_octavos.OrderBy(_ => rng.Next()).ToList();
+                    for (int i = 0; i < octP.Count; i++)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Octavos de Final"], copaId, octP[i], 0, i);
                 }
 
                 tx.Commit();
@@ -1022,8 +987,7 @@ namespace TorneoAmigos.Data
             catch (Exception ex) { tx.Rollback(); throw new Exception("Error sorteando copa: " + ex.Message); }
         }
 
-
-        public int SortearSupercopa(int temporadaId, int campeonId, int subcampeonId, int campeonCopaId, bool conSemifinal = false)
+                public int SortearSupercopa(int temporadaId, int campeonId, int subcampeonId, int campeonCopaId, bool conSemifinal = false)
         {
             using var conn = GetConnection();
             conn.Open();
@@ -1203,8 +1167,8 @@ namespace TorneoAmigos.Data
                 VALUES (@R, @C, @L, @V, false, @P)", conn, tx);
             cmd.Parameters.AddWithValue("@R", rondaId);
             cmd.Parameters.AddWithValue("@C", copaId);
-            cmd.Parameters.AddWithValue("@L", localId);
-            cmd.Parameters.AddWithValue("@V", visitanteId);
+            cmd.Parameters.AddWithValue("@L", localId > 0 ? (object)localId : DBNull.Value);
+            cmd.Parameters.AddWithValue("@V", visitanteId > 0 ? (object)visitanteId : DBNull.Value);
             cmd.Parameters.AddWithValue("@P", pos);
             cmd.ExecuteNonQuery();
         }

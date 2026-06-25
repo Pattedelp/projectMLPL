@@ -939,40 +939,26 @@ namespace TorneoAmigos.Data
                         InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 1"], copaId, fp1[i], fp1[i + 1], i / 2);
                 }
 
-                // ── FASE PREVIA 2: P_previa vs S, + slots FP1 (sorteo aleatorio) ──
+                // ── FASE PREVIA 2: 8 partidos, 16 participantes ──────────────
                 if (rondaIds.ContainsKey("Fase Previa 2"))
                 {
                     pos = 0;
-                    // Construir 16 participantes de FP2:
-                    // - P_previa (los peores de Primera) → cada uno vs alguien de S
-                    // - S_fp2 (los mejores de S que no van a FP1)
-                    // - ganFP1 slots vacíos (se completan cuando se sepa el ganador de FP1)
-
                     var fp2P = P_previa.OrderBy(_ => rng.Next()).ToList();
                     var fp2S = S_fp2.OrderBy(_ => rng.Next()).ToList();
 
-                    // Cruzar cada P_previa con un S (no P vs P)
+                    // P_previa vs S (no P vs P)
                     for (int i = 0; i < fp2P.Count; i++)
-                    {
-                        int sOponente = fp2S[i]; // se emparejan en orden aleatorio
-                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, fp2P[i], sOponente, pos++);
-                    }
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, fp2P[i], fp2S[i], pos++);
 
-                    // Partidos entre S restantes (los que no juegan vs P_previa)
+                    // S vs S restantes
                     var sRestantes = fp2S.Skip(fp2P.Count).ToList();
-                    // sRestantes se emparejan entre sí, dejando ganFP1 slots vacíos
-                    // Los slots vacíos se insertan con equipo_visitante_id = NULL (placeholder FP1)
-                    for (int i = 0; i + 1 < sRestantes.Count && pos < 8; i += 2)
-                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, sRestantes[i], sRestantes[i + 1], pos++);
+                    int partidosSvsS = sRestantes.Count / 2;
+                    for (int i = 0; i < partidosSvsS; i++)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, sRestantes[i * 2], sRestantes[i * 2 + 1], pos++);
 
-                    // Slots FP1: partidos con placeholder (local = S, visitante = null → ganador FP1)
+                    // Slots vacíos para ganadores de FP1
                     for (int i = 0; i < ganFP1 && pos < 8; i++)
-                    {
-                        var sOponente2 = sRestantes.Count > (pos - fp2P.Count - (sRestantes.Count / 2)) * 2
-                            ? sRestantes.Skip(sRestantes.Count - ganFP1 + i).First()
-                            : (sRestantes.LastOrDefault() != 0 ? sRestantes.Last() : fp2S.Last());
-                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, sOponente2, 0, pos++);
-                    }
+                        InsertarPartidoCopaVacio(conn, tx, rondaIds["Fase Previa 2"], copaId, pos++);
                 }
 
                 // ── OCTAVOS: P_octavos (P1-P8) vs slots FP2 (placeholders) ───

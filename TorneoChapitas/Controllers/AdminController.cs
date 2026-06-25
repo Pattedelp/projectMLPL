@@ -287,27 +287,39 @@ namespace TorneoAmigos.Controllers
 
             if (dto?.EquiposPrimera != null && dto.EquiposPrimera.Any())
             {
-                equiposPrimera = dto.EquiposPrimera;
-                var seleccionadosB = dto.EquiposB ?? new List<int>();
+                // Ordenar Primera: mejor→peor según tabla
+                var tablaPrimera = _repo.GetTablaPosiciones(1);
+                equiposPrimera = tablaPrimera
+                    .OrderByDescending(t => t.Puntos).ThenByDescending(t => t.DiferenciaGoles)
+                    .Select(t => t.EquipoId)
+                    .Where(id => dto.EquiposPrimera.Contains(id))
+                    .ToList();
+                // Agregar los de Primera sin partidos al final
+                var sinPartidosPrimera = dto.EquiposPrimera.Except(equiposPrimera).ToList();
+                equiposPrimera.AddRange(sinPartidosPrimera);
 
-                // Tabla de la B para ordenar peor→mejor
+                var seleccionadosB = dto.EquiposB ?? new List<int>();
+                // Ordenar B: mejor→peor según tabla
                 var tablaB = _repo.GetTablaPosiciones(2);
-                // IDs con partidos ordenados de peor a mejor
                 var conPartidos = tablaB
-                    .OrderBy(t => t.Puntos).ThenBy(t => t.DiferenciaGoles)
+                    .OrderByDescending(t => t.Puntos).ThenByDescending(t => t.DiferenciaGoles)
                     .Select(t => t.EquipoId)
                     .Where(id => seleccionadosB.Contains(id))
                     .ToList();
-                // Nuevos = seleccionados que no tienen partidos en tabla
                 equiposNuevos = seleccionadosB.Except(conPartidos).ToList();
-                // Orden final: nuevos al final (peores), luego peores de tabla
                 equiposBOrdenados = conPartidos.Concat(equiposNuevos).ToList();
             }
             else
             {
-                equiposPrimera    = _repo.GetEquiposByDivision(1).Select(e => e.Id).ToList();
+                // Sin dto: usar tabla actual mejor→peor
+                var tablaPrimera  = _repo.GetTablaPosiciones(1);
+                var conPartidosP  = tablaPrimera.OrderByDescending(t => t.Puntos).ThenByDescending(t => t.DiferenciaGoles)
+                                               .Select(t => t.EquipoId).ToList();
+                var todosP        = _repo.GetEquiposByDivision(1).Select(e => e.Id).ToList();
+                equiposPrimera    = conPartidosP.Concat(todosP.Except(conPartidosP)).ToList();
+
                 var tablaB        = _repo.GetTablaPosiciones(2);
-                var conPartidos   = tablaB.OrderBy(t => t.Puntos).ThenBy(t => t.DiferenciaGoles)
+                var conPartidos   = tablaB.OrderByDescending(t => t.Puntos).ThenByDescending(t => t.DiferenciaGoles)
                                          .Select(t => t.EquipoId).ToList();
                 var todosB        = _repo.GetEquiposByDivision(2).Select(e => e.Id).ToList();
                 equiposNuevos     = todosB.Except(conPartidos).ToList();

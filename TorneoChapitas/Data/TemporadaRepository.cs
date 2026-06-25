@@ -850,69 +850,46 @@ namespace TorneoAmigos.Data
                 }
 
                 // ── LÓGICA DEL SORTEO ──────────────────────────────────────────
-                // Objetivos:
-                // 1. Octavos siempre tiene 16 equipos (8 partidos)
-                // 2. Los primeros 8 de Primera pasan directo a Octavos
-                // 3. El resto juega fases previas mezclando Primera (peores) y Nacional (todos)
-                // 4. Primera nunca vs Primera en fases previas
-                // 5. El orden es según tabla de posiciones al momento del sorteo
+                // Estructura fija:
+                // FP1: S10-S15 entre sí (3 partidos, 3 ganadores)
+                // FP2: P9-P12 vs S5-S8, S1 vs S9, S2-S4 vs ganadores FP1 (8 partidos)
+                // Octavos: P1-P8 vs ganadores FP2 (8 partidos)
 
                 var rng = new Random();
-                int nP = equiposPrimera.Count; // ej: 12
-                int nS = equiposB.Count;        // ej: 15
+                int nP = equiposPrimera.Count; // ordenados mejor→peor: P1, P2, ...
+                int nS = equiposB.Count;        // ordenados mejor→peor: S1, S2, ...
 
-                // Primeros 8 de Primera → directo a Octavos
-                int directosOctavos = Math.Min(8, nP);
-                var P_octavos = equiposPrimera.Take(directosOctavos).ToList();      // P1-P8
-                var P_previa  = equiposPrimera.Skip(directosOctavos).ToList();      // P9-P12 (los que juegan fase previa)
+                // Separar equipos por posición
+                var P_octavos = equiposPrimera.Take(8).ToList();           // P1-P8 → directo a Octavos
+                var P_previa  = equiposPrimera.Skip(8).ToList();           // P9-P12 → FP2
 
-                // Necesitamos 8 ganadores para completar Octavos → 8 partidos en FP2
-                // Total en FP2: P_previa.Count + algunos de S completando hasta 16 participantes (8 partidos)
-                // Participantes FP2 = 16 → P_previa + S necesarios = 16
-                // S que entran directo a FP2 = 16 - P_previa.Count (si sobran S, van a FP1)
-                int participantesFP2 = 16; // siempre 8 partidos
-                int sDirectosFP2     = participantesFP2 - P_previa.Count; // S1 a S(sDirectosFP2)
-                // ── DISTRIBUCIÓN CORRECTA ─────────────────────────────────
-                // FP2 necesita exactamente 16 participantes (8 partidos)
-                // Participantes FP2 = P_previa + S_directos_FP2 + ganadores_FP1
-                // Queremos maximizar FP1 (equipos peores de S)
-                // Formula: ganFP1 = 16 - P_previa - S_directos_FP2
-                // S en FP1 = ganFP1 * 2 (cada partido da 1 ganador)
+                // S se dividen en 3 grupos:
+                // S1-S4 → FP2 (vs ganadores FP1)
+                // S5-S9 → FP2 (vs P_previa y S1)
+                // S10+ → FP1
+                int cantFP1 = Math.Max(0, nS - 9);  // los que van a FP1
+                if (cantFP1 % 2 != 0) cantFP1--;    // asegurar par
 
-                // Calculamos cuántos S van a FP1 directamente
-                // Empezamos con S_fp2 = 16 - P_previa slots para S directos
-                // Pero queremos que los peores de S jueguen FP1
-                // Con nS=15, nP_previa=4: tenemos 12 slots para S en FP2 → 3 van a FP1
-                // Pero 3 es impar → 2 juegan FP1 (1 partido), el 3ro va a FP2 → S_fp2=13
+                var S_fp1   = equiposB.Skip(nS - cantFP1).ToList(); // los peores van a FP1
+                var S_resto = equiposB.Take(nS - cantFP1).ToList(); // los demás van a FP2
 
-                // Recalcular limpio:
-                // Queremos el mayor número par de S en FP1 tal que FP2 tenga exactamente 16
-                int maxSenFP1 = 16 - P_previa.Count - (equiposB.Count - (16 - P_previa.Count));
-                // Simplificado: total slots FP2 = 16, P_previa ocupa algunos, resto son S o ganFP1
-                // Con nS equipos de B y P_previa de Primera:
-                // FP2 necesita: P_previa + S_directo_FP2 + ganFP1 = 16
-                // ganFP1 = S_fp1 / 2
-                // Entonces: P_previa + S_directo + S_fp1/2 = 16
-                // S_directo + S_fp1 = nS → S_directo = nS - S_fp1
-                // Reemplazando: P_previa + nS - S_fp1 + S_fp1/2 = 16
-                // P_previa + nS - S_fp1/2 = 16
-                // S_fp1/2 = P_previa + nS - 16
-                // S_fp1 = 2 * (P_previa + nS - 16)
+                // De S_resto: los primeros 4 (S1-S4) esperan ganadores FP1
+                // El resto (S5-S9 + lo que sobre) van contra P_previa y entre sí
+                int ganFP1   = cantFP1 / 2;
+                var S_vs_FP1 = S_resto.Take(ganFP1).ToList();       // S1-S(ganFP1) → vs ganadores FP1
+                var S_vs_P   = S_resto.Skip(ganFP1).ToList();        // S(ganFP1+1)+ → vs P_previa o entre sí
 
-                int S_fp1_ideal = 2 * (P_previa.Count + nS - 16);
-                if (S_fp1_ideal < 0) S_fp1_ideal = 0;
-                // Asegurar par
-                if (S_fp1_ideal % 2 != 0) S_fp1_ideal--;
-
-                var S_fp1 = equiposB.TakeLast(S_fp1_ideal).ToList();
-                var S_fp2 = equiposB.Take(nS - S_fp1_ideal).ToList();
-                int ganFP1 = S_fp1.Count / 2;
+                // Mezclar aleatoriamente dentro de cada grupo
+                S_fp1   = S_fp1.OrderBy(_   => rng.Next()).ToList();
+                S_vs_FP1 = S_vs_FP1.OrderBy(_ => rng.Next()).ToList();
+                S_vs_P   = S_vs_P.OrderBy(_   => rng.Next()).ToList();
+                var P_prev_rand = P_previa.OrderBy(_ => rng.Next()).ToList();
 
                 // ── CREAR RONDAS ─────────────────────────────────────────────
                 var rondas = new List<(string nombre, int orden, bool habilitada)>();
-                if (S_fp1.Any())      rondas.Add(("Fase Previa 1", 1, true));
-                if (P_previa.Any() || S_fp2.Any()) rondas.Add(("Fase Previa 2", 2, !S_fp1.Any()));
-                rondas.Add(("Octavos de Final", 3, !S_fp1.Any() && !P_previa.Any()));
+                if (S_fp1.Any())  rondas.Add(("Fase Previa 1", 1, true));
+                rondas.Add(("Fase Previa 2", 2, !S_fp1.Any()));
+                rondas.Add(("Octavos de Final", 3, false));
                 rondas.Add(("Cuartos de Final", 4, false));
                 rondas.Add(("Semifinales",      5, false));
                 rondas.Add(("Final",            6, false));
@@ -931,757 +908,43 @@ namespace TorneoAmigos.Data
 
                 int pos = 0;
 
-                // ── FASE PREVIA 1: S_fp1 entre sí (sorteo aleatorio) ─────────
+                // ── FASE PREVIA 1: los peores de S entre sí ─────────────────
                 if (S_fp1.Any() && rondaIds.ContainsKey("Fase Previa 1"))
                 {
-                    var fp1 = S_fp1.OrderBy(_ => rng.Next()).ToList();
-                    for (int i = 0; i + 1 < fp1.Count; i += 2)
-                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 1"], copaId, fp1[i], fp1[i + 1], i / 2);
+                    pos = 0;
+                    for (int i = 0; i + 1 < S_fp1.Count; i += 2)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 1"], copaId, S_fp1[i], S_fp1[i + 1], i / 2);
                 }
 
-                // ── FASE PREVIA 2: 8 partidos, 16 participantes ──────────────
+                // ── FASE PREVIA 2: 8 partidos ───────────────────────────────
                 if (rondaIds.ContainsKey("Fase Previa 2"))
                 {
                     pos = 0;
-                    var fp2P = P_previa.OrderBy(_ => rng.Next()).ToList();
-                    var fp2S = S_fp2.OrderBy(_ => rng.Next()).ToList();
 
-                    // P_previa vs S (no P vs P)
-                    for (int i = 0; i < fp2P.Count; i++)
-                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, fp2P[i], fp2S[i], pos++);
+                    // P_previa vs S_vs_P (P9 vs S5, P10 vs S6, etc.)
+                    for (int i = 0; i < P_prev_rand.Count && i < S_vs_P.Count; i++)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, P_prev_rand[i], S_vs_P[i], pos++);
 
-                    // S vs S restantes
-                    var sRestantes = fp2S.Skip(fp2P.Count).ToList();
-                    int partidosSvsS = sRestantes.Count / 2;
-                    for (int i = 0; i < partidosSvsS; i++)
-                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, sRestantes[i * 2], sRestantes[i * 2 + 1], pos++);
+                    // S vs S restantes (ej: S1 vs S9 si sobra alguien de S_vs_P)
+                    var sVsPRestantes = S_vs_P.Skip(P_prev_rand.Count).ToList();
+                    for (int i = 0; i + 1 < sVsPRestantes.Count; i += 2)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 2"], copaId, sVsPRestantes[i], sVsPRestantes[i + 1], pos++);
 
-                    // Slots vacíos para ganadores de FP1
-                    for (int i = 0; i < ganFP1 && pos < 8; i++)
+                    // S_vs_FP1 vs slots vacíos (ganadores de FP1)
+                    for (int i = 0; i < S_vs_FP1.Count && pos < 8; i++)
+                        InsertarPartidoCopaConUnEquipo(conn, tx, rondaIds["Fase Previa 2"], copaId, S_vs_FP1[i], pos++);
+
+                    // Slots completamente vacíos si aún faltan partidos para llegar a 8
+                    while (pos < 8)
                         InsertarPartidoCopaVacio(conn, tx, rondaIds["Fase Previa 2"], copaId, pos++);
                 }
 
-                // ── OCTAVOS: P_octavos (P1-P8) vs slots FP2 (placeholders) ───
+                // ── OCTAVOS: P1-P8 vs slots vacíos (ganadores FP2) ──────────
                 if (rondaIds.ContainsKey("Octavos de Final"))
                 {
                     var octP = P_octavos.OrderBy(_ => rng.Next()).ToList();
                     for (int i = 0; i < octP.Count; i++)
-                        InsertarPartidoCopa(conn, tx, rondaIds["Octavos de Final"], copaId, octP[i], 0, i);
+                        InsertarPartidoCopaConUnEquipo(conn, tx, rondaIds["Octavos de Final"], copaId, octP[i], i);
                 }
 
-                tx.Commit();
-                return copaId;
-            }
-            catch (Exception ex) { tx.Rollback(); throw new Exception("Error sorteando copa: " + ex.Message); }
-        }
 
-                public int SortearSupercopa(int temporadaId, int campeonId, int subcampeonId, int campeonCopaId, bool conSemifinal = false)
-        {
-            using var conn = GetConnection();
-            conn.Open();
-            using var tx = conn.BeginTransaction();
-            try
-            {
-                int copaId;
-                using (var cmd = new NpgsqlCommand(
-                    "INSERT INTO copas (temporada_id, tipo, nombre, finalizada) VALUES (@T, 'supercopa', 'Supercopa Argentina', false) RETURNING id", conn, tx))
-                {
-                    cmd.Parameters.AddWithValue("@T", temporadaId);
-                    copaId = Convert.ToInt32(cmd.ExecuteScalar());
-                }
-
-                if (conSemifinal)
-                {
-                    // Campeón del torneo == Campeón copa → Semifinal primero
-                    int semifinalId;
-                    using (var cmd = new NpgsqlCommand(
-                        "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, 'Semifinal', 1, true) RETURNING id", conn, tx))
-                    {
-                        cmd.Parameters.AddWithValue("@C", copaId);
-                        semifinalId = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-                    InsertarPartidoCopa(conn, tx, semifinalId, copaId, campeonId, subcampeonId, 0);
-
-                    int finalId;
-                    using (var cmd = new NpgsqlCommand(
-                        "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, 'Final', 2, false) RETURNING id", conn, tx))
-                    {
-                        cmd.Parameters.AddWithValue("@C", copaId);
-                        finalId = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-                    InsertarPartidoCopaVacio(conn, tx, finalId, copaId, 0);
-                }
-                else
-                {
-                    // Distinto campeón → Final directa
-                    int finalId;
-                    using (var cmd = new NpgsqlCommand(
-                        "INSERT INTO copa_rondas (copa_id, nombre, orden, habilitada) VALUES (@C, 'Final', 1, true) RETURNING id", conn, tx))
-                    {
-                        cmd.Parameters.AddWithValue("@C", copaId);
-                        finalId = Convert.ToInt32(cmd.ExecuteScalar());
-                    }
-                    InsertarPartidoCopa(conn, tx, finalId, copaId, campeonId, campeonCopaId, 0);
-                }
-
-                tx.Commit();
-                return copaId;
-            }
-            catch (Exception ex) { tx.Rollback(); throw new Exception("Error sorteando supercopa: " + ex.Message); }
-        }
-
-        public string? GetTipoCopaDePartido(int copaPartidoId)
-        {
-            using var conn = GetConnection();
-            using var cmd = new NpgsqlCommand(@"
-                SELECT c.tipo FROM copa_partidos cp
-                JOIN copas c ON cp.copa_id = c.id
-                WHERE cp.id = @Id", conn);
-            cmd.Parameters.AddWithValue("@Id", copaPartidoId);
-            conn.Open();
-            var result = cmd.ExecuteScalar();
-            return result?.ToString();
-        }
-
-        public bool GuardarResultadoCopa(int partidoId, int golesLocal, int golesVisitante)
-        {
-            using var conn = GetConnection();
-            conn.Open();
-            using var tx = conn.BeginTransaction();
-            try
-            {
-                // Guardar resultado
-                using (var cmd = new NpgsqlCommand(
-                    "UPDATE copa_partidos SET goles_local=@GL, goles_visitante=@GV, jugado=true WHERE id=@Id", conn, tx))
-                {
-                    cmd.Parameters.AddWithValue("@GL", golesLocal);
-                    cmd.Parameters.AddWithValue("@GV", golesVisitante);
-                    cmd.Parameters.AddWithValue("@Id", partidoId);
-                    cmd.ExecuteNonQuery();
-                }
-
-                // Obtener datos del partido
-                int copaId, rondaId, posicion, ganadorId;
-                using (var cmd = new NpgsqlCommand(@"
-                    SELECT copa_id, ronda_id, posicion_bracket,
-                           CASE WHEN goles_local > goles_visitante THEN equipo_local_id
-                                ELSE equipo_visitante_id END as ganador_id
-                    FROM copa_partidos WHERE id = @Id", conn, tx))
-                {
-                    cmd.Parameters.AddWithValue("@Id", partidoId);
-                    using var r = cmd.ExecuteReader();
-                    if (!r.Read()) { tx.Rollback(); return false; }
-                    copaId   = r.GetInt32(0);
-                    rondaId  = r.GetInt32(1);
-                    posicion = r.GetInt32(2);
-                    ganadorId = r.IsDBNull(3) ? 0 : r.GetInt32(3);
-                }
-
-                // AUTO-AVANCE: buscar slot vacío en la siguiente ronda
-                if (ganadorId > 0)
-                {
-                    int? siguienteRondaId = null;
-                    using (var cmd2 = new NpgsqlCommand(@"
-                        SELECT id FROM copa_rondas
-                        WHERE copa_id = @C
-                          AND orden > (SELECT orden FROM copa_rondas WHERE id = @R)
-                        ORDER BY orden LIMIT 1", conn, tx))
-                    {
-                        cmd2.Parameters.AddWithValue("@C", copaId);
-                        cmd2.Parameters.AddWithValue("@R", rondaId);
-                        var res = cmd2.ExecuteScalar();
-                        if (res != null) siguienteRondaId = Convert.ToInt32(res);
-                    }
-
-                    if (siguienteRondaId.HasValue)
-                    {
-                        // Buscar partido en siguiente ronda donde local o visitante esté vacío
-                        // La posición del partido siguiente = posicion_actual / 2
-                        int posSiguiente = posicion / 2;
-                        bool esLocal = posicion % 2 == 0;
-
-                        // Solo actualizar si ese campo está vacío (no pisar equipos ya asignados)
-                        var campoCheck = esLocal ? "equipo_local_id" : "equipo_visitante_id";
-                        using var cmdAdv = new NpgsqlCommand($@"
-                            UPDATE copa_partidos
-                            SET {campoCheck} = @G
-                            WHERE ronda_id = @SR
-                              AND posicion_bracket = @PS
-                              AND copa_id = @C
-                              AND {campoCheck} IS NULL", conn, tx);
-                        cmdAdv.Parameters.AddWithValue("@G",  ganadorId);
-                        cmdAdv.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
-                        cmdAdv.Parameters.AddWithValue("@PS", posSiguiente);
-                        cmdAdv.Parameters.AddWithValue("@C",  copaId);
-                        cmdAdv.ExecuteNonQuery();
-                    }
-                }
-
-                tx.Commit();
-                return true;
-            }
-            catch { tx.Rollback(); return false; }
-        }
-
-        public bool ToggleRondaHabilitada(int rondaId, bool habilitada)
-        {
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand(
-                "UPDATE copa_rondas SET habilitada=@H WHERE id=@Id", conn);
-            cmd.Parameters.AddWithValue("@H",   habilitada);
-            cmd.Parameters.AddWithValue("@Id",  rondaId);
-            conn.Open();
-            return cmd.ExecuteNonQuery() > 0;
-        }
-
-        private void InsertarPartidoCopaConUnEquipo(NpgsqlConnection conn, NpgsqlTransaction tx,
-            int rondaId, int copaId, int localId, int pos)
-        {
-            using var cmd = new NpgsqlCommand(@"
-                INSERT INTO copa_partidos (ronda_id, copa_id, equipo_local_id, jugado, posicion_bracket)
-                VALUES (@R, @C, @L, false, @P)", conn, tx);
-            cmd.Parameters.AddWithValue("@R", rondaId);
-            cmd.Parameters.AddWithValue("@C", copaId);
-            cmd.Parameters.AddWithValue("@L", localId);
-            cmd.Parameters.AddWithValue("@P", pos);
-            cmd.ExecuteNonQuery();
-        }
-
-        private void InsertarPartidoCopa(NpgsqlConnection conn, NpgsqlTransaction tx,
-            int rondaId, int copaId, int localId, int visitanteId, int pos)
-        {
-            using var cmd = new NpgsqlCommand(@"
-                INSERT INTO copa_partidos (ronda_id, copa_id, equipo_local_id, equipo_visitante_id, jugado, posicion_bracket)
-                VALUES (@R, @C, @L, @V, false, @P)", conn, tx);
-            cmd.Parameters.AddWithValue("@R", rondaId);
-            cmd.Parameters.AddWithValue("@C", copaId);
-            cmd.Parameters.AddWithValue("@L", localId > 0 ? (object)localId : DBNull.Value);
-            cmd.Parameters.AddWithValue("@V", visitanteId > 0 ? (object)visitanteId : DBNull.Value);
-            cmd.Parameters.AddWithValue("@P", pos);
-            cmd.ExecuteNonQuery();
-        }
-
-        private void InsertarPartidoCopaVacio(NpgsqlConnection conn, NpgsqlTransaction tx,
-            int rondaId, int copaId, int pos)
-        {
-            using var cmd = new NpgsqlCommand(@"
-                INSERT INTO copa_partidos (ronda_id, copa_id, jugado, posicion_bracket)
-                VALUES (@R, @C, false, @P)", conn, tx);
-            cmd.Parameters.AddWithValue("@R", rondaId);
-            cmd.Parameters.AddWithValue("@C", copaId);
-            cmd.Parameters.AddWithValue("@P", pos);
-            cmd.ExecuteNonQuery();
-        }
-
-        private static Temporada MapTemporada(IDataReader r) => new()
-        {
-            Id = r.GetInt32(0), Numero = r.GetInt32(1), Nombre = r.GetString(2),
-            FechaInicio = r.IsDBNull(3) ? null : r.GetDateTime(3),
-            FechaFin    = r.IsDBNull(4) ? null : r.GetDateTime(4),
-            Activa = r.GetBoolean(5), Finalizada = r.GetBoolean(6),
-            CantDescensos       = r.FieldCount > 7  && !r.IsDBNull(7)  ? r.GetInt32(7)  : 2,
-            CantAscensos        = r.FieldCount > 8  && !r.IsDBNull(8)  ? r.GetInt32(8)  : 2,
-            TienePromocion      = r.FieldCount > 9  && !r.IsDBNull(9)  && r.GetBoolean(9),
-            PosPromocionPrimera = r.FieldCount > 10 && !r.IsDBNull(10) ? r.GetInt32(10) : null,
-            PosPromocionB       = r.FieldCount > 11 && !r.IsDBNull(11) ? r.GetInt32(11) : null,
-        };
-
-        private static Copa MapCopa(IDataReader r) => new()
-        {
-            Id = r.GetInt32(0), TemporadaId = r.IsDBNull(1) ? null : r.GetInt32(1),
-            Tipo = r.GetString(2), Nombre = r.GetString(3), Finalizada = r.GetBoolean(4)
-        };
-
-        // ── PALMARÉS ───────────────────────────────────
-
-        public void BorrarTitulo(string tipoTitulo, int? temporadaId)
-        {
-            if (!temporadaId.HasValue) return;
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand(
-                "DELETE FROM palmares WHERE tipo_titulo = @T AND temporada_id = @TId", conn);
-            cmd.Parameters.AddWithValue("@T",   tipoTitulo);
-            cmd.Parameters.AddWithValue("@TId", temporadaId.Value);
-            conn.Open();
-            cmd.ExecuteNonQuery();
-        }
-
-        public void AgregarTitulo(int equipoId, string tipoTitulo, string nombreTitulo, int? temporadaId, string temporadaNombre)
-        {
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand(@"
-                INSERT INTO palmares (equipo_id, nombre_equipo, tipo_titulo, nombre_titulo, temporada_id, temporada_nombre)
-                VALUES (@E, (SELECT nombre FROM equipos WHERE id = @E), @T, @N, @TId, @TNom)", conn);
-            cmd.Parameters.AddWithValue("@E",    equipoId);
-            cmd.Parameters.AddWithValue("@T",    tipoTitulo);
-            cmd.Parameters.AddWithValue("@N",    nombreTitulo);
-            cmd.Parameters.AddWithValue("@TId",  (object?)temporadaId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@TNom", temporadaNombre);
-            conn.Open();
-            cmd.ExecuteNonQuery();
-        }
-
-        // ── TROFEOS (VIDRIERA) ──────────────────────────
-        public List<RankingAllTimeEntry> GetRankingAllTime()
-        {
-            // Verificar si existe la tabla de histórico antes de usarla
-            bool tablaHistoricoExiste = false;
-            using (var connChk = GetConnection())
-            {
-                connChk.Open();
-                using var chk = new NpgsqlCommand(
-                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='enfrentamientos_historicos')", connChk);
-                tablaHistoricoExiste = (bool)(chk.ExecuteScalar() ?? false);
-            }
-
-            // Sistema de puntos:
-            // Victoria 5-0/5-1/5-2/5-3 = 3pts ganador, 0pts perdedor
-            // Victoria 5-4             = 2pts ganador, 1pt  perdedor
-            // Fuentes: tabla 'partidos' (div=1, excluyendo histórico y copas)
-            //          tabla 'enfrentamientos_historicos' (torneo = 'Liga', division_id=1) si existe
-            var sql = @"
-                WITH todos_los_partidos AS (
-                    -- Partidos del sistema (Primera División, excluyendo fecha histórica)
-                    SELECT
-                        p.equipolocalid    AS local_id,
-                        p.equipovisitanteid AS visit_id,
-                        p.goleslocal       AS gl,
-                        p.golesvisitante   AS gv
-                    FROM partidos p
-                    WHERE p.divisionid = 1
-                      AND p.jugado = true
-                      AND p.fechaid NOT IN (SELECT id FROM fechas WHERE nombre = 'Histórico Pre-App')
-
-                    @UNION_HISTORICO@
-                ),
-                puntos_por_partido AS (
-                    SELECT
-                        local_id AS equipo_id,
-                        gl AS goles_favor,
-                        gv AS goles_contra,
-                        CASE
-                            WHEN gl > gv AND (gl - gv) >= 2 THEN 3  -- 5-0/5-1/5-2/5-3
-                            WHEN gl > gv AND (gl - gv) = 1  THEN 2  -- 5-4
-                            WHEN gl < gv AND (gv - gl) = 1  THEN 1  -- perdió 4-5
-                            ELSE 0
-                        END AS puntos
-                    FROM todos_los_partidos
-
-                    UNION ALL
-
-                    SELECT
-                        visit_id AS equipo_id,
-                        gv AS goles_favor,
-                        gl AS goles_contra,
-                        CASE
-                            WHEN gv > gl AND (gv - gl) >= 2 THEN 3
-                            WHEN gv > gl AND (gv - gl) = 1  THEN 2
-                            WHEN gv < gl AND (gl - gv) = 1  THEN 1
-                            ELSE 0
-                        END AS puntos
-                    FROM todos_los_partidos
-                )
-                SELECT
-                    e.id,
-                    e.nombre,
-                    COALESCE(e.pais_code, '') AS pais_code,
-                    COUNT(*)                                              AS partidos_jugados,
-                    COUNT(*) FILTER (WHERE pp.goles_favor > pp.goles_contra) AS victorias,
-                    COUNT(*) FILTER (WHERE pp.goles_favor < pp.goles_contra) AS derrotas,
-                    COALESCE(SUM(pp.goles_favor),  0)                    AS goles_a_favor,
-                    COALESCE(SUM(pp.goles_contra), 0)                    AS goles_en_contra,
-                    COALESCE(SUM(pp.puntos), 0)                          AS puntos_total
-                FROM equipos e
-                JOIN puntos_por_partido pp ON pp.equipo_id = e.id
-                GROUP BY e.id, e.nombre, e.pais_code
-                HAVING COUNT(*) > 0
-                ORDER BY puntos_total DESC, victorias DESC, goles_a_favor DESC";
-
-            var lista = new List<RankingAllTimeEntry>();
-            var unionHistorico = tablaHistoricoExiste ? @"
-                    UNION ALL
-                    SELECT eh.equipo_local_id, eh.equipo_visitante_id, eh.goles_local, eh.goles_visitante
-                    FROM enfrentamientos_historicos eh
-                    WHERE eh.torneo = 'Liga' AND eh.division_id = 1" : "";
-
-            sql = sql.Replace("@UNION_HISTORICO@", unionHistorico);
-
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand(sql, conn);
-            conn.Open();
-            using var r = cmd.ExecuteReader();
-            while (r.Read())
-            {
-                var nombre   = r.GetString(1);
-                var paisCode = r.GetString(2);
-                lista.Add(new RankingAllTimeEntry
-                {
-                    EquipoId        = r.GetInt32(0),
-                    NombreEquipo    = nombre,
-                    FlagCode        = !string.IsNullOrEmpty(paisCode) ? paisCode : BanderaMap.GetCode(nombre),
-                    PartidosJugados = Convert.ToInt32(r.GetInt64(3)),
-                    Victorias       = Convert.ToInt32(r.GetInt64(4)),
-                    Derrotas        = Convert.ToInt32(r.GetInt64(5)),
-                    GolesAFavor     = Convert.ToInt32(r.GetInt64(6)),
-                    GolesEnContra   = Convert.ToInt32(r.GetInt64(7)),
-                    PuntosTotal     = Convert.ToInt32(r.GetInt64(8))
-                });
-            }
-            return lista;
-        }
-
-        // ── HISTORIAL LEGACY ─────────────────────────────
-        public List<LegacyTemporada> GetLegacyTemporadas()
-        {
-            const string sql = @"
-                SELECT
-                    eh.equipo_local_id, eh.equipo_visitante_id,
-                    eh.goles_local, eh.goles_visitante,
-                    eh.temporada_nombre,
-                    el.nombre as nombre_local, COALESCE(el.pais_code,'') as flag_local,
-                    ev.nombre as nombre_visit, COALESCE(ev.pais_code,'') as flag_visit
-                FROM enfrentamientos_historicos eh
-                JOIN equipos el ON eh.equipo_local_id = el.id
-                JOIN equipos ev ON eh.equipo_visitante_id = ev.id
-                WHERE eh.torneo = 'Liga' AND eh.division_id = 1
-                  AND eh.temporada_nombre LIKE 'Temporada %'
-                ORDER BY eh.temporada_nombre, eh.id";
-
-            using var conn = GetConnection();
-            using var cmd = new NpgsqlCommand(sql, conn);
-            conn.Open();
-            using var r = cmd.ExecuteReader();
-
-            var dict = new Dictionary<string, List<(int lId, int vId, string lN, string lF, string vN, string vF, int gl, int gv)>>();
-            while (r.Read())
-            {
-                var tempNombre = r.GetString(4);
-                if (!dict.ContainsKey(tempNombre)) dict[tempNombre] = new();
-                dict[tempNombre].Add((
-                    r.GetInt32(0), r.GetInt32(1),
-                    r.GetString(5), r.GetString(6),
-                    r.GetString(7), r.GetString(8),
-                    r.GetInt32(2), r.GetInt32(3)
-                ));
-            }
-            r.Close();
-
-            var resultado = new List<LegacyTemporada>();
-            foreach (var (tempNombre, partidos) in dict.OrderBy(x => x.Key))
-            {
-                var numMatch = System.Text.RegularExpressions.Regex.Match(tempNombre, @"\d+");
-                int numero = numMatch.Success ? int.Parse(numMatch.Value) : 0;
-
-                var stats = new Dictionary<int, (string nombre, string flag, int pj, int v, int d, int gf, int gc, int pts)>();
-
-                void AddStats(int id, string nombre, string flag, int gf, int gc)
-                {
-                    if (!stats.ContainsKey(id)) stats[id] = (nombre, flag, 0,0,0,0,0,0);
-                    var s = stats[id];
-                    stats[id] = (s.nombre, s.flag, s.pj+1, s.v, s.d, s.gf+gf, s.gc+gc, s.pts);
-                }
-
-                var fechas = new Dictionary<int, List<LegacyPartido>>();
-                int fechaNum = 1;
-                foreach (var p in partidos)
-                {
-                    AddStats(p.lId, p.lN, p.lF, p.gl, p.gv);
-                    AddStats(p.vId, p.vN, p.vF, p.gv, p.gl);
-
-                    int diff = Math.Abs(p.gl - p.gv);
-                    var sl = stats[p.lId]; var sv = stats[p.vId];
-                    if (p.gl > p.gv)
-                    {
-                        stats[p.lId] = (sl.nombre, sl.flag, sl.pj, sl.v+1, sl.d, sl.gf, sl.gc, sl.pts + (diff >= 2 ? 3 : 2));
-                        stats[p.vId] = (sv.nombre, sv.flag, sv.pj, sv.v, sv.d+1, sv.gf, sv.gc, sv.pts + (diff == 1 ? 1 : 0));
-                    }
-                    else
-                    {
-                        stats[p.vId] = (sv.nombre, sv.flag, sv.pj, sv.v+1, sv.d, sv.gf, sv.gc, sv.pts + (diff >= 2 ? 3 : 2));
-                        stats[p.lId] = (sl.nombre, sl.flag, sl.pj, sl.v, sl.d+1, sl.gf, sl.gc, sl.pts + (diff == 1 ? 1 : 0));
-                    }
-
-                    if (!fechas.ContainsKey(fechaNum)) fechas[fechaNum] = new();
-                    fechas[fechaNum].Add(new LegacyPartido
-                    {
-                        EquipoLocalId = p.lId, NombreLocal = p.lN, FlagLocal = p.lF,
-                        EquipoVisitanteId = p.vId, NombreVisitante = p.vN, FlagVisitante = p.vF,
-                        GolesLocal = p.gl, GolesVisitante = p.gv
-                    });
-                    if (fechas[fechaNum].Count >= 5) fechaNum++;
-                }
-
-                var tabla = stats.Values
-                    .Select(s => new LegacyPosicion
-                    {
-                        EquipoId = stats.First(x => x.Value.nombre == s.nombre).Key,
-                        NombreEquipo = s.nombre,
-                        FlagCode = !string.IsNullOrEmpty(s.flag) ? s.flag : BanderaMap.GetCode(s.nombre),
-                        PJ = s.pj, V = s.v, D = s.d, GF = s.gf, GC = s.gc, Pts = s.pts
-                    })
-                    .OrderByDescending(x => x.Pts).ThenByDescending(x => x.V)
-                    .ThenByDescending(x => x.GF - x.GC).ToList();
-
-                resultado.Add(new LegacyTemporada
-                {
-                    Numero = numero,
-                    Tabla = tabla,
-                    TotalPartidos = partidos.Count,
-                    Fechas = fechas.OrderBy(f => f.Key).Select(f => new LegacyFecha
-                    {
-                        Numero = f.Key,
-                        Partidos = f.Value
-                    }).ToList()
-                });
-            }
-            return resultado.OrderBy(t => t.Numero).ToList();
-        }
-
-        public List<RankingFifaEntry> GetRankingFifa(int ultimasTemporadas = 5)
-        {
-            // Obtener IDs de las últimas N temporadas finalizadas
-            const string sqlTemps = @"
-                SELECT id FROM temporadas 
-                WHERE finalizada = true 
-                ORDER BY numero DESC 
-                LIMIT @N";
-
-            const string sqlPuntos = @"
-                WITH puntos_base AS (
-                    -- Puntos por posición en tabla final (solo Primera División)
-                    SELECT
-                        tr.equipo_id,
-                        tr.temporada_id,
-                        CASE
-                            WHEN tr.division_id = 1 AND tr.posicion = 1 THEN 30
-                            WHEN tr.division_id = 1 AND tr.posicion = 2 THEN 10
-                            WHEN tr.division_id = 1 AND tr.posicion = 3 THEN 5
-                            ELSE 0
-                        END as pts_posicion
-                    FROM temporada_resultados tr
-                    WHERE tr.temporada_id = ANY(@Temps)
-                      AND tr.division_id = 1
-
-                    UNION ALL
-
-                    -- Puntos por títulos en palmares
-                    SELECT
-                        p.equipo_id,
-                        p.temporada_id,
-                        CASE p.tipo_titulo
-                            WHEN 'campeon_copa'      THEN 25
-                            WHEN 'campeon_supercopa' THEN 20
-                            WHEN 'campeon_primera_b' THEN 5
-                            ELSE 0
-                        END as pts_posicion
-                    FROM palmares p
-                    WHERE p.temporada_id = ANY(@Temps)
-                      AND p.equipo_id IS NOT NULL
-                      AND p.tipo_titulo IN ('campeon_copa','campeon_supercopa')
-                )
-                SELECT
-                    e.id,
-                    e.nombre,
-                    COALESCE(e.pais_code,'') as pais_code,
-                    COALESCE(SUM(pb.pts_posicion), 0) as puntos_total,
-                    COUNT(*) FILTER (WHERE pb.pts_posicion = 30) as titulos_liga,
-                    COUNT(*) FILTER (WHERE pb.pts_posicion = 25) as titulos_copa,
-                    COUNT(*) FILTER (WHERE pb.pts_posicion = 20) as titulos_supercopa
-                FROM equipos e
-                JOIN puntos_base pb ON pb.equipo_id = e.id
-                GROUP BY e.id, e.nombre, e.pais_code
-                HAVING SUM(pb.pts_posicion) > 0
-                ORDER BY puntos_total DESC, titulos_liga DESC";
-
-            using var conn = GetConnection();
-            conn.Open();
-
-            // Get temporada IDs
-            var tempIds = new List<int>();
-            using (var cmd = new NpgsqlCommand(sqlTemps, conn))
-            {
-                cmd.Parameters.AddWithValue("@N", ultimasTemporadas);
-                using var r = cmd.ExecuteReader();
-                while (r.Read()) tempIds.Add(r.GetInt32(0));
-            }
-            if (!tempIds.Any()) return new();
-
-            var lista = new List<RankingFifaEntry>();
-            using (var cmd = new NpgsqlCommand(sqlPuntos, conn))
-            {
-                cmd.Parameters.AddWithValue("@Temps", tempIds.ToArray());
-                using var r = cmd.ExecuteReader();
-                while (r.Read())
-                {
-                    var nombre = r.GetString(1);
-                    var paisCode = r.GetString(2);
-                    lista.Add(new RankingFifaEntry
-                    {
-                        EquipoId              = r.GetInt32(0),
-                        NombreEquipo          = nombre,
-                        FlagCode              = !string.IsNullOrEmpty(paisCode) ? paisCode : BanderaMap.GetCode(nombre),
-                        PuntosTotal           = Convert.ToInt32(r.GetInt64(3)),
-                        TitulosLiga           = Convert.ToInt32(r.GetInt64(4)),
-                        TitulosCopa           = Convert.ToInt32(r.GetInt64(5)),
-                        TitulosSupercopa      = Convert.ToInt32(r.GetInt64(6)),
-                        TemporadasConsideradas = tempIds.Count
-                    });
-                }
-            }
-            return lista;
-        }
-
-        public List<Trofeo> GetTrofeos()
-        {
-            var lista = new List<Trofeo>();
-            using var conn = GetConnection();
-            conn.Open();
-
-            using (var cmd = new NpgsqlCommand(
-                "SELECT id, nombre, imagen_url, tipo_titulo, orden FROM trofeos ORDER BY orden", conn))
-            {
-                using var r = cmd.ExecuteReader();
-                while (r.Read())
-                {
-                    lista.Add(new Trofeo
-                    {
-                        Id         = r.GetInt32(0),
-                        Nombre     = r.GetString(1),
-                        ImagenUrl  = r.IsDBNull(2) ? null : r.GetString(2),
-                        TipoTitulo = r.GetString(3),
-                        Orden      = r.GetInt32(4)
-                    });
-                }
-            }
-
-            // Cargar campeones por tipo
-            foreach (var trofeo in lista)
-            {
-                using var cmd = new NpgsqlCommand(@"
-                    SELECT p.id, p.nombre_equipo, COALESCE(p.equipo_id,0), p.tipo_titulo, p.nombre_titulo, p.temporada_id, p.temporada_nombre
-                    FROM palmares p
-                    LEFT JOIN temporadas t ON p.temporada_id = t.id
-                    WHERE p.tipo_titulo = @T
-                    ORDER BY COALESCE(t.numero, 0) DESC, p.created_at DESC", conn);
-                cmd.Parameters.AddWithValue("@T", trofeo.TipoTitulo);
-                using var r = cmd.ExecuteReader();
-                while (r.Read())
-                {
-                    var nombre = r.GetString(1);
-                    trofeo.Campeones.Add(new TorneoAmigos.Models.Titulo
-                    {
-                        Id              = r.GetInt32(0),
-                        NombreEquipo    = nombre,
-                        FlagCode        = BanderaMap.GetCode(nombre),
-                        EquipoId        = r.GetInt32(2),
-                        TipoTitulo      = r.GetString(3),
-                        NombreTitulo    = r.GetString(4),
-                        TemporadaId     = r.IsDBNull(5) ? null : r.GetInt32(5),
-                        TemporadaNombre = r.GetString(6)
-                    });
-                }
-            }
-
-            return lista;
-        }
-
-        public bool ActualizarImagenTrofeo(int trofeoId, string imagenUrl)
-        {
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand("UPDATE trofeos SET imagen_url = @U WHERE id = @Id", conn);
-            cmd.Parameters.AddWithValue("@U",  imagenUrl);
-            cmd.Parameters.AddWithValue("@Id", trofeoId);
-            conn.Open();
-            return cmd.ExecuteNonQuery() > 0;
-        }
-
-        public List<TorneoAmigos.Models.Titulo> GetTitulosPorEquipo(string nombreEquipo)
-        {
-            var titulos = new List<TorneoAmigos.Models.Titulo>();
-            // Buscar coincidencia exacta O variantes históricas (ej: "Pato" también matchea "Pato L")
-            var sql = @"
-                SELECT id, tipo_titulo, nombre_titulo, temporada_id, temporada_nombre, nombre_equipo
-                FROM palmares
-                WHERE LOWER(TRIM(nombre_equipo)) = LOWER(TRIM(@N))
-                   OR LOWER(TRIM(nombre_equipo)) LIKE LOWER(TRIM(@N)) || ' %'
-                ORDER BY created_at DESC";
-
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@N", nombreEquipo);
-            conn.Open();
-            using var r = cmd.ExecuteReader();
-            while (r.Read())
-            {
-                titulos.Add(new TorneoAmigos.Models.Titulo
-                {
-                    Id              = r.GetInt32(0),
-                    TipoTitulo      = r.GetString(1),
-                    NombreTitulo    = r.GetString(2),
-                    TemporadaId     = r.IsDBNull(3) ? null : r.GetInt32(3),
-                    TemporadaNombre = r.GetString(4)
-                });
-            }
-            return titulos;
-        }
-
-        public PalmaresViewModel GetPalmares()
-        {
-            var titulos = new List<TorneoAmigos.Models.Titulo>();
-            // nombre_equipo puede venir directo de la tabla (histórico) o de JOIN con equipos
-            var sql = @"
-                SELECT p.id,
-                       COALESCE(p.equipo_id, 0),
-                       COALESCE(p.nombre_equipo, e.nombre, 'Desconocido'),
-                       p.tipo_titulo, p.nombre_titulo,
-                       p.temporada_id, p.temporada_nombre
-                FROM palmares p
-                LEFT JOIN equipos e ON p.equipo_id = e.id
-                ORDER BY p.created_at DESC";
-
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand(sql, conn);
-            conn.Open();
-            using var r = cmd.ExecuteReader();
-            while (r.Read())
-            {
-                var nombre = r.GetString(2);
-                titulos.Add(new TorneoAmigos.Models.Titulo
-                {
-                    Id              = r.GetInt32(0),
-                    EquipoId        = r.GetInt32(1),
-                    NombreEquipo    = nombre,
-                    FlagCode        = BanderaMap.GetCode(nombre),
-                    TipoTitulo      = r.GetString(3),
-                    NombreTitulo    = r.GetString(4),
-                    TemporadaId     = r.IsDBNull(5) ? null : r.GetInt32(5),
-                    TemporadaNombre = r.GetString(6)
-                });
-            }
-
-            // Agrupar por nombre (los históricos tienen equipo_id = 0)
-            var equipos = titulos
-                .GroupBy(t => t.NombreEquipo.Trim().ToLower())
-                .Select(g => new TorneoAmigos.Models.PalmaresEquipo
-                {
-                    EquipoId        = g.First().EquipoId,
-                    NombreEquipo    = g.First().NombreEquipo,
-                    FlagCode        = g.First().FlagCode,
-                    TotalTitulos    = g.Count(),
-                    CampeonatosLiga = g.Count(t => t.TipoTitulo == "campeon_torneo"),
-                    CopaArgentina   = g.Count(t => t.TipoTitulo == "campeon_copa"),
-                    Supercopa       = g.Count(t => t.TipoTitulo == "campeon_supercopa"),
-                    Titulos         = g.ToList()
-                })
-                .OrderByDescending(e => e.TotalTitulos)
-                .ThenByDescending(e => e.CampeonatosLiga)
-                .ToList();
-
-            return new TorneoAmigos.Models.PalmaresViewModel
-            {
-                Equipos        = equipos,
-                UltimosTitulos = titulos.Take(10).ToList()
-            };
-        }
-    }
-}

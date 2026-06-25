@@ -872,39 +872,41 @@ namespace TorneoAmigos.Data
                 // S que entran directo a FP2 = 16 - P_previa.Count (si sobran S, van a FP1)
                 int participantesFP2 = 16; // siempre 8 partidos
                 int sDirectosFP2     = participantesFP2 - P_previa.Count; // S1 a S(sDirectosFP2)
-                var S_fp2    = equiposB.Take(sDirectosFP2).ToList();      // S mejores que van directo a FP2
-                var S_fp1    = equiposB.Skip(sDirectosFP2).ToList();      // S peores que van a FP1
+                // ── DISTRIBUCIÓN CORRECTA ─────────────────────────────────
+                // FP2 necesita exactamente 16 participantes (8 partidos)
+                // Participantes FP2 = P_previa + S_directos_FP2 + ganadores_FP1
+                // Queremos maximizar FP1 (equipos peores de S)
+                // Formula: ganFP1 = 16 - P_previa - S_directos_FP2
+                // S en FP1 = ganFP1 * 2 (cada partido da 1 ganador)
 
-                // FP1: equipos restantes de S (necesitan salir pares)
-                // Si son impares, el último pasa directo a FP2
-                if (S_fp1.Count % 2 != 0)
-                {
-                    S_fp2.Add(S_fp1.Last());
-                    S_fp1 = S_fp1.Take(S_fp1.Count - 1).ToList();
-                }
+                // Calculamos cuántos S van a FP1 directamente
+                // Empezamos con S_fp2 = 16 - P_previa slots para S directos
+                // Pero queremos que los peores de S jueguen FP1
+                // Con nS=15, nP_previa=4: tenemos 12 slots para S en FP2 → 3 van a FP1
+                // Pero 3 es impar → 2 juegan FP1 (1 partido), el 3ro va a FP2 → S_fp2=13
 
-                // Calcular ganadores de FP1 que van a FP2
+                // Recalcular limpio:
+                // Queremos el mayor número par de S en FP1 tal que FP2 tenga exactamente 16
+                int maxSenFP1 = 16 - P_previa.Count - (equiposB.Count - (16 - P_previa.Count));
+                // Simplificado: total slots FP2 = 16, P_previa ocupa algunos, resto son S o ganFP1
+                // Con nS equipos de B y P_previa de Primera:
+                // FP2 necesita: P_previa + S_directo_FP2 + ganFP1 = 16
+                // ganFP1 = S_fp1 / 2
+                // Entonces: P_previa + S_directo + S_fp1/2 = 16
+                // S_directo + S_fp1 = nS → S_directo = nS - S_fp1
+                // Reemplazando: P_previa + nS - S_fp1 + S_fp1/2 = 16
+                // P_previa + nS - S_fp1/2 = 16
+                // S_fp1/2 = P_previa + nS - 16
+                // S_fp1 = 2 * (P_previa + nS - 16)
+
+                int S_fp1_ideal = 2 * (P_previa.Count + nS - 16);
+                if (S_fp1_ideal < 0) S_fp1_ideal = 0;
+                // Asegurar par
+                if (S_fp1_ideal % 2 != 0) S_fp1_ideal--;
+
+                var S_fp1 = equiposB.TakeLast(S_fp1_ideal).ToList();
+                var S_fp2 = equiposB.Take(nS - S_fp1_ideal).ToList();
                 int ganFP1 = S_fp1.Count / 2;
-
-                // Si los ganadores de FP1 + S_fp2 + P_previa != 16, ajustar
-                // En la práctica con los números actuales (12P, 15S):
-                // P_previa = 4, S_fp2 = 12, S_fp1 = 3 (impar→ par=2 + 1 directo), ganFP1 = 1
-                // Verificar: 4 + 12 + 1 = 17 → necesitamos ajuste
-                // La regla: total FP2 = 16 participantes → ganFP1 slots disponibles = 16 - P_previa - S_fp2
-                int slotsFP1enFP2 = 16 - P_previa.Count - S_fp2.Count;
-                // Si S_fp1 > slotsFP1enFP2 * 2, mover el exceso a S_fp2
-                while (S_fp1.Count > slotsFP1enFP2 * 2 && S_fp1.Any())
-                {
-                    S_fp2.Add(S_fp1.Last());
-                    S_fp1 = S_fp1.Take(S_fp1.Count - 1).ToList();
-                    slotsFP1enFP2 = 16 - P_previa.Count - S_fp2.Count;
-                }
-                if (S_fp1.Count % 2 != 0 && S_fp1.Any())
-                {
-                    S_fp2.Add(S_fp1.Last());
-                    S_fp1 = S_fp1.Take(S_fp1.Count - 1).ToList();
-                }
-                ganFP1 = S_fp1.Count / 2;
 
                 // ── CREAR RONDAS ─────────────────────────────────────────────
                 var rondas = new List<(string nombre, int orden, bool habilitada)>();

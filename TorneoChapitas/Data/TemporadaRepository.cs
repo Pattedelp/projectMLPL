@@ -1504,6 +1504,40 @@ namespace TorneoAmigos.Data
             return lista;
         }
 
+        public List<HistoricoPartido> GetPartidosHistorico(string temporadaNombre, int divisionId)
+        {
+            const string sql = @"
+                SELECT eh.goles_local, eh.goles_visitante, eh.torneo,
+                       el.nombre, COALESCE(el.pais_code,''), el.id,
+                       ev.nombre, COALESCE(ev.pais_code,''), ev.id
+                FROM enfrentamientos_historicos eh
+                JOIN equipos el ON eh.equipo_local_id = el.id
+                JOIN equipos ev ON eh.equipo_visitante_id = ev.id
+                WHERE eh.temporada_nombre = @T AND eh.division_id = @D
+                ORDER BY eh.id";
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@T", temporadaNombre);
+            cmd.Parameters.AddWithValue("@D", divisionId);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            var lista = new List<HistoricoPartido>();
+            while (r.Read())
+                lista.Add(new HistoricoPartido
+                {
+                    GolesLocal      = r.GetInt32(0),
+                    GolesVisitante  = r.GetInt32(1),
+                    Torneo          = r.GetString(2),
+                    NombreLocal     = r.GetString(3),
+                    FlagLocal       = r.GetString(4),
+                    EquipoLocalId   = r.GetInt32(5),
+                    NombreVisitante = r.GetString(6),
+                    FlagVisitante   = r.GetString(7),
+                    EquipoVisitanteId = r.GetInt32(8)
+                });
+            return lista;
+        }
+
         public List<Trofeo> GetTrofeos()
         {
             var lista = new List<Trofeo>();

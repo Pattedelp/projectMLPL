@@ -430,3 +430,18 @@ namespace TorneoAmigos.Models
         public bool? Acerto1x2 { get; set; }
         public bool? AcertoExacto { get; set; }
     }
+
+    // ── HISTORIAL PARTIDOS ────────────────────────────
+    public class HistoricoPartido
+    {
+        public int GolesLocal { get; set; }
+        public int GolesVisitante { get; set; }
+        public string Torneo { get; set; } = "";
+        public string NombreLocal { get; set; } = "";
+        public string FlagLocal { get; set; } = "";
+        public int EquipoLocalId { get; set; }
+        public string NombreVisitante { get; set; } = "";
+        public string FlagVisitante { get; set; } = "";
+        public int EquipoVisitanteId { get; set; }
+    }
+}

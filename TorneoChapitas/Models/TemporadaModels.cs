@@ -442,5 +442,6 @@ namespace TorneoAmigos.Models
         public string NombreVisitante { get; set; } = "";
         public string FlagVisitante { get; set; } = "";
         public int EquipoVisitanteId { get; set; }
+        public int FechaNumero { get; set; } = 0; // 0 = sin fecha asignada
     }
 }

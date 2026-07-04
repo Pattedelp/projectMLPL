@@ -3,14 +3,32 @@
     ViewBag.Title = Model.Temporada.Nombre;
     var partidosPrimera  = ViewBag.PartidosPrimera  as List<HistoricoPartido> ?? new();
     var partidosNacional = ViewBag.PartidosNacional as List<HistoricoPartido> ?? new();
-    var banderas = new Dictionary<string,string> {
-        {"nl","🇳🇱"},{"dk","🇩🇰"},{"cr","🇨🇷"},{"it","🇮🇹"},{"us","🇺🇲"},
-        {"ir","🇮🇷"},{"gb-wls","🏴"},{"be","🇧🇪"},{"ua","🇺🇦"},{"de","🇩🇪"},
-        {"kr","🇰🇷"},{"ec","🇪🇨"},{"br","🇧🇷"},{"es","🇪🇸"},{"vn","🇻🇳"},
-        {"co","🇨🇴"},{"ar","🇦🇷"},{"uy","🇺🇾"},{"ph","🇵🇭"},{"pl","🇵🇱"},
-        {"se","🇸🇪"},{"sa","🇸🇦"},{"ma","🇲🇦"},{"jp","🇯🇵"},{"gb-eng","🏴"},
-        {"pt","🇵🇹"},{"tr","🇹🇷"},{"ng","🇳🇬"}
-    };
+
+    // Función para agrupar partidos por fecha
+    // Si tienen fecha_numero, usar eso; si no, agrupar automáticamente por N partidos
+    List<(int Fecha, List<HistoricoPartido> Partidos)> AgruparPorFecha(List<HistoricoPartido> partidos, int equiposPorFecha) {
+        var result = new List<(int, List<HistoricoPartido>)>();
+        if (!partidos.Any()) return result;
+        bool tieneFechas = partidos.Any(p => p.FechaNumero > 0);
+        if (tieneFechas) {
+            foreach (var g in partidos.GroupBy(p => p.FechaNumero).OrderBy(g => g.Key))
+                result.Add((g.Key, g.ToList()));
+        } else {
+            int fechaNum = 1;
+            for (int i = 0; i < partidos.Count; i += equiposPorFecha) {
+                result.Add((fechaNum++, partidos.Skip(i).Take(equiposPorFecha).ToList()));
+            }
+        }
+        return result;
+    }
+
+    int eqPrimera  = Model.ResultadosPrimera.Count;
+    int eqNacional = Model.ResultadosNacionalB.Count;
+    int ppfPrimera  = eqPrimera  > 0 ? eqPrimera / 2  : 5;
+    int ppfNacional = eqNacional > 0 ? eqNacional / 2 : 5;
+
+    var fechasPrimera  = AgruparPorFecha(partidosPrimera, ppfPrimera);
+    var fechasNacional = AgruparPorFecha(partidosNacional, ppfNacional);
 }
 
 <div class="page-hero">
@@ -21,7 +39,7 @@
     </div>
 </div>
 
-<a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:24px;">
+<a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:20px;">
     ← Volver al historial
 </a>
 
@@ -31,146 +49,95 @@
     <button onclick="showTab('nacional')" id="tab-nacional" class="tab-btn">🥈 Primera Nacional</button>
 </div>
 
+@* Helper macro para tabla de posiciones *@
+@{
+    void TablaPos(List<TemporadaResultadoViewModel> resultados) {
+        <div class="tabla-wrapper">
+            <table class="tabla-posiciones">
+                <thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>V</th><th>D</th><th>DG</th><th>PTS</th></tr></thead>
+                <tbody>
+                    @foreach (var r in resultados)
+                    {
+                        <tr class="@(r.Campeon ? "zona-campeon" : r.Descendio ? "zona-descenso" : r.Ascendio ? "zona-ascenso" : "")"
+                            style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@r.EquipoId'">
+                            <td class="col-pos">@r.Posicion</td>
+                            <td class="col-equipo">
+                                @if (!string.IsNullOrEmpty(r.FlagCode))
+                                { <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
+                                @r.NombreEquipo
+                                @if (r.Campeon)   { <span style="font-size:11px;margin-left:3px;">🏆</span> }
+                                @if (r.Ascendio)  { <span style="font-size:11px;margin-left:3px;color:var(--color-green);">⬆</span> }
+                                @if (r.Descendio) { <span style="font-size:11px;margin-left:3px;color:var(--color-red);">⬇</span> }
+                            </td>
+                            <td class="col-num">@r.PartidosJugados</td>
+                            <td class="col-num" style="color:var(--color-green);">@r.Ganados</td>
+                            <td class="col-num" style="color:var(--color-red);">@r.Perdidos</td>
+                            <td class="col-num">@(r.GolesFavor - r.GolesContra >= 0 ? "+" : "")@(r.GolesFavor - r.GolesContra)</td>
+                            <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@r.Puntos</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    void ResultadosFechas(List<(int Fecha, List<HistoricoPartido> Partidos)> fechas) {
+        if (!fechas.Any()) {
+            <p style="color:var(--color-muted);font-size:13px;">No hay resultados registrados.</p>
+            return;
+        }
+        foreach (var (numFecha, partidos) in fechas) {
+            <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+                <div style="background:var(--color-bg3);padding:6px 14px;font-size:11px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;">
+                    Fecha @numFecha
+                </div>
+                @foreach (var p in partidos) {
+                    bool lg = p.GolesLocal > p.GolesVisitante;
+                    <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
+                        <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                            <span style="font-weight:@(lg ? "700" : "400");color:@(lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreLocal</span>
+                            @if (!string.IsNullOrEmpty(p.FlagLocal))
+                            { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                        </div>
+                        <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">
+                            @p.GolesLocal - @p.GolesVisitante
+                        </div>
+                        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                            @if (!string.IsNullOrEmpty(p.FlagVisitante))
+                            { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                            <span style="font-weight:@(!lg ? "700" : "400");color:@(!lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreVisitante</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+}
+
 <!-- PRIMERA DIVISIÓN -->
 <div id="tab-primera-content">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
-
-        <!-- Tabla de posiciones -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="det-grid">
         <div>
-            <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Posiciones</h3>
-            <div class="tabla-wrapper">
-                <table class="tabla-posiciones">
-                    <thead>
-                        <tr><th>#</th><th>Equipo</th><th>PJ</th><th>V</th><th>D</th><th>DG</th><th>PTS</th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var r in Model.ResultadosPrimera)
-                        {
-                            <tr class="@(r.Campeon ? "zona-campeon" : r.Descendio ? "zona-descenso" : r.Ascendio ? "zona-ascenso" : "")"
-                                style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@r.EquipoId'">
-                                <td class="col-pos">@r.Posicion</td>
-                                <td class="col-equipo">
-                                    @if (!string.IsNullOrEmpty(r.FlagCode))
-                                    { <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
-                                    @r.NombreEquipo
-                                    @if (r.Campeon)    { <span style="margin-left:4px;font-size:11px;">🏆</span> }
-                                    @if (r.Descendio)  { <span style="margin-left:4px;font-size:11px;color:var(--color-red);">⬇</span> }
-                                    @if (r.Ascendio)   { <span style="margin-left:4px;font-size:11px;color:var(--color-green);">⬆</span> }
-                                </td>
-                                <td class="col-num">@r.PartidosJugados</td>
-                                <td class="col-num" style="color:var(--color-green);">@r.Ganados</td>
-                                <td class="col-num" style="color:var(--color-red);">@r.Perdidos</td>
-                                <td class="col-num">@(r.GolesFavor - r.GolesContra > 0 ? "+" : "")@(r.GolesFavor - r.GolesContra)</td>
-                                <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@r.Puntos</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Posiciones Finales</h3>
+            @{ TablaPos(Model.ResultadosPrimera); }
         </div>
-
-        <!-- Resultados -->
         <div>
-            <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
-            @if (!partidosPrimera.Any())
-            {
-                <p style="color:var(--color-muted);font-size:13px;">No hay resultados registrados.</p>
-            }
-            else
-            {
-                <div style="display:flex;flex-direction:column;gap:6px;">
-                    @foreach (var p in partidosPrimera)
-                    {
-                        bool localGana = p.GolesLocal > p.GolesVisitante;
-                        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;">
-                            <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px;">
-                                @if (!string.IsNullOrEmpty(p.FlagLocal) && banderas.ContainsKey(p.FlagLocal))
-                                { <span>@banderas[p.FlagLocal]</span> }
-                                <a href="/Equipos/Detalle/@p.EquipoLocalId" style="color:var(--color-text);text-decoration:none;font-weight:@(localGana?"700":"400");">@p.NombreLocal</a>
-                            </div>
-                            <div style="font-family:var(--font-heading);font-size:15px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 10px;min-width:50px;text-align:center;">
-                                @p.GolesLocal - @p.GolesVisitante
-                            </div>
-                            <div style="flex:1;display:flex;align-items:center;gap:4px;">
-                                <a href="/Equipos/Detalle/@p.EquipoVisitanteId" style="color:var(--color-text);text-decoration:none;font-weight:@(!localGana?"700":"400");">@p.NombreVisitante</a>
-                                @if (!string.IsNullOrEmpty(p.FlagVisitante) && banderas.ContainsKey(p.FlagVisitante))
-                                { <span>@banderas[p.FlagVisitante]</span> }
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
+            <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
+            @{ ResultadosFechas(fechasPrimera); }
         </div>
     </div>
 </div>
 
 <!-- PRIMERA NACIONAL -->
 <div id="tab-nacional-content" style="display:none;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
-
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="det-grid">
         <div>
-            <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Posiciones</h3>
-            <div class="tabla-wrapper">
-                <table class="tabla-posiciones">
-                    <thead>
-                        <tr><th>#</th><th>Equipo</th><th>PJ</th><th>V</th><th>D</th><th>DG</th><th>PTS</th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var r in Model.ResultadosNacionalB)
-                        {
-                            <tr class="@(r.Campeon ? "zona-campeon" : r.Descendio ? "zona-descenso" : r.Ascendio ? "zona-ascenso" : "")"
-                                style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@r.EquipoId'">
-                                <td class="col-pos">@r.Posicion</td>
-                                <td class="col-equipo">
-                                    @if (!string.IsNullOrEmpty(r.FlagCode))
-                                    { <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
-                                    @r.NombreEquipo
-                                    @if (r.Campeon)   { <span style="margin-left:4px;font-size:11px;">🏆</span> }
-                                    @if (r.Ascendio)  { <span style="margin-left:4px;font-size:11px;color:var(--color-green);">⬆</span> }
-                                    @if (r.Descendio) { <span style="margin-left:4px;font-size:11px;color:var(--color-red);">⬇</span> }
-                                </td>
-                                <td class="col-num">@r.PartidosJugados</td>
-                                <td class="col-num" style="color:var(--color-green);">@r.Ganados</td>
-                                <td class="col-num" style="color:var(--color-red);">@r.Perdidos</td>
-                                <td class="col-num">@(r.GolesFavor - r.GolesContra > 0 ? "+" : "")@(r.GolesFavor - r.GolesContra)</td>
-                                <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@r.Puntos</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Posiciones Finales</h3>
+            @{ TablaPos(Model.ResultadosNacionalB); }
         </div>
-
         <div>
-            <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
-            @if (!partidosNacional.Any())
-            {
-                <p style="color:var(--color-muted);font-size:13px;">No hay resultados registrados.</p>
-            }
-            else
-            {
-                <div style="display:flex;flex-direction:column;gap:6px;">
-                    @foreach (var p in partidosNacional)
-                    {
-                        bool localGanaN = p.GolesLocal > p.GolesVisitante;
-                        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;">
-                            <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:4px;">
-                                @if (!string.IsNullOrEmpty(p.FlagLocal) && banderas.ContainsKey(p.FlagLocal))
-                                { <span>@banderas[p.FlagLocal]</span> }
-                                <a href="/Equipos/Detalle/@p.EquipoLocalId" style="color:var(--color-text);text-decoration:none;font-weight:@(localGanaN?"700":"400");">@p.NombreLocal</a>
-                            </div>
-                            <div style="font-family:var(--font-heading);font-size:15px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 10px;min-width:50px;text-align:center;">
-                                @p.GolesLocal - @p.GolesVisitante
-                            </div>
-                            <div style="flex:1;display:flex;align-items:center;gap:4px;">
-                                <a href="/Equipos/Detalle/@p.EquipoVisitanteId" style="color:var(--color-text);text-decoration:none;font-weight:@(!localGanaN?"700":"400");">@p.NombreVisitante</a>
-                                @if (!string.IsNullOrEmpty(p.FlagVisitante) && banderas.ContainsKey(p.FlagVisitante))
-                                { <span>@banderas[p.FlagVisitante]</span> }
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
+            <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
+            @{ ResultadosFechas(fechasNacional); }
         </div>
     </div>
 </div>
@@ -178,9 +145,7 @@
 <style>
 .tab-btn { padding:8px 16px;border-radius:8px;background:var(--color-bg2);border:1px solid var(--color-border);color:var(--color-muted);font-size:13px;font-weight:500;cursor:pointer; }
 .tab-btn.active { background:var(--color-gold);color:var(--color-bg);border-color:var(--color-gold); }
-@@media (max-width:700px) {
-    .det-grid { grid-template-columns: 1fr !important; }
-}
+@@media (max-width:700px) { .det-grid { grid-template-columns: 1fr !important; } }
 </style>
 
 @section Scripts {

@@ -36,6 +36,9 @@ namespace TorneoAmigos.Controllers
                 ResultadosPrimera   = resultados.Where(r => r.DivisionId == 1).ToList(),
                 ResultadosNacionalB = resultados.Where(r => r.DivisionId == 2).ToList()
             };
+
+            ViewBag.PartidosPrimera  = _repo.GetPartidosHistorico(temporada.Nombre, 1);
+            ViewBag.PartidosNacional = _repo.GetPartidosHistorico(temporada.Nombre, 2);
             return View(vm);
         }
     }

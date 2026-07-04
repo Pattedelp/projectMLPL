@@ -370,7 +370,6 @@ namespace TorneoAmigos.Models
         public int? CampeonBId { get; set; }
         public bool SinDescensos { get; set; }
     }
-}
 
     // ── RANKING FIFA ─────────────────────────────────
     public class RankingFifaEntry

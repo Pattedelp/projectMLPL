@@ -1319,6 +1319,7 @@ namespace TorneoAmigos.Data
                 JOIN equipos ev ON eh.equipo_visitante_id = ev.id
                 WHERE eh.torneo = 'Liga' AND eh.division_id = 1
                   AND eh.temporada_nombre LIKE 'Temporada %'
+                  AND CAST(REGEXP_REPLACE(eh.temporada_nombre, '[^0-9]', '', 'g') AS INT) <= 16
                 ORDER BY eh.temporada_nombre, eh.id";
 
             using var conn = GetConnection();

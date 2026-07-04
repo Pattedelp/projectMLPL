@@ -310,10 +310,11 @@ namespace TorneoAmigos.Data
                 // Esto preserva el historial partido por partido para el Mano a Mano y Tabla Histórica
                 using (var cmdMigrar = new NpgsqlCommand(@"
                     INSERT INTO enfrentamientos_historicos
-                        (equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, torneo, temporada_nombre, division_id)
+                        (equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, torneo, temporada_nombre, division_id, fecha_numero)
                     SELECT p.equipolocalid, p.equipovisitanteid, p.goleslocal, p.golesvisitante,
-                           'Liga', @TNom, p.divisionid
+                           'Liga', @TNom, p.divisionid, f.numero
                     FROM partidos p
+                    JOIN fechas f ON p.fechaid = f.id
                     WHERE p.jugado = true
                       AND COALESCE(p.tipo_partido, 'regular') = 'regular'
                       AND NOT EXISTS (
@@ -1509,12 +1510,13 @@ namespace TorneoAmigos.Data
             const string sql = @"
                 SELECT eh.goles_local, eh.goles_visitante, eh.torneo,
                        el.nombre, COALESCE(el.pais_code,''), el.id,
-                       ev.nombre, COALESCE(ev.pais_code,''), ev.id
+                       ev.nombre, COALESCE(ev.pais_code,''), ev.id,
+                       COALESCE(eh.fecha_numero, 0)
                 FROM enfrentamientos_historicos eh
                 JOIN equipos el ON eh.equipo_local_id = el.id
                 JOIN equipos ev ON eh.equipo_visitante_id = ev.id
                 WHERE eh.temporada_nombre = @T AND eh.division_id = @D
-                ORDER BY eh.id";
+                ORDER BY COALESCE(eh.fecha_numero, 0), eh.id";
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@T", temporadaNombre);
@@ -1525,15 +1527,16 @@ namespace TorneoAmigos.Data
             while (r.Read())
                 lista.Add(new HistoricoPartido
                 {
-                    GolesLocal      = r.GetInt32(0),
-                    GolesVisitante  = r.GetInt32(1),
-                    Torneo          = r.GetString(2),
-                    NombreLocal     = r.GetString(3),
-                    FlagLocal       = r.GetString(4),
-                    EquipoLocalId   = r.GetInt32(5),
-                    NombreVisitante = r.GetString(6),
-                    FlagVisitante   = r.GetString(7),
-                    EquipoVisitanteId = r.GetInt32(8)
+                    GolesLocal        = r.GetInt32(0),
+                    GolesVisitante    = r.GetInt32(1),
+                    Torneo            = r.GetString(2),
+                    NombreLocal       = r.GetString(3),
+                    FlagLocal         = r.GetString(4),
+                    EquipoLocalId     = r.GetInt32(5),
+                    NombreVisitante   = r.GetString(6),
+                    FlagVisitante     = r.GetString(7),
+                    EquipoVisitanteId = r.GetInt32(8),
+                    FechaNumero       = r.GetInt32(9)
                 });
             return lista;
         }

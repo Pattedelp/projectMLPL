@@ -53,35 +53,6 @@ namespace TorneoAmigos.Controllers
         [HttpPost]
         public IActionResult RetirarJugador(int id)
         {
-            using var conn = new Npgsql.NpgsqlConnection(
-                HttpContext.RequestServices.GetRequiredService<IConfiguration>()
-                    .GetConnectionString("TorneoAmigosDB"));
-            conn.Open();
-            using var cmd = new Npgsql.NpgsqlCommand(
-                "UPDATE equipos SET activo = false, retirado = true WHERE id = @Id", conn);
-            cmd.Parameters.AddWithValue("@Id", id);
-            cmd.ExecuteNonQuery();
-            return Json(new { ok = true });
-        }
-
-        [HttpPost]
-        public IActionResult ReactivarJugador(int id)
-        {
-            using var conn = new Npgsql.NpgsqlConnection(
-                HttpContext.RequestServices.GetRequiredService<IConfiguration>()
-                    .GetConnectionString("TorneoAmigosDB"));
-            conn.Open();
-            using var cmd = new Npgsql.NpgsqlCommand(
-                "UPDATE equipos SET activo = true, retirado = false WHERE id = @Id", conn);
-            cmd.Parameters.AddWithValue("@Id", id);
-            cmd.ExecuteNonQuery();
-            return Json(new { ok = true });
-        }
-
-        // ── RETIRAR / REACTIVAR JUGADOR ─────────────────
-        [HttpPost]
-        public IActionResult RetirarJugador(int id)
-        {
             _repo.SetJugadorActivo(id, false);
             return Json(new { ok = true });
         }

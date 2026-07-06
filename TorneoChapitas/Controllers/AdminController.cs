@@ -44,8 +44,53 @@ namespace TorneoAmigos.Controllers
                 .Concat(_repo.GetEquiposByDivision(2))
                 .OrderBy(e => e.Nombre).ToList();
             ViewBag.EquiposB = _repo.GetEquiposByDivision(2).ToList();
+            ViewBag.EquiposRetirados = _repo.GetEquiposRetirados();
             ViewBag.TodasEncuestas = _encuestas.GetTodasLasEncuestas();
             return View(vm);
+        }
+
+        // ── RETIRAR / REACTIVAR JUGADOR ─────────────────
+        [HttpPost]
+        public IActionResult RetirarJugador(int id)
+        {
+            using var conn = new Npgsql.NpgsqlConnection(
+                HttpContext.RequestServices.GetRequiredService<IConfiguration>()
+                    .GetConnectionString("TorneoAmigosDB"));
+            conn.Open();
+            using var cmd = new Npgsql.NpgsqlCommand(
+                "UPDATE equipos SET activo = false, retirado = true WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@Id", id);
+            cmd.ExecuteNonQuery();
+            return Json(new { ok = true });
+        }
+
+        [HttpPost]
+        public IActionResult ReactivarJugador(int id)
+        {
+            using var conn = new Npgsql.NpgsqlConnection(
+                HttpContext.RequestServices.GetRequiredService<IConfiguration>()
+                    .GetConnectionString("TorneoAmigosDB"));
+            conn.Open();
+            using var cmd = new Npgsql.NpgsqlCommand(
+                "UPDATE equipos SET activo = true, retirado = false WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@Id", id);
+            cmd.ExecuteNonQuery();
+            return Json(new { ok = true });
+        }
+
+        // ── RETIRAR / REACTIVAR JUGADOR ─────────────────
+        [HttpPost]
+        public IActionResult RetirarJugador(int id)
+        {
+            _repo.SetJugadorActivo(id, false);
+            return Json(new { ok = true });
+        }
+
+        [HttpPost]
+        public IActionResult ReactivarJugador(int id)
+        {
+            _repo.SetJugadorActivo(id, true);
+            return Json(new { ok = true });
         }
 
         // ── REDUCIDO ─────────────────────────────────────

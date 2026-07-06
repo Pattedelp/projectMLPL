@@ -22,6 +22,7 @@ namespace TorneoAmigos.Models
         public string FlagCode { get; set; } = "";
         public string? Descripcion { get; set; }
         public bool Activo { get; set; } = true;
+        public bool Retirado { get; set; } = false;
     }
 
     public class Fecha

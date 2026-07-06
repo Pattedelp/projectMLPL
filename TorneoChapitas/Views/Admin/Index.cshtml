@@ -433,6 +433,49 @@ else
             Agregar
         </a>
     </div>
+
+    <!-- Retirar jugador -->
+    @{
+        var activos   = ViewBag.EquiposTodos as List<Equipo> ?? new();
+        var retirados = (ViewBag.EquiposRetirados as List<Equipo>) ?? new();
+    }
+    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 24px;margin-top:10px;">
+        <div style="font-size:13px;font-weight:500;margin-bottom:10px;">⚰️ Retirar jugador</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="sel-retirar" class="form-control" style="flex:1;font-size:13px;">
+                <option value="">-- Elegí un jugador --</option>
+                @foreach (var e in activos.OrderBy(e => e.Nombre))
+                {
+                    <option value="@e.Id">@e.Nombre</option>
+                }
+            </select>
+            <button onclick="retirarJugador()" style="background:var(--color-red);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;">
+                Retirar
+            </button>
+        </div>
+        <p id="msg-retirar" style="font-size:11px;margin-top:6px;display:none;"></p>
+    </div>
+
+    <!-- Reactivar jugador -->
+    @if (retirados.Any())
+    {
+        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 24px;margin-top:10px;">
+            <div style="font-size:13px;font-weight:500;margin-bottom:10px;">♻️ Reactivar jugador retirado</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="sel-reactivar" class="form-control" style="flex:1;font-size:13px;">
+                    <option value="">-- Elegí un jugador --</option>
+                    @foreach (var e in retirados.OrderBy(e => e.Nombre))
+                    {
+                        <option value="@e.Id">@e.Nombre</option>
+                    }
+                </select>
+                <button onclick="reactivarJugador()" style="background:var(--color-green);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;">
+                    Reactivar
+                </button>
+            </div>
+            <p id="msg-reactivar" style="font-size:11px;margin-top:6px;display:none;"></p>
+        </div>
+    }
 </div>
 
 <!-- REDACTORES -->
@@ -738,6 +781,29 @@ async function regenerarFixture() {
     msg.style.color = d.ok ? 'var(--color-green)' : 'var(--color-red)';
     msg.textContent = d.msg;
     if (d.ok) setTimeout(() => location.reload(), 1500);
+}
+
+async function retirarJugador() {
+    const id = document.getElementById('sel-retirar').value;
+    const msg = document.getElementById('msg-retirar');
+    if (!id) { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Elegí un jugador.'; return; }
+    if (!confirm('¿Retirar este jugador? Sus estadísticas se conservan.')) return;
+    const r = await fetch('/Admin/RetirarJugador?id=' + id, { method: 'POST' });
+    const d = await r.json();
+    msg.style.display='block'; msg.style.color=d.ok?'var(--color-green)':'var(--color-red)';
+    msg.textContent = d.ok ? '✅ Jugador retirado.' : '⚠️ Error.';
+    if (d.ok) setTimeout(() => location.reload(), 1000);
+}
+
+async function reactivarJugador() {
+    const id = document.getElementById('sel-reactivar')?.value;
+    const msg = document.getElementById('msg-reactivar');
+    if (!id) return;
+    const r = await fetch('/Admin/ReactivarJugador?id=' + id, { method: 'POST' });
+    const d = await r.json();
+    msg.style.display='block'; msg.style.color=d.ok?'var(--color-green)':'var(--color-red)';
+    msg.textContent = d.ok ? '✅ Jugador reactivado.' : '⚠️ Error.';
+    if (d.ok) setTimeout(() => location.reload(), 1000);
 }
 
 async function borrarFixture() {

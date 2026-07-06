@@ -58,10 +58,41 @@ namespace TorneoAmigos.Data
         }
 
         // ── EQUIPOS ────────────────────────────
-        public List<Equipo> GetEquiposByDivision(int divisionId)
+        public List<Equipo> GetEquiposRetirados()
         {
             var lista = new List<Equipo>();
             const string sql = @"SELECT id, divisionid, nombre, escudo, colorprincipal, colorsecundario, activo, COALESCE(pais_code,'') as pais_code
+                                 FROM equipos WHERE activo = false ORDER BY nombre";
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand(sql, conn);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) lista.Add(new Equipo
+            {
+                Id = r.GetInt32(0), DivisionId = r.GetInt32(1), Nombre = r.GetString(2),
+                Escudo = r.IsDBNull(3) ? null : r.GetString(3),
+                ColorPrincipal  = r.IsDBNull(4) ? "#003366" : r.GetString(4),
+                ColorSecundario = r.IsDBNull(5) ? "#FFD700" : r.GetString(5),
+                Activo   = false,
+                FlagCode = !string.IsNullOrEmpty(r.GetString(7)) ? r.GetString(7) : BanderaMap.GetCode(r.GetString(2))
+            });
+            return lista;
+        }
+
+        public void SetJugadorActivo(int id, bool activo)
+        {
+            using var conn = GetConnection();
+            using var cmd  = new NpgsqlCommand("UPDATE equipos SET activo = @A WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@A",  activo);
+            cmd.Parameters.AddWithValue("@Id", id);
+            conn.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        public List<Equipo> GetEquiposByDivision(int divisionId)
+        {
+            var lista = new List<Equipo>();
+            const string sql = @"SELECT id, divisionid, nombre, escudo, colorprincipal, colorsecundario, activo, COALESCE(pais_code,'') as pais_code, COALESCE(retirado, false) as retirado
                                  FROM equipos WHERE divisionid = @D AND activo = true ORDER BY nombre";
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -468,7 +499,8 @@ namespace TorneoAmigos.Data
             FlagCode = !string.IsNullOrEmpty(r.IsDBNull(7) ? "" : r.GetString(7))
                 ? r.GetString(7)
                 : BanderaMap.GetCode(r.GetString(2)),
-            Activo = r.GetBoolean(6)
+            Activo   = r.GetBoolean(6),
+            Retirado = r.FieldCount > 8 && !r.IsDBNull(8) && r.GetBoolean(8)
         };
 
         private static Fecha MapFecha(IDataReader r) => new()

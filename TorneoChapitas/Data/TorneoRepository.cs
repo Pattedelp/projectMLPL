@@ -92,7 +92,7 @@ namespace TorneoAmigos.Data
         public List<Equipo> GetEquiposByDivision(int divisionId)
         {
             var lista = new List<Equipo>();
-            const string sql = @"SELECT id, divisionid, nombre, escudo, colorprincipal, colorsecundario, activo, COALESCE(pais_code,'') as pais_code, COALESCE(retirado, false) as retirado
+            const string sql = @"SELECT id, divisionid, nombre, escudo, colorprincipal, colorsecundario, activo, COALESCE(pais_code,'') as pais_code
                                  FROM equipos WHERE divisionid = @D AND activo = true ORDER BY nombre";
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -499,8 +499,7 @@ namespace TorneoAmigos.Data
             FlagCode = !string.IsNullOrEmpty(r.IsDBNull(7) ? "" : r.GetString(7))
                 ? r.GetString(7)
                 : BanderaMap.GetCode(r.GetString(2)),
-            Activo   = r.GetBoolean(6),
-            Retirado = r.FieldCount > 8 && !r.IsDBNull(8) && r.GetBoolean(8)
+            Activo   = r.GetBoolean(6)
         };
 
         private static Fecha MapFecha(IDataReader r) => new()

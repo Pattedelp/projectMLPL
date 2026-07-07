@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TorneoAmigos.Data;
+using TorneoAmigos.Models;
 
 namespace TorneoAmigos.Controllers
 {
@@ -9,10 +10,12 @@ namespace TorneoAmigos.Controllers
     {
         private readonly TorneoRepository _repo;
         private readonly PrediccionesRepository _prediRepo;
-        public ResultadoController(TorneoRepository repo, PrediccionesRepository prediRepo)
+        private readonly TemporadaRepository _tempRepo;
+        public ResultadoController(TorneoRepository repo, PrediccionesRepository prediRepo, TemporadaRepository tempRepo)
         {
-            _repo = repo;
+            _repo      = repo;
             _prediRepo = prediRepo;
+            _tempRepo  = tempRepo;
         }
 
         [Authorize(Roles = "Admin")]
@@ -25,10 +28,41 @@ namespace TorneoAmigos.Controllers
 
             if (ok)
             {
-                // Calcular puntos de predicciones para este partido
                 var divisionId = _repo.GetDivisionIdDePartido(dto.PartidoId);
                 if (divisionId > 0)
                     _prediRepo.CalcularPuntosPartido(dto.PartidoId, divisionId, dto.GolesLocal, dto.GolesVisitante);
+
+                // Si es partido de promoción, actualizar automáticamente el borrador de cierre
+                var tipoPartido = _repo.GetTipoPartido(dto.PartidoId);
+                if (tipoPartido == "promocion")
+                {
+                    var temporada = _tempRepo.GetTemporadaActiva();
+                    if (temporada != null)
+                    {
+                        var partido = _repo.GetPartidoById(dto.PartidoId);
+                        if (partido != null)
+                        {
+                            // Ganador de la B asciende, perdedor de Primera se queda (no hay cambio automático)
+                            // pero actualizamos el cierre con los valores correctos
+                            var cierre = _tempRepo.GetCierre(temporada.Id) ?? new TemporadaCierre { TemporadaId = temporada.Id };
+                            bool localGana = dto.GolesLocal > dto.GolesVisitante;
+
+                            // Determinar quién es de Primera y quién de la B
+                            // El local generalmente es de la B (ganador del reducido)
+                            var tablaB = _repo.GetTablaPosiciones(2);
+                            bool localEsB = tablaB.Any(t => t.EquipoId == partido.EquipoLocalId);
+
+                            int? ascensoId  = localEsB && localGana  ? partido.EquipoLocalId   :
+                                             !localEsB && !localGana ? partido.EquipoVisitanteId : null;
+                            int? descensoId = localEsB && localGana  ? partido.EquipoVisitanteId :
+                                             !localEsB && !localGana ? partido.EquipoLocalId    : null;
+
+                            if (ascensoId.HasValue)  cierre.Ascenso1Id  = ascensoId;
+                            if (descensoId.HasValue) cierre.Descenso1Id = descensoId;
+                            _tempRepo.GuardarCierre(cierre);
+                        }
+                    }
+                }
             }
 
             return Json(new { ok });

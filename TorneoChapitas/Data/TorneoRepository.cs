@@ -79,6 +79,35 @@ namespace TorneoAmigos.Data
             return lista;
         }
 
+        public string GetTipoPartido(int partidoId)
+        {
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(
+                "SELECT COALESCE(tipo_partido,'regular') FROM partidos WHERE id = @Id", conn);
+            cmd.Parameters.AddWithValue("@Id", partidoId);
+            conn.Open();
+            return cmd.ExecuteScalar() as string ?? "regular";
+        }
+
+        public Partido? GetPartidoById(int partidoId)
+        {
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(@"
+                SELECT p.id, p.fechaid, p.divisionid, p.equipolocalid, p.equipovisitanteid,
+                       p.goleslocal, p.golesvisitante, p.jugado, p.fechapartido, p.lugar, p.observaciones,
+                       el.nombre, el.colorprincipal, ev.nombre, ev.colorprincipal,
+                       COALESCE(el.pais_code,''), COALESCE(ev.pais_code,''),
+                       COALESCE(p.tipo_partido,'regular')
+                FROM partidos p
+                INNER JOIN equipos el ON p.equipolocalid = el.id
+                INNER JOIN equipos ev ON p.equipovisitanteid = ev.id
+                WHERE p.id = @Id", conn);
+            cmd.Parameters.AddWithValue("@Id", partidoId);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            return r.Read() ? MapPartido(r) : null;
+        }
+
         public void SetJugadorActivo(int id, bool activo)
         {
             using var conn = GetConnection();

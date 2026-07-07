@@ -82,14 +82,14 @@
                     }
                     <div style="margin-top:12px;border-top:1px solid var(--color-border);padding-top:12px;">
                         <div style="font-size:12px;color:var(--color-muted);margin-bottom:8px;">
-                            Partido de Promoción (ganador reducido vs @(equipoPromPrimera?.NombreEquipo ?? $"{posPromPrimera}° de Primera")):
+                            Partido de Promoción (ganador del reducido vs @(equipoPromPrimera?.NombreEquipo ?? $"{posPromPrimera}° de Primera")):
                         </div>
                         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                             <select id="sel-prom-local" class="form-control" style="font-size:12px;flex:1;min-width:120px;">
-                                <option value="0">Local...</option>
-                                @foreach (var e in tablaB.Skip(2).Take(4))
+                                <option value="0">Ganador del reducido (B)...</option>
+                                @foreach (var e in tablaB)
                                 {
-                                    <option value="@e.EquipoId">@e.NombreEquipo (B)</option>
+                                    <option value="@e.EquipoId">@e.NombreEquipo</option>
                                 }
                                 @if (equipoPromPrimera != null)
                                 {
@@ -98,14 +98,14 @@
                             </select>
                             <span style="color:var(--color-muted);">vs</span>
                             <select id="sel-prom-visit" class="form-control" style="font-size:12px;flex:1;min-width:120px;">
-                                <option value="0">Visitante...</option>
-                                @foreach (var e in tablaB.Skip(2).Take(4))
-                                {
-                                    <option value="@e.EquipoId">@e.NombreEquipo (B)</option>
-                                }
+                                <option value="0">@(equipoPromPrimera?.NombreEquipo ?? $"{posPromPrimera}° de Primera")...</option>
                                 @if (equipoPromPrimera != null)
                                 {
-                                    <option value="@equipoPromPrimera.EquipoId">@equipoPromPrimera.NombreEquipo (1ra)</option>
+                                    <option value="@equipoPromPrimera.EquipoId" selected>@equipoPromPrimera.NombreEquipo (1ra)</option>
+                                }
+                                @foreach (var e in tablaB)
+                                {
+                                    <option value="@e.EquipoId">@e.NombreEquipo (B)</option>
                                 }
                             </select>
                             <button onclick="generarPromocion()" style="background:#e05555;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;">

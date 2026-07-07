@@ -1036,58 +1036,84 @@ namespace TorneoAmigos.Data
 
                 // Obtener datos del partido
                 int copaId, rondaId, posicion, ganadorId;
+                string nombreRonda = "";
                 using (var cmd = new NpgsqlCommand(@"
-                    SELECT copa_id, ronda_id, posicion_bracket,
-                           CASE WHEN goles_local > goles_visitante THEN equipo_local_id
-                                ELSE equipo_visitante_id END as ganador_id
-                    FROM copa_partidos WHERE id = @Id", conn, tx))
+                    SELECT cp.copa_id, cp.ronda_id, cp.posicion_bracket,
+                           CASE WHEN cp.goles_local > cp.goles_visitante THEN cp.equipo_local_id
+                                ELSE cp.equipo_visitante_id END as ganador_id,
+                           cr.nombre as ronda_nombre
+                    FROM copa_partidos cp
+                    JOIN copa_rondas cr ON cp.ronda_id = cr.id
+                    WHERE cp.id = @Id", conn, tx))
                 {
                     cmd.Parameters.AddWithValue("@Id", partidoId);
                     using var r = cmd.ExecuteReader();
                     if (!r.Read()) { tx.Rollback(); return false; }
-                    copaId   = r.GetInt32(0);
-                    rondaId  = r.GetInt32(1);
-                    posicion = r.GetInt32(2);
-                    ganadorId = r.IsDBNull(3) ? 0 : r.GetInt32(3);
+                    copaId      = r.GetInt32(0);
+                    rondaId     = r.GetInt32(1);
+                    posicion    = r.GetInt32(2);
+                    ganadorId   = r.IsDBNull(3) ? 0 : r.GetInt32(3);
+                    nombreRonda = r.GetString(4);
                 }
 
                 // AUTO-AVANCE: buscar slot vacío en la siguiente ronda
                 if (ganadorId > 0)
                 {
                     int? siguienteRondaId = null;
+                    string siguienteRondaNombre = "";
                     using (var cmd2 = new NpgsqlCommand(@"
-                        SELECT id FROM copa_rondas
-                        WHERE copa_id = @C
-                          AND orden > (SELECT orden FROM copa_rondas WHERE id = @R)
-                        ORDER BY orden LIMIT 1", conn, tx))
+                        SELECT cr.id, cr.nombre FROM copa_rondas cr
+                        WHERE cr.copa_id = @C
+                          AND cr.orden > (SELECT orden FROM copa_rondas WHERE id = @R)
+                        ORDER BY cr.orden LIMIT 1", conn, tx))
                     {
                         cmd2.Parameters.AddWithValue("@C", copaId);
                         cmd2.Parameters.AddWithValue("@R", rondaId);
-                        var res = cmd2.ExecuteScalar();
-                        if (res != null) siguienteRondaId = Convert.ToInt32(res);
+                        using var r2 = cmd2.ExecuteReader();
+                        if (r2.Read()) { siguienteRondaId = r2.GetInt32(0); siguienteRondaNombre = r2.GetString(1); }
                     }
 
                     if (siguienteRondaId.HasValue)
                     {
-                        // Buscar partido en siguiente ronda donde local o visitante esté vacío
-                        // La posición del partido siguiente = posicion_actual / 2
-                        int posSiguiente = posicion / 2;
-                        bool esLocal = posicion % 2 == 0;
+                        // Para FP1 → FP2: buscar el primer slot completamente vacío (local=NULL)
+                        // Para otras rondas: usar posicion/2
+                        bool esFP1 = nombreRonda?.Contains("Fase Previa 1") == true;
 
-                        // Solo actualizar si ese campo está vacío (no pisar equipos ya asignados)
-                        var campoCheck = esLocal ? "equipo_local_id" : "equipo_visitante_id";
-                        using var cmdAdv = new NpgsqlCommand($@"
-                            UPDATE copa_partidos
-                            SET {campoCheck} = @G
-                            WHERE ronda_id = @SR
-                              AND posicion_bracket = @PS
-                              AND copa_id = @C
-                              AND {campoCheck} IS NULL", conn, tx);
-                        cmdAdv.Parameters.AddWithValue("@G",  ganadorId);
-                        cmdAdv.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
-                        cmdAdv.Parameters.AddWithValue("@PS", posSiguiente);
-                        cmdAdv.Parameters.AddWithValue("@C",  copaId);
-                        cmdAdv.ExecuteNonQuery();
+                        if (esFP1)
+                        {
+                            // Buscar primer partido en FP2 donde local_id IS NULL
+                            using var cmdAdv = new NpgsqlCommand(@"
+                                UPDATE copa_partidos
+                                SET equipo_local_id = @G
+                                WHERE id = (
+                                    SELECT id FROM copa_partidos
+                                    WHERE ronda_id = @SR AND copa_id = @C
+                                      AND equipo_local_id IS NULL
+                                    ORDER BY posicion_bracket LIMIT 1
+                                )", conn, tx);
+                            cmdAdv.Parameters.AddWithValue("@G",  ganadorId);
+                            cmdAdv.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
+                            cmdAdv.Parameters.AddWithValue("@C",  copaId);
+                            cmdAdv.ExecuteNonQuery();
+                        }
+                        else
+                        {
+                            int posSiguiente = posicion / 2;
+                            bool esLocal = posicion % 2 == 0;
+                            var campoCheck = esLocal ? "equipo_local_id" : "equipo_visitante_id";
+                            using var cmdAdv = new NpgsqlCommand($@"
+                                UPDATE copa_partidos
+                                SET {campoCheck} = @G
+                                WHERE ronda_id = @SR
+                                  AND posicion_bracket = @PS
+                                  AND copa_id = @C
+                                  AND {campoCheck} IS NULL", conn, tx);
+                            cmdAdv.Parameters.AddWithValue("@G",  ganadorId);
+                            cmdAdv.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
+                            cmdAdv.Parameters.AddWithValue("@PS", posSiguiente);
+                            cmdAdv.Parameters.AddWithValue("@C",  copaId);
+                            cmdAdv.ExecuteNonQuery();
+                        }
                     }
                 }
 

@@ -270,7 +270,7 @@
 
                     <!-- Ascensos -->
                     <div>
-                        <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:6px;">📈 Ascensos (de Primera Nacional → Primera)</label>
+                        <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:6px;">📈 Ascensos directos (de Primera Nacional → Primera)</label>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                             <select id="sel-ascenso-1" class="form-control" style="font-size:13px;">
                                 <option value="0">-- Automático (1° de la B) --</option>
@@ -286,6 +286,33 @@
                                     <option value="@e.Id" selected="@(cierre != null && cierre.Ascenso2Id == e.Id)">@e.Nombre</option>
                                 }
                             </select>
+                        </div>
+                    </div>
+
+                    <!-- Promoción: ascenso 3 y descenso por promoción -->
+                    <div>
+                        <label style="font-size:11px;color:#3a82c8;letter-spacing:1px;display:block;margin-bottom:6px;">⚔️ Partido de Promoción (solo si ganó el equipo de la B)</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:10px;color:var(--color-muted);display:block;margin-bottom:4px;">⬆ Ascenso 3 (ganador de la B)</label>
+                                <select id="sel-ascenso-3" class="form-control" style="font-size:13px;">
+                                    <option value="0">-- No hubo / Ganó el de Primera --</option>
+                                    @foreach (var e in equiposB)
+                                    {
+                                        <option value="@e.Id" selected="@(cierre != null && cierre.Ascenso3Id == e.Id)">@e.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:10px;color:var(--color-muted);display:block;margin-bottom:4px;">⬇ Descenso por promo (perdedor de Primera)</label>
+                                <select id="sel-descenso-promo" class="form-control" style="font-size:13px;">
+                                    <option value="0">-- No hubo / Ganó el de Primera --</option>
+                                    @foreach (var e in equiposTodos.Where(e => e.DivisionId == 1))
+                                    {
+                                        <option value="@e.Id" selected="@(cierre != null && cierre.DescensoPromoId == e.Id)">@e.Nombre</option>
+                                    }
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -851,8 +878,10 @@ async function guardarCierre() {
         campeonBId:         parseInt(document.getElementById('sel-campeon-b').value) || 0,
         ascenso1Id:         parseInt(document.getElementById('sel-ascenso-1').value) || 0,
         ascenso2Id:         parseInt(document.getElementById('sel-ascenso-2').value) || 0,
+        ascenso3Id:         parseInt(document.getElementById('sel-ascenso-3').value) || 0,
         descenso1Id:        parseInt(document.getElementById('sel-descenso-1').value) || 0,
         descenso2Id:        parseInt(document.getElementById('sel-descenso-2').value) || 0,
+        descensoPromoId:    parseInt(document.getElementById('sel-descenso-promo').value) || 0,
         sinDescensos:       document.getElementById('chk-sin-descensos').checked
     };
 

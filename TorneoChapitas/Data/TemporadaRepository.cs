@@ -85,7 +85,9 @@ namespace TorneoAmigos.Data
                        tc.descenso_2_id,         ed2.nombre,
                        tc.sin_descensos,
                        tc.campeon_primera_id,    ep.nombre,
-                       tc.campeon_b_id,          eb.nombre
+                       tc.campeon_b_id,          eb.nombre,
+                       tc.ascenso_3_id,          ea3.nombre,
+                       tc.descenso_promo_id,     edp.nombre
                 FROM temporada_cierre tc
                 LEFT JOIN equipos ec  ON tc.campeon_copa_id      = ec.id
                 LEFT JOIN equipos es  ON tc.campeon_supercopa_id = es.id
@@ -95,6 +97,8 @@ namespace TorneoAmigos.Data
                 LEFT JOIN equipos ed2 ON tc.descenso_2_id        = ed2.id
                 LEFT JOIN equipos ep  ON tc.campeon_primera_id   = ep.id
                 LEFT JOIN equipos eb  ON tc.campeon_b_id         = eb.id
+                LEFT JOIN equipos ea3 ON tc.ascenso_3_id         = ea3.id
+                LEFT JOIN equipos edp ON tc.descenso_promo_id    = edp.id
                 WHERE tc.temporada_id = @T";
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -102,16 +106,6 @@ namespace TorneoAmigos.Data
             conn.Open();
             using var r = cmd.ExecuteReader();
             if (!r.Read()) return null;
-            // índices: 0=id, 1=temporada_id,
-            //          2=copa_id, 3=copa_nombre,
-            //          4=supercopa_id, 5=supercopa_nombre,
-            //          6=asc1_id, 7=asc1_nombre,
-            //          8=asc2_id, 9=asc2_nombre,
-            //          10=desc1_id, 11=desc1_nombre,
-            //          12=desc2_id, 13=desc2_nombre,
-            //          14=sin_descensos,
-            //          15=primera_id, 16=primera_nombre,
-            //          17=b_id, 18=b_nombre
             return new TemporadaCierre
             {
                 Id                     = r.GetInt32(0),
@@ -130,7 +124,11 @@ namespace TorneoAmigos.Data
                 Descenso2Nombre        = r.IsDBNull(13) ? null : r.GetString(13),
                 SinDescensos           = r.GetBoolean(14),
                 CampeonPrimeraId       = r.IsDBNull(15) ? null : r.GetInt32(15),
-                CampeonBId             = r.IsDBNull(17) ? null : r.GetInt32(17)
+                CampeonBId             = r.IsDBNull(17) ? null : r.GetInt32(17),
+                Ascenso3Id             = r.IsDBNull(19) ? null : r.GetInt32(19),
+                Ascenso3Nombre         = r.IsDBNull(20) ? null : r.GetString(20),
+                DescensoPromoId        = r.IsDBNull(21) ? null : r.GetInt32(21),
+                DescensoPromoNombre    = r.IsDBNull(22) ? null : r.GetString(22)
             };
         }
 
@@ -261,9 +259,10 @@ namespace TorneoAmigos.Data
                 INSERT INTO temporada_cierre
                     (temporada_id, campeon_copa_id, campeon_supercopa_id,
                      campeon_primera_id, campeon_b_id,
-                     ascenso_1_id, ascenso_2_id, descenso_1_id, descenso_2_id,
+                     ascenso_1_id, ascenso_2_id, ascenso_3_id,
+                     descenso_1_id, descenso_2_id, descenso_promo_id,
                      sin_descensos, updated_at)
-                VALUES (@T, @CC, @CS, @CP, @CB, @A1, @A2, @D1, @D2, @SD, NOW())
+                VALUES (@T, @CC, @CS, @CP, @CB, @A1, @A2, @A3, @D1, @D2, @DP, @SD, NOW())
                 ON CONFLICT (temporada_id) DO UPDATE SET
                     campeon_copa_id      = EXCLUDED.campeon_copa_id,
                     campeon_supercopa_id = EXCLUDED.campeon_supercopa_id,
@@ -271,8 +270,10 @@ namespace TorneoAmigos.Data
                     campeon_b_id         = EXCLUDED.campeon_b_id,
                     ascenso_1_id         = EXCLUDED.ascenso_1_id,
                     ascenso_2_id         = EXCLUDED.ascenso_2_id,
+                    ascenso_3_id         = EXCLUDED.ascenso_3_id,
                     descenso_1_id        = EXCLUDED.descenso_1_id,
                     descenso_2_id        = EXCLUDED.descenso_2_id,
+                    descenso_promo_id    = EXCLUDED.descenso_promo_id,
                     sin_descensos        = EXCLUDED.sin_descensos,
                     updated_at           = NOW()";
             using var conn = GetConnection();
@@ -284,8 +285,10 @@ namespace TorneoAmigos.Data
             cmd.Parameters.AddWithValue("@CB", (object?)cierre.CampeonBId         ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@A1", (object?)cierre.Ascenso1Id         ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@A2", (object?)cierre.Ascenso2Id         ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@A3", (object?)cierre.Ascenso3Id         ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@D1", (object?)cierre.Descenso1Id        ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@D2", (object?)cierre.Descenso2Id        ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@DP", (object?)cierre.DescensoPromoId    ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@SD", cierre.SinDescensos);
             conn.Open();
             return cmd.ExecuteNonQuery() > 0;
@@ -378,10 +381,12 @@ namespace TorneoAmigos.Data
                 // Ascensos: usar borrador si existe, si no usar los 2 primeros de tabla B
                 var ascenso1 = cierre?.Ascenso1Id ?? (tablaB.Count >= 1 ? tablaB[0].EquipoId : 0);
                 var ascenso2 = cierre?.Ascenso2Id ?? (tablaB.Count >= 2 ? tablaB[1].EquipoId : 0);
+                var ascenso3 = cierre?.Ascenso3Id; // solo si ganó el de la B en promoción
                 if (ascenso1 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 1 WHERE id = @Id", ascenso1);
                 if (ascenso2 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 1 WHERE id = @Id", ascenso2);
+                if (ascenso3.HasValue && ascenso3 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 1 WHERE id = @Id", ascenso3.Value);
 
-                // Descensos: usar borrador si existe, si no usar los 2 últimos de tabla Primera
+                // Descensos directos
                 if (!sinDescensos)
                 {
                     var descenso1 = cierre?.Descenso1Id ?? (tablaPrimera.Count >= 2 ? tablaPrimera[tablaPrimera.Count - 2].EquipoId : 0);
@@ -389,6 +394,10 @@ namespace TorneoAmigos.Data
                     if (descenso1 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", descenso1);
                     if (descenso2 > 0) EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", descenso2);
                 }
+
+                // Descenso por promoción (si gana el de la B, el de Primera baja)
+                if (cierre?.DescensoPromoId.HasValue == true && cierre.DescensoPromoId > 0)
+                    EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", cierre.DescensoPromoId.Value);
 
                 // Registrar títulos en el palmarés (temporadaNombre ya fue obtenido arriba)
 

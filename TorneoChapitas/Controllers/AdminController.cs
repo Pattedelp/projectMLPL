@@ -136,8 +136,10 @@ namespace TorneoAmigos.Controllers
                 CampeonBId         = dto.CampeonBId         > 0 ? dto.CampeonBId         : null,
                 Ascenso1Id         = dto.Ascenso1Id         > 0 ? dto.Ascenso1Id         : null,
                 Ascenso2Id         = dto.Ascenso2Id         > 0 ? dto.Ascenso2Id         : null,
+                Ascenso3Id         = dto.Ascenso3Id         > 0 ? dto.Ascenso3Id         : null,
                 Descenso1Id        = dto.Descenso1Id        > 0 ? dto.Descenso1Id        : null,
                 Descenso2Id        = dto.Descenso2Id        > 0 ? dto.Descenso2Id        : null,
+                DescensoPromoId    = dto.DescensoPromoId    > 0 ? dto.DescensoPromoId    : null,
                 SinDescensos       = dto.SinDescensos
             };
 
@@ -505,8 +507,10 @@ namespace TorneoAmigos.Controllers
         public int CampeonSupercopaId { get; set; }
         public int Ascenso1Id { get; set; }
         public int Ascenso2Id { get; set; }
+        public int Ascenso3Id { get; set; }
         public int Descenso1Id { get; set; }
         public int Descenso2Id { get; set; }
+        public int DescensoPromoId { get; set; }
         public int CampeonPrimeraId { get; set; }
         public int CampeonBId { get; set; }
         public bool SinDescensos { get; set; }

@@ -362,10 +362,14 @@ namespace TorneoAmigos.Models
         public string? Ascenso1Nombre { get; set; }
         public int? Ascenso2Id { get; set; }
         public string? Ascenso2Nombre { get; set; }
+        public int? Ascenso3Id { get; set; }        // ganador promoción (si gana el de la B)
+        public string? Ascenso3Nombre { get; set; }
         public int? Descenso1Id { get; set; }
         public string? Descenso1Nombre { get; set; }
         public int? Descenso2Id { get; set; }
         public string? Descenso2Nombre { get; set; }
+        public int? DescensoPromoId { get; set; }   // pierde promoción (baja de Primera)
+        public string? DescensoPromoNombre { get; set; }
         public int? CampeonPrimeraId { get; set; }
         public int? CampeonBId { get; set; }
         public bool SinDescensos { get; set; }

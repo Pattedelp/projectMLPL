@@ -1074,7 +1074,7 @@ namespace TorneoAmigos.Data
                         SELECT cr.id, cr.nombre FROM copa_rondas cr
                         WHERE cr.copa_id = @C
                           AND cr.orden > (SELECT orden FROM copa_rondas WHERE id = @R)
-                        ORDER BY cr.orden LIMIT 1", conn, tx))
+                        ORDER BY cr.orden FETCH FIRST 1 ROW ONLY", conn, tx))
                     {
                         cmd2.Parameters.AddWithValue("@C", copaId);
                         cmd2.Parameters.AddWithValue("@R", rondaId);
@@ -1098,7 +1098,7 @@ namespace TorneoAmigos.Data
                                     SELECT id FROM copa_partidos
                                     WHERE ronda_id = @SR AND copa_id = @C
                                       AND equipo_local_id IS NULL
-                                    ORDER BY posicion_bracket LIMIT 1
+                                    ORDER BY posicion_bracket FETCH FIRST 1 ROW ONLY
                                 )", conn, tx);
                             cmdAdv.Parameters.AddWithValue("@G",  ganadorId);
                             cmdAdv.Parameters.AddWithValue("@SR", siguienteRondaId.Value);

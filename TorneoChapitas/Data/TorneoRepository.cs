@@ -409,24 +409,6 @@ namespace TorneoAmigos.Data
                 .Where(p => p.Jugado && p.TipoPartido == "regular")
                 .ToList();
 
-        public Partido? GetPartidoById(int id)
-        {
-            const string sql = @"
-                SELECT p.id, p.fechaid, p.divisionid, p.equipolocalid, p.equipovisitanteid,
-                       p.goleslocal, p.golesvisitante, p.jugado, p.fechapartido, p.lugar, p.observaciones,
-                       el.nombre, el.colorprincipal, ev.nombre, ev.colorprincipal
-                FROM partidos p
-                INNER JOIN equipos el ON p.equipolocalid    = el.id
-                INNER JOIN equipos ev ON p.equipovisitanteid = ev.id
-                WHERE p.id = @Id";
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@Id", id);
-            conn.Open();
-            using var r = cmd.ExecuteReader();
-            return r.Read() ? MapPartido(r) : null;
-        }
-
         public int GetDivisionIdDePartido(int partidoId)
         {
             using var conn = GetConnection();

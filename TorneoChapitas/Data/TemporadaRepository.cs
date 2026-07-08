@@ -1107,9 +1107,42 @@ namespace TorneoAmigos.Data
                         }
                         else
                         {
-                            int posSiguiente = posicion / 2;
-                            bool esLocal = posicion % 2 == 0;
-                            var campoCheck = esLocal ? "equipo_local_id" : "equipo_visitante_id";
+                            // Contar partidos en ronda actual y siguiente para determinar la relación
+                            int partidosRondaActual = 0, partidosRondaSiguiente = 0;
+                            using (var cmdCount = new NpgsqlCommand(@"
+                                SELECT
+                                    (SELECT COUNT(*) FROM copa_partidos WHERE ronda_id = @R AND copa_id = @C) as actual,
+                                    (SELECT COUNT(*) FROM copa_partidos WHERE ronda_id = @SR AND copa_id = @C) as siguiente",
+                                conn, tx))
+                            {
+                                cmdCount.Parameters.AddWithValue("@R",  rondaId);
+                                cmdCount.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
+                                cmdCount.Parameters.AddWithValue("@C",  copaId);
+                                using var rc = cmdCount.ExecuteReader();
+                                if (rc.Read()) {
+                                    partidosRondaActual    = Convert.ToInt32(rc.GetInt64(0));
+                                    partidosRondaSiguiente = Convert.ToInt32(rc.GetInt64(1));
+                                }
+                            }
+
+                            int posSiguiente;
+                            string campoCheck;
+
+                            if (partidosRondaActual == partidosRondaSiguiente)
+                            {
+                                // Relación 1:1 (ej: FP2 8 partidos → Octavos 8 partidos)
+                                // Ganador de posición N va a posición N como visitante
+                                posSiguiente = posicion;
+                                campoCheck   = "equipo_visitante_id";
+                            }
+                            else
+                            {
+                                // Relación 2:1 (ej: 16→8, Cuartos→Semis, Semis→Final)
+                                posSiguiente = posicion / 2;
+                                bool esLocal = posicion % 2 == 0;
+                                campoCheck   = esLocal ? "equipo_local_id" : "equipo_visitante_id";
+                            }
+
                             using var cmdAdv = new NpgsqlCommand($@"
                                 UPDATE copa_partidos
                                 SET {campoCheck} = @G

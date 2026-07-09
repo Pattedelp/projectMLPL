@@ -1144,6 +1144,12 @@ namespace TorneoAmigos.Data
                             }
 
                             using var cmdAdv = new NpgsqlCommand($@"
+                                INSERT INTO copa_partidos (ronda_id, copa_id, equipo_local_id, equipo_visitante_id, jugado, posicion_bracket)
+                                SELECT @SR, @C, NULL, NULL, false, @PS
+                                WHERE NOT EXISTS (
+                                    SELECT 1 FROM copa_partidos 
+                                    WHERE ronda_id = @SR AND copa_id = @C AND posicion_bracket = @PS
+                                );
                                 UPDATE copa_partidos
                                 SET {campoCheck} = @G
                                 WHERE ronda_id = @SR

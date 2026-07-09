@@ -952,6 +952,18 @@ namespace TorneoAmigos.Data
                         InsertarPartidoCopaConUnEquipo(conn, tx, rondaIds["Octavos de Final"], copaId, octRand[i], i);
                 }
 
+                // ── CUARTOS, SEMIS, FINAL: partidos vacíos desde el inicio ──
+                if (rondaIds.ContainsKey("Cuartos de Final"))
+                    for (int i = 0; i < 4; i++)
+                        InsertarPartidoCopaVacio(conn, tx, rondaIds["Cuartos de Final"], copaId, i);
+
+                if (rondaIds.ContainsKey("Semifinales"))
+                    for (int i = 0; i < 2; i++)
+                        InsertarPartidoCopaVacio(conn, tx, rondaIds["Semifinales"], copaId, i);
+
+                if (rondaIds.ContainsKey("Final"))
+                    InsertarPartidoCopaVacio(conn, tx, rondaIds["Final"], copaId, 0);
+
                 tx.Commit();
                 return copaId;
             }

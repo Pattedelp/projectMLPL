@@ -41,9 +41,10 @@
                 {
                     int placeholders = ronda.Nombre.Contains("Cuartos") ? 4 :
                                        ronda.Nombre.Contains("Semi") ? 2 : 1;
+                    bool phBloqueado = !ronda.Habilitada && !Model.EsAdmin;
                     @for (int ph = 0; ph < placeholders; ph++)
                     {
-                        <div class="bracket-match bracket-blur">
+                        <div class="bracket-match @(phBloqueado ? "bracket-blur" : "")">
                             <div class="bracket-team tbd"><span>Por definir</span></div>
                             <div class="bracket-team tbd"><span>Por definir</span></div>
                         </div>

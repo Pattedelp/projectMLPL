@@ -39,8 +39,8 @@
             <div class="bracket-matches">
                 @if (!ronda.Partidos.Any())
                 {
-                    @{ int placeholders = ronda.Nombre.Contains("Cuartos") ? 4 :
-                                         ronda.Nombre.Contains("Semi") ? 2 : 1; }
+                    int placeholders = ronda.Nombre.Contains("Cuartos") ? 4 :
+                                       ronda.Nombre.Contains("Semi") ? 2 : 1;
                     @for (int ph = 0; ph < placeholders; ph++)
                     {
                         <div class="bracket-match bracket-blur">

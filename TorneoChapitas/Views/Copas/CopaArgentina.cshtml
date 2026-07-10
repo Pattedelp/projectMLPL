@@ -19,74 +19,96 @@
        class="@(Model.Copa.Tipo == "supercopa" ? "active" : "")">Supercopa Argentina</a>
 </nav>
 
-<div class="bracket-scroll">
-<div class="bracket">
-    @foreach (var ronda in Model.Rondas)
-    {
-        <div class="bracket-round">
-            <div class="bracket-round-header">
-                <span class="bracket-round-title">@ronda.Nombre</span>
-                @if (Model.EsAdmin)
-                {
-                    <label class="toggle-habilitada" style="margin-left:8px" title="Habilitar ronda">
-                        <input type="checkbox" class="check-ronda"
-                               data-ronda-id="@ronda.Id"
-                               @(ronda.Habilitada ? "checked" : "") />
-                        <span class="toggle-slider"></span>
-                    </label>
-                }
-            </div>
-            <div class="bracket-matches">
-                @foreach (var partido in ronda.Partidos)
-                {
-                    var bloqueado = !ronda.Habilitada && !Model.EsAdmin;
-                    var tbd = string.IsNullOrEmpty(partido.NombreLocal) || partido.NombreLocal == "Por definir";
-                    <div class="bracket-match @(bloqueado ? "bracket-blur" : "")" id="copa-partido-@partido.Id">
-                        <div class="bracket-team @(partido.Jugado && partido.GolesLocal > partido.GolesVisitante ? "winner" : "") @(tbd ? "tbd" : "")">
-                            @if (!string.IsNullOrEmpty(partido.FlagLocal))
-                            {
-                                <img src="https://flagcdn.com/16x12/@(partido.FlagLocal).png" class="flag-sm" alt="" onerror="this.style.display='none'" />
-                            }
-                            <span>@(string.IsNullOrEmpty(partido.NombreLocal) ? "Por definir" : partido.NombreLocal)</span>
-                            @if (partido.Jugado) { <span class="bracket-score">@partido.GolesLocal</span> }
-                        </div>
-                        <div class="bracket-team @(partido.Jugado && partido.GolesVisitante > partido.GolesLocal ? "winner" : "") @(tbd ? "tbd" : "")">
-                            @if (!string.IsNullOrEmpty(partido.FlagVisitante))
-                            {
-                                <img src="https://flagcdn.com/16x12/@(partido.FlagVisitante).png" class="flag-sm" alt="" onerror="this.style.display='none'" />
-                            }
-                            <span>@(string.IsNullOrEmpty(partido.NombreVisitante) ? "Por definir" : partido.NombreVisitante)</span>
-                            @if (partido.Jugado) { <span class="bracket-score">@partido.GolesVisitante</span> }
-                        </div>
-                        @if (Model.EsAdmin && ronda.Habilitada)
-                        {
-                            <div class="bracket-admin-btn" style="display:flex;gap:6px;justify-content:flex-end;">
-                                @if (!tbd)
-                                {
-                                    <a href="#" class="btn-editar"
-                                       onclick="abrirModalCopa(@partido.Id, '@partido.NombreLocal', '@partido.FlagLocal', '@partido.NombreVisitante', '@partido.FlagVisitante', @(partido.GolesLocal??0), @(partido.GolesVisitante??0)); return false;">
-                                        @(partido.Jugado ? "editar" : "+ resultado")
-                                    </a>
-                                }
-                                <a href="#" class="btn-editar" style="background:rgba(58,130,200,.2);color:#8aabcc;"
-                                   onclick="abrirModalEditarBracket(@partido.Id, '@partido.NombreLocal', '@partido.NombreVisitante'); return false;">
-                                    ✏️
-                                </a>
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
+<!-- Copa de fondo -->
+<div class="copa-fondo-bg">🏆</div>
+
+<div class="bracket-scroll-new">
+<div class="bracket-new">
+
+@foreach (var ronda in Model.Rondas)
+{
+    bool esUltima = ronda == Model.Rondas.Last();
+    bool esFinal  = ronda.Nombre == "Final";
+
+    <div class="round-new @(esFinal ? "round-final" : "")">
+        <div class="round-new-header">
+            <span class="round-new-title">@(esFinal ? "⭐ " : "")@ronda.Nombre</span>
+            @if (Model.EsAdmin)
+            {
+                <label class="toggle-habilitada" style="margin-left:8px" title="Habilitar ronda">
+                    <input type="checkbox" class="check-ronda"
+                           data-ronda-id="@ronda.Id"
+                           @(ronda.Habilitada ? "checked" : "") />
+                    <span class="toggle-slider"></span>
+                </label>
+            }
         </div>
-        @if (ronda != Model.Rondas.Last())
+
+        <div class="round-new-matches">
+            @foreach (var partido in ronda.Partidos)
+            {
+                var bloqueado  = !ronda.Habilitada && !Model.EsAdmin;
+                var localTbd   = string.IsNullOrEmpty(partido.NombreLocal)     || partido.NombreLocal     == "Por definir";
+                var visitTbd   = string.IsNullOrEmpty(partido.NombreVisitante) || partido.NombreVisitante == "Por definir";
+                var localWin   = partido.Jugado && partido.GolesLocal > partido.GolesVisitante;
+                var visitWin   = partido.Jugado && partido.GolesVisitante > partido.GolesLocal;
+
+                <div class="match-new @(bloqueado ? "match-blur" : "") @(esFinal ? "match-final" : "")" id="copa-partido-@partido.Id">
+                    <!-- Local -->
+                    <div class="team-new @(localWin ? "team-win" : "") @(localTbd ? "team-tbd" : "")">
+                        @if (!localTbd && !string.IsNullOrEmpty(partido.FlagLocal))
+                        {
+                            <img src="https://flagcdn.com/16x12/@(partido.FlagLocal).png" class="flag-sm" alt="" onerror="this.style.display='none'" />
+                        }
+                        <span class="team-new-name">@(localTbd ? "Por definir" : partido.NombreLocal)</span>
+                        @if (partido.Jugado) { <span class="team-new-score">@partido.GolesLocal</span> }
+                    </div>
+                    <!-- Visitante -->
+                    <div class="team-new @(visitWin ? "team-win" : "") @(visitTbd ? "team-tbd" : "")">
+                        @if (!visitTbd && !string.IsNullOrEmpty(partido.FlagVisitante))
+                        {
+                            <img src="https://flagcdn.com/16x12/@(partido.FlagVisitante).png" class="flag-sm" alt="" onerror="this.style.display='none'" />
+                        }
+                        <span class="team-new-name">@(visitTbd ? "Por definir" : partido.NombreVisitante)</span>
+                        @if (partido.Jugado) { <span class="team-new-score">@partido.GolesVisitante</span> }
+                    </div>
+                    <!-- Botones admin -->
+                    @if (Model.EsAdmin && ronda.Habilitada)
+                    {
+                        <div class="match-admin-btns">
+                            @if (!localTbd && !visitTbd)
+                            {
+                                <a href="#" class="btn-editar"
+                                   onclick="abrirModalCopa(@partido.Id, '@partido.NombreLocal', '@partido.FlagLocal', '@partido.NombreVisitante', '@partido.FlagVisitante', @(partido.GolesLocal??0), @(partido.GolesVisitante??0)); return false;">
+                                    @(partido.Jugado ? "editar" : "+ resultado")
+                                </a>
+                            }
+                            <a href="#" class="btn-editar" style="background:rgba(58,130,200,.2);color:#8aabcc;"
+                               onclick="abrirModalEditarBracket(@partido.Id, '@partido.NombreLocal', '@partido.NombreVisitante'); return false;">
+                                ✏️
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (esFinal)
         {
-            <div class="bracket-arrow">›</div>
+            <div class="trophy-animated">🏆</div>
         }
+    </div>
+
+    @if (!esUltima)
+    {
+        <div class="bracket-connector @(esFinal ? "connector-gold" : "")">›</div>
     }
+}
+
 </div>
 </div>
 
-<!-- MODAL -->
+<!-- MODAL RESULTADO -->
 <div id="modal-overlay-copa" class="modal-overlay" onclick="cerrarModalCopa()" style="display:none"></div>
 <div id="modal-copa" class="modal-resultado" style="display:none">
     <div class="modal-header">
@@ -128,7 +150,7 @@
     <div class="modal-body">
         <input type="hidden" id="edit-bracket-id" />
         <p style="font-size:12px;color:var(--color-muted);margin-bottom:16px;">
-            Local actual: <strong id="edit-local-actual"></strong> · 
+            Local actual: <strong id="edit-local-actual"></strong> ·
             Visitante actual: <strong id="edit-visita-actual"></strong>
         </p>
         <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
@@ -148,6 +170,172 @@
         </div>
     </div>
 </div>
+
+<style>
+/* ── COPA DE FONDO ─────────────────────────── */
+.copa-fondo-bg {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 340px;
+    opacity: 0.035;
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+}
+
+/* ── SCROLL CONTAINER ──────────────────────── */
+.bracket-scroll-new {
+    overflow-x: auto;
+    padding: 20px 0 32px;
+    position: relative;
+    z-index: 1;
+}
+
+/* ── BRACKET ───────────────────────────────── */
+.bracket-new {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    min-width: max-content;
+    padding: 0 20px;
+}
+
+/* ── RONDA ─────────────────────────────────── */
+.round-new {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 160px;
+}
+
+.round-new-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 6px;
+}
+
+.round-new-title {
+    font-family: var(--font-heading);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--color-gold);
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.round-new-matches {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Espaciado dinámico entre partidos según ronda */
+.bracket-new > .round-new:nth-child(5) .round-new-matches  { gap: 56px; }   /* Octavos */
+.bracket-new > .round-new:nth-child(7) .round-new-matches  { gap: 144px; }  /* Cuartos */
+.bracket-new > .round-new:nth-child(9) .round-new-matches  { gap: 320px; }  /* Semis */
+
+/* ── PARTIDO ───────────────────────────────── */
+.match-new {
+    width: 155px;
+    background: var(--color-bg2);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color .2s;
+}
+
+.match-new:hover { border-color: rgba(240,192,64,.4); }
+.match-blur { filter: blur(4px); pointer-events: none; }
+
+.match-final {
+    border-color: var(--color-gold);
+    box-shadow: 0 0 16px rgba(240,192,64,0.25);
+}
+
+/* ── EQUIPO ────────────────────────────────── */
+.team-new {
+    padding: 7px 10px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border-bottom: 1px solid var(--color-border);
+}
+.team-new:last-of-type { border-bottom: none; }
+
+.team-new.team-win {
+    background: rgba(240,192,64,0.12);
+    font-weight: 700;
+    color: var(--color-gold);
+}
+
+.team-new.team-tbd {
+    color: var(--color-border);
+    font-style: italic;
+}
+
+.team-new-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.team-new-score {
+    font-weight: 700;
+    font-size: 13px;
+    min-width: 16px;
+    text-align: right;
+}
+
+/* ── BOTONES ADMIN ─────────────────────────── */
+.match-admin-btns {
+    display: flex;
+    gap: 4px;
+    padding: 4px 6px;
+    border-top: 1px solid var(--color-border);
+    justify-content: flex-end;
+    background: var(--color-bg3);
+}
+
+/* ── CONECTOR ──────────────────────────────── */
+.bracket-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    color: var(--color-border);
+    font-size: 24px;
+    margin-top: 26px;
+    align-self: flex-start;
+    padding-top: 140px;
+}
+
+.bracket-new > .bracket-connector:nth-child(4)  { padding-top: 140px; }  /* →Octavos */
+.bracket-new > .bracket-connector:nth-child(6)  { padding-top: 170px; }  /* →Cuartos */
+.bracket-new > .bracket-connector:nth-child(8)  { padding-top: 310px; }  /* →Semis   */
+.bracket-new > .bracket-connector:nth-child(10) { padding-top: 660px; }  /* →Final   */
+
+.connector-gold { color: var(--color-gold); }
+
+/* ── TROFEO ────────────────────────────────── */
+.trophy-animated {
+    font-size: 52px;
+    margin-top: 20px;
+    animation: trophyPulse 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(240,192,64,0.8));
+}
+
+@@keyframes trophyPulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(240,192,64,0.8)); }
+    50%       { transform: scale(1.08); filter: drop-shadow(0 0 24px rgba(240,192,64,1)); }
+}
+</style>
 
 @section Scripts {
 <script>
@@ -207,7 +395,7 @@ async function guardarResultadoCopa() {
 
 document.querySelectorAll('.check-ronda').forEach(chk => {
     chk.addEventListener('change', async function() {
-        const rondaId   = this.dataset.rondaId;
+        const rondaId    = this.dataset.rondaId;
         const habilitada = this.checked;
         const r = await fetch('/Copas/ToggleRonda', {
             method: 'POST',
@@ -220,14 +408,12 @@ document.querySelectorAll('.check-ronda').forEach(chk => {
     });
 });
 
-// Modal editar bracket
 let editBracketId = null;
 function abrirModalEditarBracket(id, local, visitante) {
     editBracketId = id;
     document.getElementById('edit-bracket-id').value = id;
     document.getElementById('edit-local-actual').textContent  = local || 'Por definir';
     document.getElementById('edit-visita-actual').textContent = visitante || 'Por definir';
-    // Cargar equipos en selects
     fetch('/Admin/GetEquiposTodos')
         .then(r => r.json())
         .then(equipos => {
@@ -244,11 +430,13 @@ function abrirModalEditarBracket(id, local, visitante) {
     document.getElementById('modal-overlay-edit-bracket').style.display = 'block';
     document.getElementById('modal-edit-bracket').style.display = 'block';
 }
+
 function cerrarModalEditarBracket() {
     document.getElementById('modal-overlay-edit-bracket').style.display = 'none';
     document.getElementById('modal-edit-bracket').style.display = 'none';
     editBracketId = null;
 }
+
 async function guardarEditBracket() {
     const id      = document.getElementById('edit-bracket-id').value;
     const localId = document.getElementById('edit-sel-local').value;
@@ -263,21 +451,8 @@ async function guardarEditBracket() {
     else alert('Error al guardar.');
 }
 
-// Registrar título de copa (admin)
-async function registrarTituloCopa(equipoId, nombreEquipo, tipoTitulo, nombreTitulo) {
-    if (!confirm(`¿Registrar "${nombreTitulo}" para ${nombreEquipo} en el palmarés?`)) return;
-    const r = await fetch('/Admin/RegistrarTituloCopa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ equipoId, tipoTitulo, nombreTitulo })
-    });
-    const d = await r.json();
-    if (d.ok) alert('✅ Título registrado en el palmarés.');
-    else alert('Error al registrar.');
-}
-
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') cerrarModalCopa();
+    if (e.key === 'Escape') { cerrarModalCopa(); cerrarModalEditarBracket(); }
     if (e.key === 'Enter' && copaPartidoActual) guardarResultadoCopa();
 });
 </script>

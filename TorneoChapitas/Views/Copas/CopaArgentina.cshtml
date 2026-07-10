@@ -113,21 +113,41 @@
         int gapB = nB <= 1 ? 0 : (totalH - nB * MATCH_H) / (nB - 1);
 
         <svg class="bracket-svg-connector" width="40" height="@(totalH + 32)" viewBox="0 0 40 @(totalH + 32)">
-        @for (int i = 0; i < nA; i++)
-        {
-            // Centro vertical del partido i en ronda A
-            double yA = i * (MATCH_H + gapA) + MATCH_H / 2.0;
-            // Partido destino en ronda B
-            int destB = i / 2;
-            double yB = destB * (MATCH_H + gapB) + MATCH_H / 2.0;
+        @{
+            string colorLine = "#1e3a5f";
+            if (nA == nB)
+            {
+                // Relación 1:1: línea recta de cada partido al siguiente
+                for (int i = 0; i < nA; i++)
+                {
+                    double y = i * (MATCH_H + gapA) + MATCH_H / 2.0;
+                    <line x1="0" y1="@y.ToString("F1")" x2="40" y2="@y.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
+                }
+            }
+            else
+            {
+                // Relación 2:1: por cada partido destino, dibujar las 2 líneas que llegan
+                int nDest = nB > 0 ? nB : nA / 2;
+                // gapB recalculado correctamente para la ronda destino
+                int gapBReal = nDest <= 1 ? 0 : (totalH - nDest * MATCH_H) / (nDest - 1);
+                for (int d = 0; d < nDest; d++)
+                {
+                    int src1 = d * 2;
+                    int src2 = d * 2 + 1;
+                    double yD  = d    * (MATCH_H + gapBReal) + MATCH_H / 2.0;
+                    double yS1 = src1 * (MATCH_H + gapA) + MATCH_H / 2.0;
+                    double yS2 = src2 < nA ? src2 * (MATCH_H + gapA) + MATCH_H / 2.0 : yS1;
 
-            // Si nA == nB es relación 1:1, sino 2:1
-            if (nA == nB) { yB = yA; }
-
-            string colorLine = esFinal ? "#f0c040" : "#1e3a5f";
-            <line x1="0" y1="@yA.ToString("F1")" x2="20" y2="@yA.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
-            <line x1="20" y1="@yA.ToString("F1")" x2="20" y2="@yB.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
-            <line x1="20" y1="@yB.ToString("F1")" x2="40" y2="@yB.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
+                    // Línea desde partido origen 1 hasta el punto medio, luego baja/sube a destino
+                    <line x1="0"  y1="@yS1.ToString("F1")" x2="20" y2="@yS1.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
+                    <line x1="20" y1="@yS1.ToString("F1")" x2="20" y2="@yD.ToString("F1")"  stroke="@colorLine" stroke-width="1.5"/>
+                    // Línea desde partido origen 2 hasta el punto medio, luego sube/baja a destino
+                    <line x1="0"  y1="@yS2.ToString("F1")" x2="20" y2="@yS2.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
+                    <line x1="20" y1="@yS2.ToString("F1")" x2="20" y2="@yD.ToString("F1")"  stroke="@colorLine" stroke-width="1.5"/>
+                    // Línea de salida al siguiente partido
+                    <line x1="20" y1="@yD.ToString("F1")" x2="40" y2="@yD.ToString("F1")"  stroke="@colorLine" stroke-width="1.5"/>
+                }
+            }
         }
         </svg>
     }

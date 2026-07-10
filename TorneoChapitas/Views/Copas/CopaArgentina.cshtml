@@ -2,6 +2,8 @@
 @{
     ViewBag.Title = Model.Copa.Nombre;
     ViewBag.ActivePage = "copas";
+    int MATCH_H   = 58;  // altura de cada partido (px)
+    int MATCH_GAP = 8;   // gap mínimo entre partidos (px)
 }
 
 <div class="page-hero">
@@ -19,23 +21,34 @@
        class="@(Model.Copa.Tipo == "supercopa" ? "active" : "")">Supercopa Argentina</a>
 </nav>
 
-<!-- Copa de fondo -->
 <div class="copa-fondo-bg">🏆</div>
 
 <div class="bracket-scroll-new">
-<div class="bracket-new">
+<div class="bracket-new" id="bracket-root">
+
+@{
+    // Calcular la ronda con más partidos (base para el layout)
+    int maxPartidos = Model.Rondas.Max(r => r.Partidos.Count);
+    if (maxPartidos == 0) maxPartidos = 1;
+    int totalH = maxPartidos * MATCH_H + (maxPartidos - 1) * MATCH_GAP;
+}
 
 @foreach (var ronda in Model.Rondas)
 {
     bool esUltima = ronda == Model.Rondas.Last();
     bool esFinal  = ronda.Nombre == "Final";
+    int  nP       = ronda.Partidos.Count;
 
-    <div class="round-new @(esFinal ? "round-final" : "")">
+    // Espaciado entre partidos de esta ronda para centrarlos en totalH
+    // Los partidos se distribuyen equidistantes dentro de totalH
+    int gapRonda = nP <= 1 ? 0 : (totalH - nP * MATCH_H) / (nP - 1);
+
+    <div class="round-new @(esFinal ? "round-final" : "")" style="--gap-ronda:@(gapRonda)px; --total-h:@(totalH)px;">
         <div class="round-new-header">
             <span class="round-new-title">@(esFinal ? "⭐ " : "")@ronda.Nombre</span>
             @if (Model.EsAdmin)
             {
-                <label class="toggle-habilitada" style="margin-left:8px" title="Habilitar ronda">
+                <label class="toggle-habilitada" style="margin-left:6px" title="Habilitar ronda">
                     <input type="checkbox" class="check-ronda"
                            data-ronda-id="@ronda.Id"
                            @(ronda.Habilitada ? "checked" : "") />
@@ -44,49 +57,40 @@
             }
         </div>
 
-        <div class="round-new-matches">
+        <div class="round-new-matches" style="gap:@(gapRonda)px; height:@(totalH)px;">
             @foreach (var partido in ronda.Partidos)
             {
-                var bloqueado  = !ronda.Habilitada && !Model.EsAdmin;
-                var localTbd   = string.IsNullOrEmpty(partido.NombreLocal)     || partido.NombreLocal     == "Por definir";
-                var visitTbd   = string.IsNullOrEmpty(partido.NombreVisitante) || partido.NombreVisitante == "Por definir";
-                var localWin   = partido.Jugado && partido.GolesLocal > partido.GolesVisitante;
-                var visitWin   = partido.Jugado && partido.GolesVisitante > partido.GolesLocal;
+                var bloqueado = !ronda.Habilitada && !Model.EsAdmin;
+                var localTbd  = string.IsNullOrEmpty(partido.NombreLocal)     || partido.NombreLocal     == "Por definir";
+                var visitTbd  = string.IsNullOrEmpty(partido.NombreVisitante) || partido.NombreVisitante == "Por definir";
+                var localWin  = partido.Jugado && partido.GolesLocal > partido.GolesVisitante;
+                var visitWin  = partido.Jugado && partido.GolesVisitante > partido.GolesLocal;
 
                 <div class="match-new @(bloqueado ? "match-blur" : "") @(esFinal ? "match-final" : "")" id="copa-partido-@partido.Id">
-                    <!-- Local -->
                     <div class="team-new @(localWin ? "team-win" : "") @(localTbd ? "team-tbd" : "")">
                         @if (!localTbd && !string.IsNullOrEmpty(partido.FlagLocal))
-                        {
-                            <img src="https://flagcdn.com/16x12/@(partido.FlagLocal).png" class="flag-sm" alt="" onerror="this.style.display='none'" />
-                        }
+                        { <img src="https://flagcdn.com/16x12/@(partido.FlagLocal).png" class="flag-sm" alt="" onerror="this.style.display='none'" /> }
                         <span class="team-new-name">@(localTbd ? "Por definir" : partido.NombreLocal)</span>
                         @if (partido.Jugado) { <span class="team-new-score">@partido.GolesLocal</span> }
                     </div>
-                    <!-- Visitante -->
                     <div class="team-new @(visitWin ? "team-win" : "") @(visitTbd ? "team-tbd" : "")">
                         @if (!visitTbd && !string.IsNullOrEmpty(partido.FlagVisitante))
-                        {
-                            <img src="https://flagcdn.com/16x12/@(partido.FlagVisitante).png" class="flag-sm" alt="" onerror="this.style.display='none'" />
-                        }
+                        { <img src="https://flagcdn.com/16x12/@(partido.FlagVisitante).png" class="flag-sm" alt="" onerror="this.style.display='none'" /> }
                         <span class="team-new-name">@(visitTbd ? "Por definir" : partido.NombreVisitante)</span>
                         @if (partido.Jugado) { <span class="team-new-score">@partido.GolesVisitante</span> }
                     </div>
-                    <!-- Botones admin -->
                     @if (Model.EsAdmin && ronda.Habilitada)
                     {
                         <div class="match-admin-btns">
                             @if (!localTbd && !visitTbd)
                             {
                                 <a href="#" class="btn-editar"
-                                   onclick="abrirModalCopa(@partido.Id, '@partido.NombreLocal', '@partido.FlagLocal', '@partido.NombreVisitante', '@partido.FlagVisitante', @(partido.GolesLocal??0), @(partido.GolesVisitante??0)); return false;">
+                                   onclick="abrirModalCopa(@partido.Id,'@partido.NombreLocal','@partido.FlagLocal','@partido.NombreVisitante','@partido.FlagVisitante',@(partido.GolesLocal??0),@(partido.GolesVisitante??0));return false;">
                                     @(partido.Jugado ? "editar" : "+ resultado")
                                 </a>
                             }
                             <a href="#" class="btn-editar" style="background:rgba(58,130,200,.2);color:#8aabcc;"
-                               onclick="abrirModalEditarBracket(@partido.Id, '@partido.NombreLocal', '@partido.NombreVisitante'); return false;">
-                                ✏️
-                            </a>
+                               onclick="abrirModalEditarBracket(@partido.Id,'@partido.NombreLocal','@partido.NombreVisitante');return false;">✏️</a>
                         </div>
                     }
                 </div>
@@ -101,7 +105,31 @@
 
     @if (!esUltima)
     {
-        <div class="bracket-connector @(esFinal ? "connector-gold" : "")">›</div>
+        // SVG conector entre esta ronda y la siguiente
+        var rondaSig = Model.Rondas[Model.Rondas.IndexOf(ronda) + 1];
+        int nA = ronda.Partidos.Count;
+        int nB = rondaSig.Partidos.Count;
+        int gapA = nA <= 1 ? 0 : (totalH - nA * MATCH_H) / (nA - 1);
+        int gapB = nB <= 1 ? 0 : (totalH - nB * MATCH_H) / (nB - 1);
+
+        <svg class="bracket-svg-connector" width="40" height="@(totalH + 32)" viewBox="0 0 40 @(totalH + 32)">
+        @for (int i = 0; i < nA; i++)
+        {
+            // Centro vertical del partido i en ronda A
+            double yA = i * (MATCH_H + gapA) + MATCH_H / 2.0;
+            // Partido destino en ronda B
+            int destB = i / 2;
+            double yB = destB * (MATCH_H + gapB) + MATCH_H / 2.0;
+
+            // Si nA == nB es relación 1:1, sino 2:1
+            if (nA == nB) { yB = yA; }
+
+            string colorLine = esFinal ? "#f0c040" : "#1e3a5f";
+            <line x1="0" y1="@yA.ToString("F1")" x2="20" y2="@yA.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
+            <line x1="20" y1="@yA.ToString("F1")" x2="20" y2="@yB.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
+            <line x1="20" y1="@yB.ToString("F1")" x2="40" y2="@yB.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
+        }
+        </svg>
     }
 }
 
@@ -150,8 +178,7 @@
     <div class="modal-body">
         <input type="hidden" id="edit-bracket-id" />
         <p style="font-size:12px;color:var(--color-muted);margin-bottom:16px;">
-            Local actual: <strong id="edit-local-actual"></strong> ·
-            Visitante actual: <strong id="edit-visita-actual"></strong>
+            Local: <strong id="edit-local-actual"></strong> · Visitante: <strong id="edit-visita-actual"></strong>
         </p>
         <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
             <div style="flex:1;">
@@ -172,288 +199,167 @@
 </div>
 
 <style>
-/* ── COPA DE FONDO ─────────────────────────── */
 .copa-fondo-bg {
-    position: fixed;
-    top: 50%;
-    left: 50%;
+    position: fixed; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 340px;
-    opacity: 0.035;
-    pointer-events: none;
-    user-select: none;
-    z-index: 0;
+    font-size: 320px; opacity: 0.035;
+    pointer-events: none; user-select: none; z-index: 0;
 }
-
-/* ── SCROLL CONTAINER ──────────────────────── */
 .bracket-scroll-new {
-    overflow-x: auto;
-    padding: 20px 0 32px;
-    position: relative;
-    z-index: 1;
+    overflow-x: auto; padding: 16px 0 32px;
+    position: relative; z-index: 1;
 }
-
-/* ── BRACKET ───────────────────────────────── */
 .bracket-new {
-    display: flex;
-    align-items: flex-start;
-    gap: 0;
-    min-width: max-content;
-    padding: 0 20px;
+    display: flex; align-items: flex-start; gap: 0;
+    min-width: max-content; padding: 0 16px;
 }
-
-/* ── RONDA ─────────────────────────────────── */
 .round-new {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 160px;
+    display: flex; flex-direction: column;
+    align-items: center; min-width: 155px;
 }
-
 .round-new-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16px;
-    gap: 6px;
+    display: flex; align-items: center;
+    margin-bottom: 12px; gap: 6px; height: 20px;
 }
-
 .round-new-title {
-    font-family: var(--font-heading);
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: var(--color-gold);
-    text-transform: uppercase;
-    font-weight: 600;
-    white-space: nowrap;
+    font-family: var(--font-heading); font-size: 10px;
+    letter-spacing: 2px; color: var(--color-gold);
+    text-transform: uppercase; font-weight: 600; white-space: nowrap;
 }
-
 .round-new-matches {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
+    display: flex; flex-direction: column;
+    width: 155px; justify-content: space-between;
 }
-
-/* Espaciado dinámico entre partidos según ronda */
-.bracket-new > .round-new:nth-child(5) .round-new-matches  { gap: 56px; }   /* Octavos */
-.bracket-new > .round-new:nth-child(7) .round-new-matches  { gap: 144px; }  /* Cuartos */
-.bracket-new > .round-new:nth-child(9) .round-new-matches  { gap: 320px; }  /* Semis */
-
-/* ── PARTIDO ───────────────────────────────── */
 .match-new {
-    width: 155px;
+    width: 155px; min-height: 58px;
     background: var(--color-bg2);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
-    overflow: hidden;
-    transition: border-color .2s;
+    border-radius: 8px; overflow: hidden;
+    flex-shrink: 0;
 }
-
-.match-new:hover { border-color: rgba(240,192,64,.4); }
+.match-new:hover { border-color: rgba(240,192,64,.3); }
 .match-blur { filter: blur(4px); pointer-events: none; }
-
-.match-final {
-    border-color: var(--color-gold);
-    box-shadow: 0 0 16px rgba(240,192,64,0.25);
-}
-
-/* ── EQUIPO ────────────────────────────────── */
+.match-final { border-color: var(--color-gold); box-shadow: 0 0 14px rgba(240,192,64,0.25); }
 .team-new {
-    padding: 7px 10px;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+    padding: 6px 8px; font-size: 12px;
+    display: flex; align-items: center; gap: 5px;
     border-bottom: 1px solid var(--color-border);
 }
 .team-new:last-of-type { border-bottom: none; }
-
-.team-new.team-win {
-    background: rgba(240,192,64,0.12);
-    font-weight: 700;
-    color: var(--color-gold);
-}
-
-.team-new.team-tbd {
-    color: var(--color-border);
-    font-style: italic;
-}
-
-.team-new-name {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.team-new-score {
-    font-weight: 700;
-    font-size: 13px;
-    min-width: 16px;
-    text-align: right;
-}
-
-/* ── BOTONES ADMIN ─────────────────────────── */
+.team-new.team-win { background: rgba(240,192,64,0.12); font-weight: 700; color: var(--color-gold); }
+.team-new.team-tbd { color: #2d3f55; font-style: italic; }
+.team-new-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-new-score { font-weight: 700; font-size: 13px; min-width: 14px; text-align: right; }
 .match-admin-btns {
-    display: flex;
-    gap: 4px;
-    padding: 4px 6px;
+    display: flex; gap: 4px; padding: 3px 6px;
     border-top: 1px solid var(--color-border);
-    justify-content: flex-end;
-    background: var(--color-bg3);
+    justify-content: flex-end; background: var(--color-bg3);
 }
-
-/* ── CONECTOR ──────────────────────────────── */
-.bracket-connector {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 6px;
-    color: var(--color-border);
-    font-size: 24px;
-    margin-top: 26px;
-    align-self: flex-start;
-    padding-top: 140px;
+.bracket-svg-connector {
+    flex-shrink: 0; margin-top: 32px; overflow: visible;
 }
-
-.bracket-new > .bracket-connector:nth-child(4)  { padding-top: 140px; }  /* →Octavos */
-.bracket-new > .bracket-connector:nth-child(6)  { padding-top: 170px; }  /* →Cuartos */
-.bracket-new > .bracket-connector:nth-child(8)  { padding-top: 310px; }  /* →Semis   */
-.bracket-new > .bracket-connector:nth-child(10) { padding-top: 660px; }  /* →Final   */
-
-.connector-gold { color: var(--color-gold); }
-
-/* ── TROFEO ────────────────────────────────── */
 .trophy-animated {
-    font-size: 52px;
-    margin-top: 20px;
+    font-size: 48px; margin-top: 16px;
     animation: trophyPulse 2s ease-in-out infinite;
     filter: drop-shadow(0 0 12px rgba(240,192,64,0.8));
 }
-
 @@keyframes trophyPulse {
-    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(240,192,64,0.8)); }
-    50%       { transform: scale(1.08); filter: drop-shadow(0 0 24px rgba(240,192,64,1)); }
+    0%,100% { transform:scale(1); filter:drop-shadow(0 0 12px rgba(240,192,64,0.8)); }
+    50%      { transform:scale(1.08); filter:drop-shadow(0 0 24px rgba(240,192,64,1)); }
 }
 </style>
 
 @section Scripts {
 <script>
 let copaPartidoActual = null;
-
-function abrirModalCopa(id, local, flagL, visitante, flagV, gl, gv) {
-    copaPartidoActual = id;
-    document.getElementById('copa-local').textContent     = local;
-    document.getElementById('copa-visitante').textContent = visitante;
-    const fl = document.getElementById('copa-flag-local');
-    const fv = document.getElementById('copa-flag-visitante');
-    if (flagL) { fl.src = `https://flagcdn.com/32x24/${flagL}.png`; fl.style.display='inline'; } else fl.style.display='none';
-    if (flagV) { fv.src = `https://flagcdn.com/32x24/${flagV}.png`; fv.style.display='inline'; } else fv.style.display='none';
-    document.getElementById('copa-input-local').value     = gl;
-    document.getElementById('copa-input-visitante').value = gv;
-    document.getElementById('copa-error').style.display   = 'none';
-    document.getElementById('modal-overlay-copa').style.display = 'block';
-    document.getElementById('modal-copa').style.display         = 'block';
+function abrirModalCopa(id,local,flagL,visitante,flagV,gl,gv) {
+    copaPartidoActual=id;
+    document.getElementById('copa-local').textContent=local;
+    document.getElementById('copa-visitante').textContent=visitante;
+    const fl=document.getElementById('copa-flag-local'),fv=document.getElementById('copa-flag-visitante');
+    if(flagL){fl.src=`https://flagcdn.com/32x24/${flagL}.png`;fl.style.display='inline';}else fl.style.display='none';
+    if(flagV){fv.src=`https://flagcdn.com/32x24/${flagV}.png`;fv.style.display='inline';}else fv.style.display='none';
+    document.getElementById('copa-input-local').value=gl;
+    document.getElementById('copa-input-visitante').value=gv;
+    document.getElementById('copa-error').style.display='none';
+    document.getElementById('modal-overlay-copa').style.display='block';
+    document.getElementById('modal-copa').style.display='block';
     document.getElementById('copa-input-local').focus();
     document.getElementById('copa-input-local').select();
 }
-
 function cerrarModalCopa() {
-    document.getElementById('modal-overlay-copa').style.display = 'none';
-    document.getElementById('modal-copa').style.display         = 'none';
-    copaPartidoActual = null;
+    document.getElementById('modal-overlay-copa').style.display='none';
+    document.getElementById('modal-copa').style.display='none';
+    copaPartidoActual=null;
 }
-
 async function guardarResultadoCopa() {
-    const gl = parseInt(document.getElementById('copa-input-local').value);
-    const gv = parseInt(document.getElementById('copa-input-visitante').value);
-    if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) {
-        document.getElementById('copa-error').textContent = 'Valores inválidos.';
-        document.getElementById('copa-error').style.display = 'block';
-        return;
+    const gl=parseInt(document.getElementById('copa-input-local').value);
+    const gv=parseInt(document.getElementById('copa-input-visitante').value);
+    if(isNaN(gl)||isNaN(gv)||gl<0||gv<0){
+        document.getElementById('copa-error').textContent='Valores inválidos.';
+        document.getElementById('copa-error').style.display='block';return;
     }
-    const btn = document.getElementById('copa-btn-guardar');
-    btn.textContent = 'Guardando...'; btn.disabled = true;
+    const btn=document.getElementById('copa-btn-guardar');
+    btn.textContent='Guardando...';btn.disabled=true;
     try {
-        const r = await fetch('/Copas/GuardarResultadoCopa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ partidoId: copaPartidoActual, golesLocal: gl, golesVisitante: gv })
+        const r=await fetch('/Copas/GuardarResultadoCopa',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({partidoId:copaPartidoActual,golesLocal:gl,golesVisitante:gv})
         });
-        const d = await r.json();
-        if (d.ok) { cerrarModalCopa(); location.reload(); }
-        else {
-            document.getElementById('copa-error').textContent = 'Error al guardar.';
-            document.getElementById('copa-error').style.display = 'block';
-        }
+        const d=await r.json();
+        if(d.ok){cerrarModalCopa();location.reload();}
+        else{document.getElementById('copa-error').textContent='Error al guardar.';document.getElementById('copa-error').style.display='block';}
     } catch {
-        document.getElementById('copa-error').textContent = 'Error de conexión.';
-        document.getElementById('copa-error').style.display = 'block';
+        document.getElementById('copa-error').textContent='Error de conexión.';
+        document.getElementById('copa-error').style.display='block';
     }
-    btn.textContent = 'Guardar'; btn.disabled = false;
+    btn.textContent='Guardar';btn.disabled=false;
 }
-
-document.querySelectorAll('.check-ronda').forEach(chk => {
-    chk.addEventListener('change', async function() {
-        const rondaId    = this.dataset.rondaId;
-        const habilitada = this.checked;
-        const r = await fetch('/Copas/ToggleRonda', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rondaId: parseInt(rondaId), habilitada })
+document.querySelectorAll('.check-ronda').forEach(chk=>{
+    chk.addEventListener('change',async function(){
+        const r=await fetch('/Copas/ToggleRonda',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({rondaId:parseInt(this.dataset.rondaId),habilitada:this.checked})
         });
-        const d = await r.json();
-        if (!d.ok) this.checked = !habilitada;
-        else location.reload();
+        const d=await r.json();
+        if(!d.ok)this.checked=!this.checked;else location.reload();
     });
 });
-
-let editBracketId = null;
-function abrirModalEditarBracket(id, local, visitante) {
-    editBracketId = id;
-    document.getElementById('edit-bracket-id').value = id;
-    document.getElementById('edit-local-actual').textContent  = local || 'Por definir';
-    document.getElementById('edit-visita-actual').textContent = visitante || 'Por definir';
-    fetch('/Admin/GetEquiposTodos')
-        .then(r => r.json())
-        .then(equipos => {
-            ['edit-sel-local','edit-sel-visita'].forEach(selId => {
-                const sel = document.getElementById(selId);
-                sel.innerHTML = '<option value="0">-- Por definir --</option>';
-                equipos.forEach(e => {
-                    const opt = document.createElement('option');
-                    opt.value = e.id; opt.textContent = e.nombre;
-                    sel.appendChild(opt);
-                });
-            });
+let editBracketId=null;
+function abrirModalEditarBracket(id,local,visitante){
+    editBracketId=id;
+    document.getElementById('edit-bracket-id').value=id;
+    document.getElementById('edit-local-actual').textContent=local||'Por definir';
+    document.getElementById('edit-visita-actual').textContent=visitante||'Por definir';
+    fetch('/Admin/GetEquiposTodos').then(r=>r.json()).then(equipos=>{
+        ['edit-sel-local','edit-sel-visita'].forEach(selId=>{
+            const sel=document.getElementById(selId);
+            sel.innerHTML='<option value="0">-- Por definir --</option>';
+            equipos.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nombre;sel.appendChild(o);});
         });
-    document.getElementById('modal-overlay-edit-bracket').style.display = 'block';
-    document.getElementById('modal-edit-bracket').style.display = 'block';
-}
-
-function cerrarModalEditarBracket() {
-    document.getElementById('modal-overlay-edit-bracket').style.display = 'none';
-    document.getElementById('modal-edit-bracket').style.display = 'none';
-    editBracketId = null;
-}
-
-async function guardarEditBracket() {
-    const id      = document.getElementById('edit-bracket-id').value;
-    const localId = document.getElementById('edit-sel-local').value;
-    const visitId = document.getElementById('edit-sel-visita').value;
-    const r = await fetch('/Copas/EditarBracket', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partidoId: parseInt(id), localId: parseInt(localId), visitanteId: parseInt(visitId) })
     });
-    const d = await r.json();
-    if (d.ok) { cerrarModalEditarBracket(); location.reload(); }
-    else alert('Error al guardar.');
+    document.getElementById('modal-overlay-edit-bracket').style.display='block';
+    document.getElementById('modal-edit-bracket').style.display='block';
 }
-
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { cerrarModalCopa(); cerrarModalEditarBracket(); }
-    if (e.key === 'Enter' && copaPartidoActual) guardarResultadoCopa();
+function cerrarModalEditarBracket(){
+    document.getElementById('modal-overlay-edit-bracket').style.display='none';
+    document.getElementById('modal-edit-bracket').style.display='none';
+    editBracketId=null;
+}
+async function guardarEditBracket(){
+    const id=document.getElementById('edit-bracket-id').value;
+    const localId=document.getElementById('edit-sel-local').value;
+    const visitId=document.getElementById('edit-sel-visita').value;
+    const r=await fetch('/Copas/EditarBracket',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({partidoId:parseInt(id),localId:parseInt(localId),visitanteId:parseInt(visitId)})
+    });
+    const d=await r.json();
+    if(d.ok){cerrarModalEditarBracket();location.reload();}else alert('Error al guardar.');
+}
+document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){cerrarModalCopa();cerrarModalEditarBracket();}
+    if(e.key==='Enter'&&copaPartidoActual)guardarResultadoCopa();
 });
 </script>
 }

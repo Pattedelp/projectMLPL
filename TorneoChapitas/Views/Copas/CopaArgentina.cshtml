@@ -25,9 +25,10 @@
 
 <div class="bracket-scroll-new">
 <div class="bracket-new" id="bracket-root">
+<svg id="bracket-connectors-svg" class="bracket-connectors-svg"></svg>
 
 @{
-    // Calcular la ronda con más partidos (base para el layout)
+    // Calcular la ronda con más partidos (base para el layout, solo estético)
     int maxPartidos = Model.Rondas.Max(r => r.Partidos.Count);
     if (maxPartidos == 0) maxPartidos = 1;
     int totalH = maxPartidos * MATCH_H + (maxPartidos - 1) * MATCH_GAP;
@@ -35,15 +36,13 @@
 
 @foreach (var ronda in Model.Rondas)
 {
-    bool esUltima = ronda == Model.Rondas.Last();
     bool esFinal  = ronda.Nombre == "Final";
     int  nP       = ronda.Partidos.Count;
 
-    // Espaciado entre partidos de esta ronda para centrarlos en totalH
-    // Los partidos se distribuyen equidistantes dentro de totalH
+    // Espaciado entre partidos de esta ronda para centrarlos en totalH (solo estético)
     int gapRonda = nP <= 1 ? 0 : (totalH - nP * MATCH_H) / (nP - 1);
 
-    <div class="round-new @(esFinal ? "round-final" : "")" style="--gap-ronda:@(gapRonda)px; --total-h:@(totalH)px;">
+    <div class="round-new @(esFinal ? "round-final" : "")" data-ronda-orden="@ronda.Orden">
         <div class="round-new-header">
             <span class="round-new-title">@(esFinal ? "⭐ " : "")@ronda.Nombre</span>
             @if (Model.EsAdmin)
@@ -57,7 +56,7 @@
             }
         </div>
 
-        <div class="round-new-matches" style="gap:@(gapRonda)px; height:@(totalH)px;">
+        <div class="round-new-matches" style="gap:@(gapRonda)px; min-height:@(totalH)px;">
             @foreach (var partido in ronda.Partidos)
             {
                 var bloqueado = !ronda.Habilitada && !Model.EsAdmin;
@@ -66,7 +65,7 @@
                 var localWin  = partido.Jugado && partido.GolesLocal > partido.GolesVisitante;
                 var visitWin  = partido.Jugado && partido.GolesVisitante > partido.GolesLocal;
 
-                <div class="match-new @(bloqueado ? "match-blur" : "") @(esFinal ? "match-final" : "")" id="copa-partido-@partido.Id">
+                <div class="match-new @(bloqueado ? "match-blur" : "") @(esFinal ? "match-final" : "")" id="copa-partido-@partido.Id" data-pos="@partido.PosicionBracket">
                     <div class="team-new @(localWin ? "team-win" : "") @(localTbd ? "team-tbd" : "")">
                         @if (!localTbd && !string.IsNullOrEmpty(partido.FlagLocal))
                         { <img src="https://flagcdn.com/16x12/@(partido.FlagLocal).png" class="flag-sm" alt="" onerror="this.style.display='none'" /> }
@@ -102,55 +101,6 @@
             <div class="trophy-animated">🏆</div>
         }
     </div>
-
-    @if (!esUltima)
-    {
-        // SVG conector entre esta ronda y la siguiente
-        var rondaSig = Model.Rondas[Model.Rondas.IndexOf(ronda) + 1];
-        int nA = ronda.Partidos.Count;
-        int nB = rondaSig.Partidos.Count;
-        int gapA = nA <= 1 ? 0 : (totalH - nA * MATCH_H) / (nA - 1);
-        int gapB = nB <= 1 ? 0 : (totalH - nB * MATCH_H) / (nB - 1);
-
-        <svg class="bracket-svg-connector" width="40" height="@(totalH + 32)" viewBox="0 0 40 @(totalH + 32)">
-        @{
-            string colorLine = "#1e3a5f";
-            if (nA == nB)
-            {
-                // Relación 1:1: línea recta de cada partido al siguiente
-                for (int i = 0; i < nA; i++)
-                {
-                    double y = i * (MATCH_H + gapA) + MATCH_H / 2.0;
-                    <line x1="0" y1="@y.ToString("F1")" x2="40" y2="@y.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
-                }
-            }
-            else
-            {
-                // Relación 2:1: por cada partido destino, dibujar las 2 líneas que llegan
-                int nDest = nB > 0 ? nB : nA / 2;
-                // gapB recalculado correctamente para la ronda destino
-                int gapBReal = nDest <= 1 ? 0 : (totalH - nDest * MATCH_H) / (nDest - 1);
-                for (int d = 0; d < nDest; d++)
-                {
-                    int src1 = d * 2;
-                    int src2 = d * 2 + 1;
-                    double yD  = d    * (MATCH_H + gapBReal) + MATCH_H / 2.0;
-                    double yS1 = src1 * (MATCH_H + gapA) + MATCH_H / 2.0;
-                    double yS2 = src2 < nA ? src2 * (MATCH_H + gapA) + MATCH_H / 2.0 : yS1;
-
-                    // Línea desde partido origen 1 hasta el punto medio, luego baja/sube a destino
-                    <line x1="0"  y1="@yS1.ToString("F1")" x2="20" y2="@yS1.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
-                    <line x1="20" y1="@yS1.ToString("F1")" x2="20" y2="@yD.ToString("F1")"  stroke="@colorLine" stroke-width="1.5"/>
-                    // Línea desde partido origen 2 hasta el punto medio, luego sube/baja a destino
-                    <line x1="0"  y1="@yS2.ToString("F1")" x2="20" y2="@yS2.ToString("F1")" stroke="@colorLine" stroke-width="1.5"/>
-                    <line x1="20" y1="@yS2.ToString("F1")" x2="20" y2="@yD.ToString("F1")"  stroke="@colorLine" stroke-width="1.5"/>
-                    // Línea de salida al siguiente partido
-                    <line x1="20" y1="@yD.ToString("F1")" x2="40" y2="@yD.ToString("F1")"  stroke="@colorLine" stroke-width="1.5"/>
-                }
-            }
-        }
-        </svg>
-    }
 }
 
 </div>
@@ -230,12 +180,19 @@
     position: relative; z-index: 1;
 }
 .bracket-new {
-    display: flex; align-items: flex-start; gap: 0;
+    display: flex; align-items: flex-start; gap: 40px;
     min-width: max-content; padding: 0 16px;
+    position: relative;
+}
+.bracket-connectors-svg {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; overflow: visible; z-index: 0;
 }
 .round-new {
     display: flex; flex-direction: column;
     align-items: center; min-width: 155px;
+    position: relative; z-index: 1;
 }
 .round-new-header {
     display: flex; align-items: center;
@@ -275,9 +232,6 @@
     border-top: 1px solid var(--color-border);
     justify-content: flex-end; background: var(--color-bg3);
 }
-.bracket-svg-connector {
-    flex-shrink: 0; margin-top: 32px; overflow: visible;
-}
 .trophy-animated {
     font-size: 48px; margin-top: 16px;
     animation: trophyPulse 2s ease-in-out infinite;
@@ -291,6 +245,121 @@
 
 @section Scripts {
 <script>
+(function () {
+    // ── Conectores del bracket: se dibujan midiendo la posición REAL de cada
+    // caja en el DOM (getBoundingClientRect), en vez de calcularla a mano en
+    // el servidor. Así funciona sin importar la altura real de cada partido
+    // (modo admin con botones extra, texto largo, fuentes distintas, etc.)
+    const container = document.getElementById('bracket-root');
+    const svg = document.getElementById('bracket-connectors-svg');
+    if (!container || !svg) return;
+
+    const svgNS   = 'http://www.w3.org/2000/svg';
+    const LINE_COLOR = '#3a6ea5';
+    const DOT_COLOR  = '#f0c040';
+
+    function addLine(x1, y1, x2, y2) {
+        const l = document.createElementNS(svgNS, 'line');
+        l.setAttribute('x1', x1.toFixed(1));
+        l.setAttribute('y1', y1.toFixed(1));
+        l.setAttribute('x2', x2.toFixed(1));
+        l.setAttribute('y2', y2.toFixed(1));
+        l.setAttribute('stroke', LINE_COLOR);
+        l.setAttribute('stroke-width', '1.5');
+        svg.appendChild(l);
+    }
+
+    function addDot(x, y) {
+        const c = document.createElementNS(svgNS, 'circle');
+        c.setAttribute('cx', x.toFixed(1));
+        c.setAttribute('cy', y.toFixed(1));
+        c.setAttribute('r', '2.5');
+        c.setAttribute('fill', DOT_COLOR);
+        svg.appendChild(c);
+    }
+
+    function centerY(el, containerRect) {
+        const r = el.getBoundingClientRect();
+        return (r.top - containerRect.top) + r.height / 2;
+    }
+
+    function drawConnectors() {
+        svg.innerHTML = '';
+        const containerRect = container.getBoundingClientRect();
+
+        svg.setAttribute('width', container.scrollWidth);
+        svg.setAttribute('height', container.scrollHeight);
+        svg.setAttribute('viewBox', `0 0 ${container.scrollWidth} ${container.scrollHeight}`);
+
+        const rounds = Array.from(container.querySelectorAll('.round-new'));
+
+        for (let i = 0; i < rounds.length - 1; i++) {
+            const roundA = rounds[i];
+            const roundB = rounds[i + 1];
+
+            const matchesA = Array.from(roundA.querySelectorAll('.match-new'))
+                .sort((a, b) => (+a.dataset.pos) - (+b.dataset.pos));
+            const matchesB = Array.from(roundB.querySelectorAll('.match-new'))
+                .sort((a, b) => (+a.dataset.pos) - (+b.dataset.pos));
+
+            const nA = matchesA.length, nB = matchesB.length;
+            if (!nA || !nB) continue;
+
+            const rectA = roundA.querySelector('.round-new-matches').getBoundingClientRect();
+            const rectB = roundB.querySelector('.round-new-matches').getBoundingClientRect();
+            const x1 = rectA.right - containerRect.left;
+            const x2 = rectB.left  - containerRect.left;
+            const trunkX = x1 + (x2 - x1) / 2;
+
+            if (nA === nB) {
+                // Relación 1:1 → cada partido conecta directo al siguiente en la misma posición
+                for (let idx = 0; idx < nA; idx++) {
+                    const y1 = centerY(matchesA[idx], containerRect);
+                    const y2 = centerY(matchesB[idx], containerRect);
+                    addLine(x1, y1, trunkX, y1);
+                    addLine(trunkX, y1, trunkX, y2);
+                    addLine(trunkX, y2, x2, y2);
+                    addDot(trunkX, y2);
+                }
+            } else {
+                // Relación 2:1 → dos partidos de origen convergen en uno de destino
+                for (let d = 0; d < nB; d++) {
+                    const y2 = centerY(matchesB[d], containerRect);
+                    const s1 = matchesA[d * 2];
+                    const s2 = matchesA[d * 2 + 1];
+
+                    [s1, s2].forEach(src => {
+                        if (!src) return;
+                        const y1 = centerY(src, containerRect);
+                        addLine(x1, y1, trunkX, y1);
+                        addLine(trunkX, y1, trunkX, y2);
+                    });
+
+                    addLine(trunkX, y2, x2, y2);
+                    addDot(trunkX, y2); // marca el punto de unión siempre visible
+                }
+            }
+        }
+    }
+
+    let rafId = null;
+    function scheduleDraw() {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(drawConnectors);
+    }
+
+    // Redibuja ante cualquier cambio de tamaño del bracket (admin toggle,
+    // fuentes que terminan de cargar, resize de ventana, banderas, etc.)
+    if ('ResizeObserver' in window) {
+        new ResizeObserver(scheduleDraw).observe(container);
+    } else {
+        window.addEventListener('resize', scheduleDraw);
+    }
+    window.addEventListener('load', scheduleDraw);
+    document.addEventListener('DOMContentLoaded', scheduleDraw);
+    scheduleDraw();
+})();
+
 let copaPartidoActual = null;
 function abrirModalCopa(id,local,flagL,visitante,flagV,gl,gv) {
     copaPartidoActual=id;

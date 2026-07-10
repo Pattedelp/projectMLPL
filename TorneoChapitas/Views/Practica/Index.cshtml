@@ -1,0 +1,769 @@
+@{
+    ViewBag.Title = "Modo Práctica";
+    ViewBag.ActivePage = "practica";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🎯</div>
+    <div class="page-hero-text">
+        <h1>Modo Práctica</h1>
+        <p>Practicá rebotes y pases · Sandbox libre, no se guarda nada</p>
+    </div>
+</div>
+
+<div class="practica-wrap">
+    <div class="practica-board-col">
+        <div class="practica-scoreboard">
+            <span class="practica-score-team">Vos <strong id="score-yo">0</strong></span>
+            <span class="practica-score-sep">-</span>
+            <span class="practica-score-team"><strong id="score-rival">0</strong> Rival</span>
+        </div>
+        <div class="practica-canvas-holder">
+            <canvas id="practica-canvas"></canvas>
+            <div id="practica-gol" class="practica-gol-msg">¡GOL!</div>
+            <div id="practica-passes" class="practica-passes">Passes: 0/3</div>
+
+            <!-- OVERLAY SELECCIÓN DE FORMACIÓN -->
+            <div id="formacion-overlay" class="formacion-overlay">
+                <h2 class="formacion-title">ELEGÍ TU FORMACIÓN</h2>
+                <div id="formacion-step-title" class="formacion-step">TU EQUIPO</div>
+                <div class="formacion-section-label">ATAQUE</div>
+                <div class="formacion-grid" data-variant="atq"></div>
+                <div class="formacion-section-label">DEFENSA</div>
+                <div class="formacion-grid" data-variant="def"></div>
+            </div>
+        </div>
+        <div class="practica-toolbar">
+            <button id="practica-reset" class="btn-editar practica-btn">↺ Reiniciar</button>
+            <button id="practica-cambiar-form" class="btn-editar practica-btn">⇄ Cambiar formación</button>
+        </div>
+    </div>
+
+    <div class="practica-info-col">
+        <div class="practica-info-card">
+            <h3>Cómo jugar</h3>
+            <ul>
+                <li><strong>Elegí tu formación</strong> y la del rival antes de empezar (mismas del juego: 1-3-2, 1-2-3, 1-4-1, 1-2-1-2, en ataque o defensa)</li>
+                <li><strong>Tocá cualquiera de tus chapitas</strong> (las de abajo) y arrastrá hacia donde querés que vaya — la flecha muestra dirección y potencia, igual que en el juego</li>
+                <li>Todas las fichas y la pelota chocan entre sí con física real</li>
+                <li><strong>Pases (máx 3):</strong> si la pelota toca a un compañero, cuando todo frena la chapita se reacomoda sola detrás del balón apuntando al arco rival, lista para tirar de nuevo. Si toca a un rival, se pierde la posesión y el contador vuelve a 0</li>
+                <li>Esperá a que todo se detenga para volver a tirar</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+.practica-wrap {
+    display: flex; gap: 24px; padding: 0 16px 40px;
+    flex-wrap: wrap; align-items: flex-start; justify-content: center;
+}
+.practica-board-col { flex: 0 1 420px; min-width: 280px; }
+.practica-scoreboard {
+    display: flex; justify-content: center; align-items: center; gap: 14px;
+    background: var(--color-bg3); border: 1px solid var(--color-border);
+    border-radius: var(--radius) var(--radius) 0 0; padding: 8px;
+    font-family: var(--font-heading); letter-spacing: 1px; font-size: 14px;
+}
+.practica-score-team strong { color: var(--color-gold); font-size: 18px; }
+.practica-score-sep { color: var(--color-muted); }
+.practica-canvas-holder {
+    position: relative; width: 100%;
+    aspect-ratio: 390 / 660;
+    background: #0a2e1f;
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    overflow: hidden;
+    touch-action: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+#practica-canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.practica-gol-msg {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    font-family: var(--font-heading); font-size: 42px;
+    color: var(--color-gold); letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(240,192,64,.8);
+    opacity: 0; pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease;
+    z-index: 3;
+}
+.practica-gol-msg.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.practica-passes {
+    position: absolute; bottom: 8px; right: 10px;
+    background: rgba(0,0,0,0.55); color: #fff;
+    font-size: 11px; padding: 3px 10px; border-radius: 10px;
+    pointer-events: none; z-index: 2;
+}
+
+/* ── Overlay de formaciones (estilo igual al juego) ── */
+.formacion-overlay {
+    position: absolute; inset: 0; z-index: 5;
+    background: rgba(5, 8, 12, 0.96);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 18px 10px; overflow-y: auto;
+}
+.formacion-title {
+    font-family: var(--font-heading); color: var(--color-gold);
+    font-size: 20px; letter-spacing: 2px; margin-bottom: 2px;
+}
+.formacion-step {
+    color: #fff; font-size: 12px; letter-spacing: 2px;
+    margin-bottom: 12px; opacity: .8;
+}
+.formacion-section-label {
+    font-family: var(--font-heading); color: #fff;
+    font-size: 15px; letter-spacing: 2px; margin: 10px 0 8px;
+}
+.formacion-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; width: 100%; max-width: 360px;
+}
+.formacion-opt { text-align: center; cursor: pointer; }
+.formacion-opt canvas {
+    width: 100%; border-radius: 4px; display: block;
+    border: 2px solid transparent; transition: border-color .15s;
+}
+.formacion-opt:hover canvas { border-color: var(--color-gold); }
+.formacion-opt-name { color: #aaa; font-size: 12px; margin-top: 4px; }
+.formacion-opt:hover .formacion-opt-name { color: #fff; }
+
+.practica-toolbar {
+    display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap;
+}
+.practica-btn { padding: 8px 16px; font-size: 13px; }
+
+.practica-info-col { flex: 1 1 260px; min-width: 240px; max-width: 340px; }
+.practica-info-card {
+    background: var(--color-bg2); border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); padding: 18px;
+}
+.practica-info-card h3 {
+    font-family: var(--font-heading); color: var(--color-gold);
+    font-size: 15px; letter-spacing: 1px; margin-bottom: 10px;
+    text-transform: uppercase;
+}
+.practica-info-card ul { padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.practica-info-card li { font-size: 13px; color: var(--color-muted); }
+.practica-info-card li strong { color: var(--color-text); }
+</style>
+
+@section Scripts {
+<script>
+(function () {
+    const canvas = document.getElementById('practica-canvas');
+    const ctx = canvas.getContext('2d');
+    const holder = canvas.parentElement;
+    const golMsg = document.getElementById('practica-gol');
+    const passesEl = document.getElementById('practica-passes');
+    const scoreYoEl = document.getElementById('score-yo');
+    const scoreRivalEl = document.getElementById('score-rival');
+    const overlay = document.getElementById('formacion-overlay');
+    const stepTitle = document.getElementById('formacion-step-title');
+
+    // ── Layout lógico ────────────────────────────────────────────────
+    const W = 390, H = 660;
+    const STAND_W = 34;
+    const GOAL_DEPTH = 24;
+    const GOAL_W = 112;
+
+    const bounds = { left: STAND_W, right: W - STAND_W, top: GOAL_DEPTH + 8, bottom: H - GOAL_DEPTH - 8 };
+    const centerX = W / 2;
+    const HALF_L = H / 2 - bounds.top; // largo de cada mitad de cancha
+
+    const goalTop    = { xMin: centerX - GOAL_W / 2, xMax: centerX + GOAL_W / 2, y: bounds.top,    depth: GOAL_DEPTH };
+    const goalBottom = { xMin: centerX - GOAL_W / 2, xMax: centerX + GOAL_W / 2, y: bounds.bottom, depth: GOAL_DEPTH };
+
+    // ── Config física ────────────────────────────────────────────────
+    const PIECE_R      = 15;
+    const BALL_R       = 9;
+    const PIECE_MASS   = 2.4;
+    const BALL_MASS    = 1;
+    const RESTITUTION  = 0.72;
+    const PIECE_E      = 0.85;     // elasticidad choque ficha-ficha
+    const BALL_IMPACT  = 0.45;     // elasticidad choque ficha-pelota (bajo = impacto amortiguado, como el juego)
+    const FRICTION_P   = 340;
+    const FRICTION_B   = 300;
+    const MAX_DRAG     = 150;      // px de arrastre máximo
+    const DRAG_TO_POWER = 7.2;
+    const REST_SPEED   = 18;       // debajo de esto, se considera quieto
+    const PASS_MAX     = 3;
+
+    // ── Formaciones (exactas del juego: GK + 5) ─────────────────────
+    // Cada posición: { x: offset horizontal desde el centro, f: fracción desde la línea de gol propia hacia el mediocampo }
+    const GK = { x: 0, f: 0.07 };
+    const FORMACIONES = {
+        '1-3-2': {
+            atq: [GK, { x: -52, f: .42 }, { x: 0, f: .45 }, { x: 52, f: .42 }, { x: -30, f: .80 }, { x: 30, f: .80 }],
+            def: [GK, { x: -48, f: .22 }, { x: 0, f: .26 }, { x: 48, f: .22 }, { x: -28, f: .44 }, { x: 28, f: .44 }]
+        },
+        '1-2-3': {
+            atq: [GK, { x: -34, f: .38 }, { x: 34, f: .38 }, { x: -64, f: .72 }, { x: 0, f: .76 }, { x: 64, f: .72 }],
+            def: [GK, { x: -26, f: .18 }, { x: 26, f: .18 }, { x: -58, f: .40 }, { x: 0, f: .42 }, { x: 58, f: .40 }]
+        },
+        '1-4-1': {
+            atq: [GK, { x: -72, f: .50 }, { x: -24, f: .46 }, { x: 24, f: .46 }, { x: 72, f: .50 }, { x: 0, f: .80 }],
+            def: [GK, { x: -66, f: .18 }, { x: -22, f: .15 }, { x: 22, f: .15 }, { x: 66, f: .18 }, { x: 0, f: .38 }]
+        },
+        '1-2-1-2': {
+            atq: [GK, { x: -40, f: .32 }, { x: 40, f: .32 }, { x: 0, f: .55 }, { x: -40, f: .80 }, { x: 40, f: .80 }],
+            def: [GK, { x: -34, f: .16 }, { x: 34, f: .16 }, { x: 0, f: .31 }, { x: -40, f: .46 }, { x: 40, f: .46 }]
+        }
+    };
+    const NOMBRES = ['1-3-2', '1-2-3', '1-4-1', '1-2-1-2'];
+
+    // ── Banderas de las chapitas (círculo con bandera, como el juego) ──
+    const FLAG_YO = 'ar', FLAG_RIVAL = 'de';
+    function loadFlag(code) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = 'https://flagcdn.com/64x48/' + code + '.png';
+        return img;
+    }
+    const flagYo = loadFlag(FLAG_YO);
+    const flagRival = loadFlag(FLAG_RIVAL);
+
+    // ── Estado ──────────────────────────────────────────────────────
+    let pieces = [];   // { x, y, vx, vy, team: 0 propio | 1 rival }
+    let ball = { x: centerX, y: H / 2, vx: 0, vy: 0 };
+    let formYo = null, formRival = null;   // { nombre, variant }
+    let selStep = 0;   // 0 = eligiendo la propia, 1 = eligiendo la del rival
+    let scoreYo = 0, scoreRival = 0;
+    let passes = 0;
+    let lastFlicked = null;     // la ficha que acabo de tirar
+    let pendingReceiver = null; // ficha propia que recibió el pase (se reacomoda al frenar todo)
+    let scored = false;
+
+    let aiming = null;      // pieza seleccionada mientras se arrastra
+    let dragCurrent = null;
+
+    function posicionesDe(nombre, variant, isTop) {
+        return FORMACIONES[nombre][variant].map(p => ({
+            x: centerX + p.x,
+            y: isTop ? bounds.top + p.f * HALF_L : bounds.bottom - p.f * HALF_L
+        }));
+    }
+
+    function armarEquipos() {
+        pieces = [];
+        posicionesDe(formRival.nombre, formRival.variant, true).forEach(p =>
+            pieces.push({ x: p.x, y: p.y, vx: 0, vy: 0, team: 1 }));
+        posicionesDe(formYo.nombre, formYo.variant, false).forEach(p =>
+            pieces.push({ x: p.x, y: p.y, vx: 0, vy: 0, team: 0 }));
+        ball = { x: centerX, y: H / 2, vx: 0, vy: 0 };
+        passes = 0; lastFlicked = null; pendingReceiver = null;
+        passesEl.textContent = 'Passes: 0/' + PASS_MAX;
+    }
+
+    // ── Overlay de selección de formación ────────────────────────────
+    function drawThumb(cv, nombre, variant) {
+        const c = cv.getContext('2d');
+        const tw = 90, th = 110;
+        cv.width = tw; cv.height = th;
+        // pastito
+        for (let i = 0; i < 6; i++) {
+            c.fillStyle = i % 2 === 0 ? '#3f9142' : '#357a39';
+            c.fillRect(0, i * th / 6, tw, th / 6 + 1);
+        }
+        // arco propio abajo
+        c.strokeStyle = 'rgba(255,255,255,.7)';
+        c.lineWidth = 1.5;
+        c.strokeRect(tw / 2 - 20, th - 14, 40, 14);
+        c.beginPath(); c.arc(tw / 2, 0, 22, 0, Math.PI); c.stroke();
+
+        const posiciones = FORMACIONES[nombre][variant];
+        posiciones.forEach(p => {
+            const px = tw / 2 + p.x * (tw / (W - 2 * STAND_W)) * 0.9;
+            const py = th - 8 - p.f * (th - 20);
+            c.beginPath();
+            c.arc(px, py, 6, 0, Math.PI * 2);
+            c.fillStyle = '#3a82c8';
+            c.fill();
+            c.strokeStyle = '#fff'; c.lineWidth = 1.2; c.stroke();
+        });
+    }
+
+    function buildOverlay() {
+        overlay.querySelectorAll('.formacion-grid').forEach(grid => {
+            grid.innerHTML = '';
+            const variant = grid.dataset.variant;
+            NOMBRES.forEach(nombre => {
+                const opt = document.createElement('div');
+                opt.className = 'formacion-opt';
+                const cv = document.createElement('canvas');
+                drawThumb(cv, nombre, variant);
+                const label = document.createElement('div');
+                label.className = 'formacion-opt-name';
+                label.textContent = nombre;
+                opt.appendChild(cv); opt.appendChild(label);
+                opt.addEventListener('click', () => elegirFormacion(nombre, variant));
+                grid.appendChild(opt);
+            });
+        });
+    }
+
+    function elegirFormacion(nombre, variant) {
+        if (selStep === 0) {
+            formYo = { nombre, variant };
+            selStep = 1;
+            stepTitle.textContent = 'FORMACIÓN DEL RIVAL';
+        } else {
+            formRival = { nombre, variant };
+            overlay.style.display = 'none';
+            armarEquipos();
+        }
+    }
+
+    function abrirSelector() {
+        selStep = 0;
+        stepTitle.textContent = 'TU EQUIPO';
+        overlay.style.display = 'flex';
+    }
+
+    buildOverlay();
+    document.getElementById('practica-cambiar-form').addEventListener('click', abrirSelector);
+    document.getElementById('practica-reset').addEventListener('click', () => {
+        if (formYo && formRival) armarEquipos();
+    });
+
+    // ── Resize / DPI ────────────────────────────────────────────────
+    function resizeCanvas() {
+        const rect = holder.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        const scale = (rect.width * dpr) / W;
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function localPoint(evt) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = (evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left;
+        const cy = (evt.touches ? evt.touches[0].clientY : evt.clientY) - rect.top;
+        return { x: cx * (W / rect.width), y: cy * (H / rect.height) };
+    }
+
+    function todoQuieto() {
+        if (Math.hypot(ball.vx, ball.vy) > REST_SPEED) return false;
+        return pieces.every(p => Math.hypot(p.vx, p.vy) <= REST_SPEED);
+    }
+
+    // ── Input: swipe directo desde la chapita (igual al juego) ───────
+    function onPointerDown(evt) {
+        if (!formYo || !formRival) return;
+        if (!todoQuieto()) return;
+        const p = localPoint(evt);
+        // buscar la chapita propia más cercana al toque
+        let best = null, bestDist = Infinity;
+        pieces.forEach(pc => {
+            if (pc.team !== 0) return;
+            const d = Math.hypot(p.x - pc.x, p.y - pc.y);
+            if (d < bestDist) { bestDist = d; best = pc; }
+        });
+        if (!best || bestDist > PIECE_R * 2.2) return;
+        aiming = best;
+        dragCurrent = p;
+        canvas.style.cursor = 'grabbing';
+        evt.preventDefault();
+    }
+
+    function onPointerMove(evt) {
+        if (!aiming) return;
+        dragCurrent = localPoint(evt);
+        evt.preventDefault();
+    }
+
+    function onPointerUp(evt) {
+        if (!aiming) return;
+        const dx = dragCurrent.x - aiming.x;
+        const dy = dragCurrent.y - aiming.y;
+        let dist = Math.hypot(dx, dy);
+        canvas.style.cursor = 'grab';
+
+        if (dist >= 12) {
+            dist = Math.min(dist, MAX_DRAG);
+            const angle = Math.atan2(dy, dx);
+            const speed = dist * DRAG_TO_POWER;
+            aiming.vx = Math.cos(angle) * speed;
+            aiming.vy = Math.sin(angle) * speed;
+            lastFlicked = aiming;
+        }
+        aiming = null;
+        dragCurrent = null;
+        if (evt.cancelable) evt.preventDefault();
+    }
+
+    canvas.addEventListener('mousedown', onPointerDown);
+    canvas.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+    canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+    canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+    window.addEventListener('touchend', onPointerUp);
+
+    function showGol(side) {
+        if (side === 'top') scoreYo++; else scoreRival++;
+        scoreYoEl.textContent = scoreYo;
+        scoreRivalEl.textContent = scoreRival;
+        golMsg.classList.add('show');
+        setTimeout(() => {
+            golMsg.classList.remove('show');
+            armarEquipos();
+        }, 1100);
+    }
+
+    // ── Física ──────────────────────────────────────────────────────
+    function applyFriction(obj, amount, dt) {
+        const speed = Math.hypot(obj.vx, obj.vy);
+        if (speed <= 0) return;
+        const newSpeed = Math.max(0, speed - amount * dt);
+        const f = newSpeed / speed;
+        obj.vx *= f; obj.vy *= f;
+        if (newSpeed < 6) { obj.vx = 0; obj.vy = 0; }
+    }
+
+    function bounceWalls(obj, r, allowGoal) {
+        if (obj.x - r < bounds.left) { obj.x = bounds.left + r; obj.vx = -obj.vx * RESTITUTION; }
+        if (obj.x + r > bounds.right) { obj.x = bounds.right - r; obj.vx = -obj.vx * RESTITUTION; }
+
+        const inGoalX = obj.x > goalTop.xMin + r && obj.x < goalTop.xMax - r;
+
+        if (obj.y - r < bounds.top) {
+            if (allowGoal && inGoalX) {
+                if (obj.y - r < bounds.top - goalTop.depth) return 'top';
+            } else {
+                obj.y = bounds.top + r; obj.vy = -obj.vy * RESTITUTION;
+            }
+        }
+        if (obj.y + r > bounds.bottom) {
+            if (allowGoal && inGoalX) {
+                if (obj.y + r > bounds.bottom + goalBottom.depth) return 'bottom';
+            } else {
+                obj.y = bounds.bottom - r; obj.vy = -obj.vy * RESTITUTION;
+            }
+        }
+        return null;
+    }
+
+    function collideBodies(a, b, ra, rb, ma, mb, e) {
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = ra + rb;
+        if (dist === 0 || dist >= minDist) return false;
+
+        const nx = dx / dist, ny = dy / dist;
+        const overlap = minDist - dist;
+        a.x -= nx * overlap * (mb / (ma + mb));
+        a.y -= ny * overlap * (mb / (ma + mb));
+        b.x += nx * overlap * (ma / (ma + mb));
+        b.y += ny * overlap * (ma / (ma + mb));
+
+        const v1n = a.vx * nx + a.vy * ny;
+        const v2n = b.vx * nx + b.vy * ny;
+        if (v1n - v2n <= 0) return true; // ya se están separando
+
+        const v1t_x = a.vx - v1n * nx, v1t_y = a.vy - v1n * ny;
+        const v2t_x = b.vx - v2n * nx, v2t_y = b.vy - v2n * ny;
+
+        // Colisión con coeficiente de restitución e (e=1 elástica perfecta, e<1 amortiguada)
+        const v1nAfter = (ma * v1n + mb * v2n + mb * e * (v2n - v1n)) / (ma + mb);
+        const v2nAfter = (ma * v1n + mb * v2n + ma * e * (v1n - v2n)) / (ma + mb);
+
+        a.vx = v1t_x + v1nAfter * nx; a.vy = v1t_y + v1nAfter * ny;
+        b.vx = v2t_x + v2nAfter * nx; b.vy = v2t_y + v2nAfter * ny;
+        return true;
+    }
+
+    let lastT = performance.now();
+
+    function step(dt) {
+        if (!formYo || !formRival) return;
+
+        pieces.forEach(p => {
+            applyFriction(p, FRICTION_P, dt);
+            p.x += p.vx * dt; p.y += p.vy * dt;
+        });
+        applyFriction(ball, FRICTION_B, dt);
+        ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+
+        // colisiones ficha-ficha (todas contra todas)
+        for (let i = 0; i < pieces.length; i++) {
+            for (let j = i + 1; j < pieces.length; j++) {
+                collideBodies(pieces[i], pieces[j], PIECE_R, PIECE_R, PIECE_MASS, PIECE_MASS, PIECE_E);
+            }
+        }
+        // colisiones ficha-pelota
+        pieces.forEach(p => {
+            if (collideBodies(p, ball, PIECE_R, BALL_R, PIECE_MASS, BALL_MASS, BALL_IMPACT)) {
+                if (p.team === 0) {
+                    // Pase: la pelota tocó a un compañero distinto del que tiré
+                    // (solo cuenta si hay un tiro activo, para evitar contactos fantasma)
+                    if (lastFlicked && p !== lastFlicked && !pendingReceiver && passes < PASS_MAX) {
+                        pendingReceiver = p;
+                    }
+                } else {
+                    // Tocó una ficha rival: se pierde la posesión, se resetean los pases
+                    passes = 0;
+                    pendingReceiver = null;
+                    passesEl.textContent = 'Passes: 0/' + PASS_MAX;
+                }
+            }
+        });
+
+        pieces.forEach(p => bounceWalls(p, PIECE_R, false));
+
+        // Reacomodo del pase (igual al juego): cuando todo frena, el receptor
+        // se coloca automáticamente detrás del balón, apuntando al arco rival
+        if (pendingReceiver && todoQuieto()) {
+            const gx = centerX, gy = bounds.top; // centro del arco rival (arriba)
+            let dx = ball.x - gx, dy = ball.y - gy;
+            let d = Math.hypot(dx, dy);
+            if (d < 1) { dx = 0; dy = 1; d = 1; }
+            const off = PIECE_R + BALL_R + 3;
+            let px = ball.x + (dx / d) * off;
+            let py = ball.y + (dy / d) * off;
+            px = Math.max(bounds.left + PIECE_R, Math.min(bounds.right - PIECE_R, px));
+            py = Math.max(bounds.top + PIECE_R, Math.min(bounds.bottom - PIECE_R, py));
+            pendingReceiver.x = px;
+            pendingReceiver.y = py;
+            pendingReceiver.vx = 0;
+            pendingReceiver.vy = 0;
+            ball.vx = 0; ball.vy = 0;   // tras el pase, la pelota queda quieta (como el juego)
+            lastFlicked = null;          // el tiro terminó; el próximo pase requiere otro tiro
+            passes++;
+            passesEl.textContent = 'Passes: ' + passes + '/' + PASS_MAX;
+            pendingReceiver = null;
+        }
+
+        if (!scored) {
+            const golSide = bounceWalls(ball, BALL_R, true);
+            if (golSide) {
+                scored = true;
+                ball.vx = 0; ball.vy = 0;
+                showGol(golSide);
+                setTimeout(() => { scored = false; }, 1150);
+            }
+        }
+    }
+
+    // ── Dibujo ──────────────────────────────────────────────────────
+    function drawStands() {
+        const colors = ['#3a6ea5', '#c94f2e', '#f0c040', '#4caf82'];
+        [{ x0: 0 }, { x0: W - STAND_W }].forEach(band => {
+            ctx.fillStyle = '#141414';
+            ctx.fillRect(band.x0, 0, STAND_W, H);
+            let ci = 0;
+            for (let y = 4; y < H; y += 9) {
+                for (let x = band.x0 + 3; x < band.x0 + STAND_W - 3; x += 8) {
+                    ctx.fillStyle = colors[ci % colors.length];
+                    ctx.globalAlpha = 0.55;
+                    ctx.fillRect(x, y, 5, 5);
+                    ci++;
+                }
+            }
+            ctx.globalAlpha = 1;
+        });
+    }
+
+    function drawPitch() {
+        const stripeH = (bounds.bottom - bounds.top) / 12;
+        for (let i = 0; i < 12; i++) {
+            ctx.fillStyle = i % 2 === 0 ? '#3f9142' : '#357a39';
+            ctx.fillRect(bounds.left, bounds.top + i * stripeH, bounds.right - bounds.left, stripeH + 1);
+        }
+
+        // paredes laterales (riel gris, rebotan)
+        ctx.fillStyle = '#9aa3ad';
+        ctx.fillRect(bounds.left - 5, bounds.top - 5, 5, bounds.bottom - bounds.top + 10);
+        ctx.fillRect(bounds.right, bounds.top - 5, 5, bounds.bottom - bounds.top + 10);
+        ctx.fillRect(bounds.left - 5, bounds.top - 5, bounds.right - bounds.left + 10, 5);
+        ctx.fillRect(bounds.left - 5, bounds.bottom, bounds.right - bounds.left + 10, 5);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
+
+        ctx.beginPath();
+        ctx.moveTo(bounds.left, H / 2); ctx.lineTo(bounds.right, H / 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(centerX, H / 2, 42, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(centerX, H / 2, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fill();
+
+        [goalTop, goalBottom].forEach((g, idx) => {
+            const isTop = idx === 0;
+            const yOuter = isTop ? g.y - g.depth : g.y + g.depth;
+
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            ctx.fillRect(g.xMin, Math.min(g.y, yOuter), GOAL_W, g.depth);
+            ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+            ctx.lineWidth = 1;
+            for (let gx = g.xMin; gx <= g.xMax; gx += 12) {
+                ctx.beginPath(); ctx.moveTo(gx, Math.min(g.y, yOuter)); ctx.lineTo(gx, Math.max(g.y, yOuter)); ctx.stroke();
+            }
+            for (let gy = Math.min(g.y, yOuter); gy <= Math.max(g.y, yOuter); gy += 8) {
+                ctx.beginPath(); ctx.moveTo(g.xMin, gy); ctx.lineTo(g.xMax, gy); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#c9ced4';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(g.xMin, g.y);
+            ctx.lineTo(g.xMin, yOuter);
+            ctx.lineTo(g.xMax, yOuter);
+            ctx.lineTo(g.xMax, g.y);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.lineWidth = 2;
+            const areaW = GOAL_W + 46, areaH = 34;
+            const areaY = isTop ? g.y : g.y - areaH;
+            ctx.strokeRect(centerX - areaW / 2, areaY, areaW, areaH);
+        });
+
+        // banderines
+        ctx.fillStyle = '#e05555';
+        [[bounds.left, bounds.top], [bounds.right, bounds.top], [bounds.left, bounds.bottom], [bounds.right, bounds.bottom]].forEach(function (c) {
+            ctx.beginPath();
+            ctx.moveTo(c[0], c[1] - 10); ctx.lineTo(c[0] + 6, c[1] - 6); ctx.lineTo(c[0], c[1] - 2);
+            ctx.fill();
+        });
+    }
+
+    function drawPiece(p) {
+        const img = p.team === 0 ? flagYo : flagRival;
+        const highlight = aiming === p;
+
+        // sombra
+        ctx.beginPath();
+        ctx.arc(p.x, p.y + 2, PIECE_R + 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+
+        if (highlight) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, PIECE_R + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(240,192,64,0.85)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        // bandera recortada en círculo
+        if (img.complete && img.naturalWidth > 0) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, PIECE_R - 1.5, 0, Math.PI * 2);
+            ctx.clip();
+            const scale = (PIECE_R * 2) / 48 * 1.15;
+            ctx.drawImage(img, p.x - 32 * scale, p.y - 24 * scale, 64 * scale, 48 * scale);
+            ctx.restore();
+        } else {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, PIECE_R - 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = p.team === 0 ? '#74acdf' : '#333';
+            ctx.fill();
+        }
+
+        // anillo blanco de la chapita
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, PIECE_R, 0, Math.PI * 2);
+        ctx.strokeStyle = '#f2f2f2';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, PIECE_R + 1.4, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    function drawBall() {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y + 2, BALL_R + 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+        ctx.fillStyle = '#f5f5f0';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#222';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, BALL_R * 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = '#222';
+        ctx.fill();
+    }
+
+    // Flecha blanca sólida desde la ficha hacia la dirección del swipe (igual al juego)
+    function drawArrow() {
+        if (!aiming || !dragCurrent) return;
+        const dx = dragCurrent.x - aiming.x;
+        const dy = dragCurrent.y - aiming.y;
+        let dist = Math.hypot(dx, dy);
+        if (dist < 12) return;
+        dist = Math.min(dist, MAX_DRAG);
+        const angle = Math.atan2(dy, dx);
+
+        const startOffset = PIECE_R + 4;
+        const len = Math.max(dist, startOffset + 14);
+        const headLen = 16, headW = 15;
+        const tailW = 3.5, neckW = 7;
+
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        const perpX = -sin, perpY = cos;
+
+        const sx = aiming.x + cos * startOffset, sy = aiming.y + sin * startOffset;
+        const nx = aiming.x + cos * (len - headLen), ny = aiming.y + sin * (len - headLen);
+        const tx = aiming.x + cos * len, ty = aiming.y + sin * len;
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.beginPath();
+        // cola angosta → cuello más ancho (flecha que se ensancha hacia la punta)
+        ctx.moveTo(sx + perpX * tailW, sy + perpY * tailW);
+        ctx.lineTo(nx + perpX * neckW, ny + perpY * neckW);
+        ctx.lineTo(nx + perpX * headW, ny + perpY * headW);
+        ctx.lineTo(tx, ty);
+        ctx.lineTo(nx - perpX * headW, ny - perpY * headW);
+        ctx.lineTo(nx - perpX * neckW, ny - perpY * neckW);
+        ctx.lineTo(sx - perpX * tailW, sy - perpY * tailW);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function frame(t) {
+        let dt = Math.max(0, Math.min((t - lastT) / 1000, 0.05));
+        lastT = t;
+        // Sub-pasos de física: evita que a máxima velocidad una ficha
+        // "atraviese" la pelota sin registrar el choque (tunneling)
+        while (dt > 0) {
+            const h = Math.min(dt, 1 / 120);
+            step(h);
+            dt -= h;
+        }
+
+        ctx.clearRect(0, 0, W, H);
+        drawStands();
+        drawPitch();
+        pieces.forEach(drawPiece);
+        drawBall();
+        drawArrow();
+
+        requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+})();
+</script>
+}

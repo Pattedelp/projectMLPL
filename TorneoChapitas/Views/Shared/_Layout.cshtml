@@ -64,7 +64,7 @@
                class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
 
             <div class="nav-dropdown">
-                <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"||ViewBag.ActivePage=="trofeos"||ViewBag.ActivePage=="predicciones"||ViewBag.ActivePage=="legacy"||ViewBag.ActivePage=="ranking")?"active":"")">Más ▾</span>
+                <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"||ViewBag.ActivePage=="trofeos"||ViewBag.ActivePage=="predicciones"||ViewBag.ActivePage=="legacy"||ViewBag.ActivePage=="ranking"||ViewBag.ActivePage=="practica")?"active":"")">Más ▾</span>
                 <div class="dropdown-menu">
                     <a asp-controller="Historial" asp-action="Index">📚 Historial de Temporadas</a>
                     <a asp-controller="Estadisticas" asp-action="Index">📈 Estadísticas</a>
@@ -72,6 +72,7 @@
                     <a asp-controller="Predicciones" asp-action="Index">🔮 Predicciones</a>
                     <a asp-controller="Legacy" asp-action="Index">📜 Amateurismo</a>
                     <a asp-controller="Ranking" asp-action="Index">🌍 Ranking AAC</a>
+                    <a asp-controller="Practica" asp-action="Index">🎯 Modo Práctica</a>
                 </div>
             </div>
         </nav>
@@ -145,6 +146,7 @@
         <a asp-controller="Predicciones" asp-action="Index" class="drawer-item">🔮 Predicciones</a>
         <a asp-controller="Legacy" asp-action="Index" class="drawer-item">📜 Amateurismo</a>
         <a asp-controller="Ranking" asp-action="Index" class="drawer-item">🌍 Ranking AAC</a>
+        <a asp-controller="Practica" asp-action="Index" class="drawer-item">🎯 Modo Práctica</a>
 
         <div class="drawer-divider"></div>
         @if (User.IsInRole("Admin"))

@@ -56,28 +56,64 @@
         </button>
     </div>
 
-    <!-- Lista de jugadores recién agregados -->
     <div id="agregados" style="margin-top:24px;"></div>
 </div>
 
 @section Scripts {
 <script>
 const PAISES = [
-    {code:'se',name:'Suecia'},{code:'rs',name:'Serbia'},{code:'sn',name:'Senegal'},{code:'cm',name:'Camerún'},
-    {code:'ca',name:'Canadá'},{code:'qa',name:'Qatar'},{code:'gh',name:'Ghana'},
-    {code:'dz',name:'Argelia'},{code:'au',name:'Australia'},{code:'cn',name:'China'},
-    {code:'hr',name:'Croacia'},{code:'eg',name:'Egipto'},{code:'gb',name:'Inglaterra'},
-    {code:'fr',name:'Francia'},{code:'id',name:'Indonesia'},{code:'jp',name:'Japón'},
-    {code:'my',name:'Malasia'},{code:'mx',name:'México'},{code:'ma',name:'Marruecos'},
-    {code:'ng',name:'Nigeria'},{code:'pe',name:'Perú'},{code:'pt',name:'Portugal'},
-    {code:'ru',name:'Rusia'},{code:'sa',name:'Arabia Saudita'},{code:'kr',name:'Corea del Sur'},
-    {code:'th',name:'Tailandia'},{code:'tn',name:'Túnez'},{code:'tr',name:'Turquía'},
-    {code:'pl',name:'Polonia'}
+    {code:'de',name:'Alemania'},
+    {code:'dz',name:'Argelia'},
+    {code:'sa',name:'Arabia Saudita'},
+    {code:'ar',name:'Argentina'},
+    {code:'au',name:'Australia'},
+    {code:'be',name:'Bélgica'},
+    {code:'br',name:'Brasil'},
+    {code:'ca',name:'Canadá'},
+    {code:'cm',name:'Camerún'},
+    {code:'cn',name:'China'},
+    {code:'co',name:'Colombia'},
+    {code:'kr',name:'Corea del Sur'},
+    {code:'cr',name:'Costa Rica'},
+    {code:'hr',name:'Croacia'},
+    {code:'dk',name:'Dinamarca'},
+    {code:'ec',name:'Ecuador'},
+    {code:'eg',name:'Egipto'},
+    {code:'es',name:'España'},
+    {code:'us',name:'Estados Unidos'},
+    {code:'ph',name:'Filipinas'},
+    {code:'fr',name:'Francia'},
+    {code:'gh',name:'Ghana'},
+    {code:'gb-wls',name:'Gales'},
+    {code:'gb',name:'Inglaterra'},
+    {code:'id',name:'Indonesia'},
+    {code:'ir',name:'Irán'},
+    {code:'it',name:'Italia'},
+    {code:'jp',name:'Japón'},
+    {code:'my',name:'Malasia'},
+    {code:'ma',name:'Marruecos'},
+    {code:'mx',name:'México'},
+    {code:'ng',name:'Nigeria'},
+    {code:'nl',name:'Países Bajos'},
+    {code:'pe',name:'Perú'},
+    {code:'pl',name:'Polonia'},
+    {code:'pt',name:'Portugal'},
+    {code:'qa',name:'Qatar'},
+    {code:'ru',name:'Rusia'},
+    {code:'sn',name:'Senegal'},
+    {code:'rs',name:'Serbia'},
+    {code:'se',name:'Suecia'},
+    {code:'ch',name:'Suiza'},
+    {code:'th',name:'Tailandia'},
+    {code:'tn',name:'Túnez'},
+    {code:'tr',name:'Turquía'},
+    {code:'ua',name:'Ucrania'},
+    {code:'uy',name:'Uruguay'},
+    {code:'vn',name:'Vietnam'},
 ];
 
 let paisesTomados = {};
 
-// Cargar países ya tomados
 fetch('/Admin/GetPaisesTomados')
     .then(r => r.json())
     .then(data => {
@@ -89,9 +125,9 @@ function buildSelect() {
     const sel = document.getElementById('sel-pais');
     sel.innerHTML = '<option value="">-- Seleccioná un país --</option>';
     PAISES.forEach(p => {
-        const opt      = document.createElement('option');
-        opt.value      = p.code;
-        const tomado   = paisesTomados[p.code];
+        const opt    = document.createElement('option');
+        opt.value    = p.code;
+        const tomado = paisesTomados[p.code];
         if (tomado) {
             opt.textContent = `${p.name} — tomado por ${tomado}`;
             opt.disabled    = true;
@@ -103,16 +139,12 @@ function buildSelect() {
     });
 }
 
-// Preview de bandera al seleccionar
 document.getElementById('sel-pais').addEventListener('change', function() {
     const code    = this.value;
     const preview = document.getElementById('preview-bandera');
-    const msg     = document.getElementById('pais-tomado-msg');
-
     if (code) {
         preview.src           = `https://flagcdn.com/32x24/${code}.png`;
         preview.style.display = 'inline';
-        msg.style.display     = 'none';
     } else {
         preview.style.display = 'none';
     }
@@ -128,8 +160,8 @@ async function agregarJugador() {
     msgOk.style.display = msgErr.style.display = 'none';
 
     if (!nombre) {
-        msgErr.textContent    = '⚠️ El nombre es obligatorio.';
-        msgErr.style.display  = 'block';
+        msgErr.textContent   = '⚠️ El nombre es obligatorio.';
+        msgErr.style.display = 'block';
         return;
     }
 
@@ -149,25 +181,25 @@ async function agregarJugador() {
             if (paisCode) paisesTomados[paisCode] = nombre;
             buildSelect();
 
-            const esReactivado = d.reactivado;
+            const divNombre = divisionId === 1 ? 'Primera División' : divisionId === 3 ? 'Primera C Nacional' : 'Primera Nacional';
             const div  = document.getElementById('agregados');
             const item = document.createElement('div');
             item.style.cssText = 'background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;';
             item.innerHTML = `
                 ${paisCode ? `<img src="https://flagcdn.com/20x15/${paisCode}.png" style="border-radius:2px;" />` : '<span>🏴</span>'}
                 <strong style="font-size:14px;">${nombre}</strong>
-                <span style="font-size:12px;color:var(--color-muted);">${divisionId === 1 ? 'Primera División' : divisionId === 3 ? 'Primera C Nacional' : 'Primera Nacional'}</span>
-                <span style="font-size:11px;color:${esReactivado ? '#f0c040' : 'var(--color-green)'};margin-left:auto;">
-                    ${esReactivado ? '↩️ Reactivado' : '✓ Agregado'}
+                <span style="font-size:12px;color:var(--color-muted);">${divNombre}</span>
+                <span style="font-size:11px;color:${d.reactivado ? '#f0c040' : 'var(--color-green)'};margin-left:auto;">
+                    ${d.reactivado ? '↩️ Reactivado' : '✓ Agregado'}
                 </span>
             `;
             div.insertBefore(item, div.firstChild);
 
-            document.getElementById('inp-nombre').value   = '';
-            document.getElementById('sel-pais').value     = '';
+            document.getElementById('inp-nombre').value = '';
+            document.getElementById('sel-pais').value   = '';
             document.getElementById('preview-bandera').style.display = 'none';
 
-            msgOk.textContent   = esReactivado
+            msgOk.textContent   = d.reactivado
                 ? `↩️ ${nombre} fue reactivado y actualizado correctamente.`
                 : `✅ ${nombre} agregado correctamente.`;
             msgOk.style.display = 'block';
@@ -184,7 +216,6 @@ async function agregarJugador() {
     btn.disabled    = false;
 }
 
-// Enter para agregar
 document.getElementById('inp-nombre').addEventListener('keydown', e => {
     if (e.key === 'Enter') agregarJugador();
 });

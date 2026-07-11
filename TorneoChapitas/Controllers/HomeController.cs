@@ -30,7 +30,9 @@ namespace TorneoAmigos.Controllers
                 TotalGoles           = _repo.GetTotalGoles(),
                 UltimasNoticias      = _noticias.GetNoticias(soloPublicadas: true).Take(6).ToList()
             };
-            ViewBag.Encuestas   = _encuestas.GetEncuestasActivas();
+            ViewBag.Encuestas   = new List<Encuesta>(); // temporalmente deshabilitado para test
+            //ViewBag.Encuestas   = _encuestas.GetEncuestasActivas();
+            ViewBag.PrimeraCActiva = _tempRepo.PrimeraCActiva();
             ViewBag.RankingFifa = null; // Moved to /Ranking page
             return View(vm);
         }

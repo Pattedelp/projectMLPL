@@ -9,19 +9,15 @@
     <link rel="icon" href="~/favicon.ico" type="image/x-icon" />
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="~/img/apple-touch-icon.png" />
-
-    <!-- Open Graph / WhatsApp preview -->
     <meta property="og:title" content="@ViewBag.Title - Torneo Chapitas" />
     <meta property="og:description" content="Torneo Chapitas - AAC" />
     <meta property="og:image" content="https://torneochapitas.up.railway.app/img/og-image.jpg" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-
     <link rel="stylesheet" href="~/css/torneo.css" />
 </head>
 <body>
 
-<!-- TOPBAR -->
 <header class="topbar">
     <div class="topbar-inner">
         <a asp-controller="Home" asp-action="Index" class="logo">
@@ -29,7 +25,6 @@
             <span class="logo-text">Torneo Chapitas <em>AAC</em></span>
         </a>
 
-        <!-- NAV DESKTOP -->
         <nav class="main-nav">
             <a asp-controller="Home" asp-action="Index"
                class="@(ViewBag.ActivePage=="home"?"active":"")">Inicio</a>
@@ -51,6 +46,18 @@
                     <a asp-controller="NacionalB" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
+
+            @if (ViewBag.PrimeraCActiva == true)
+            {
+            <div class="nav-dropdown">
+                <span class="@(ViewBag.ActivePage=="primera-c"?"active":"")">1ra C Nacional ▾</span>
+                <div class="dropdown-menu">
+                    <a asp-controller="PrimeraC" asp-action="Posiciones">Posiciones</a>
+                    <a asp-controller="PrimeraC" asp-action="Fixture">Fixture</a>
+                    <a asp-controller="PrimeraC" asp-action="Equipos">Equipos</a>
+                </div>
+            </div>
+            }
 
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="copas"?"active":"")">Copas ▾</span>
@@ -77,7 +84,6 @@
             </div>
         </nav>
 
-        <!-- AUTH DESKTOP -->
         <div class="nav-auth">
             @if (User.IsInRole("Admin"))
             {
@@ -93,7 +99,6 @@
             }
         </div>
 
-        <!-- AUTH MOBILE (al lado del hamburger) -->
         <div class="nav-auth-mobile">
             @if (User.IsInRole("Admin"))
             {
@@ -105,17 +110,14 @@
             }
         </div>
 
-        <!-- HAMBURGER (solo mobile) -->
         <button class="nav-toggle" id="navToggle" aria-label="Menú">
             <span></span><span></span><span></span>
         </button>
     </div>
 </header>
 
-<!-- OVERLAY (solo mobile, detrás del drawer) -->
 <div class="drawer-overlay" id="drawerOverlay"></div>
 
-<!-- DRAWER LATERAL (solo mobile) -->
 <nav class="drawer" id="drawer" aria-hidden="true">
     <div class="drawer-header">
         <span class="drawer-logo">🏆 Torneo Chapitas</span>
@@ -133,6 +135,13 @@
         <a asp-controller="NacionalB" asp-action="Posiciones" class="drawer-item drawer-sub">Posiciones</a>
         <a asp-controller="NacionalB" asp-action="Fixture" class="drawer-item drawer-sub">Fixture</a>
         <a asp-controller="NacionalB" asp-action="Equipos" class="drawer-item drawer-sub">Equipos</a>
+
+        @if (ViewBag.PrimeraCActiva == true)
+        {
+        <div class="drawer-section-label">🏟️ Primera C Nacional</div>
+        <a asp-controller="PrimeraC" asp-action="Posiciones" class="drawer-item drawer-sub">Posiciones</a>
+        <a asp-controller="PrimeraC" asp-action="Fixture" class="drawer-item drawer-sub">Fixture</a>
+        }
 
         <div class="drawer-section-label">🏅 Copas</div>
         <a asp-controller="Copas" asp-action="CopaArgentina" class="drawer-item drawer-sub">Copa Argentina</a>
@@ -160,7 +169,6 @@
         {
             <a asp-controller="Auth" asp-action="Login" class="drawer-item">🔐 Acceso Admin</a>
         }
-        <!-- Espaciado extra al final para que se pueda scrollear -->
         <div style="height:40px"></div>
     </div>
 </nav>
@@ -195,7 +203,6 @@
 </footer>
 
 <script>
-// ── USUARIOS ONLINE ─────────────────────────────
 async function pingOnline() {
     try {
         const r = await fetch('/api/online');
@@ -205,9 +212,8 @@ async function pingOnline() {
     } catch {}
 }
 pingOnline();
-setInterval(pingOnline, 30000); // ping cada 30 segundos
+setInterval(pingOnline, 30000);
 
-// ── DRAWER MOBILE ──────────────────────────────
 const drawer        = document.getElementById('drawer');
 const drawerOverlay = document.getElementById('drawerOverlay');
 const navToggle     = document.getElementById('navToggle');
@@ -230,14 +236,12 @@ navToggle.addEventListener('click', function(e) { e.stopPropagation(); openDrawe
 drawerClose.addEventListener('click', closeDrawer);
 drawerOverlay.addEventListener('click', closeDrawer);
 
-// Swipe derecha para cerrar
 let txStart = 0;
 drawer.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
 drawer.addEventListener('touchend',   e => {
     if (e.changedTouches[0].clientX - txStart > 60) closeDrawer();
 }, { passive: true });
 
-// ── DROPDOWN DESKTOP — hover con position:fixed ──
 document.querySelectorAll('.nav-dropdown').forEach(function(dropdown) {
     var span  = dropdown.querySelector('span');
     var menu  = dropdown.querySelector('.dropdown-menu');
@@ -245,11 +249,10 @@ document.querySelectorAll('.nav-dropdown').forEach(function(dropdown) {
 
     function showMenu() {
         clearTimeout(timer);
-        // Cerrar otros
         document.querySelectorAll('.dropdown-menu').forEach(function(m) {
             if (m !== menu) { m.style.display = 'none'; }
         });
-        var rect        = span.getBoundingClientRect();
+        var rect = span.getBoundingClientRect();
         menu.style.position = 'fixed';
         menu.style.top      = rect.bottom + 'px';
         menu.style.left     = rect.left + 'px';

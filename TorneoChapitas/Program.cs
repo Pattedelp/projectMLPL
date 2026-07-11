@@ -27,7 +27,10 @@ else
     }
 }
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<TorneoAmigos.Filters.PrimeraCFilter>();
+});
 builder.Services.AddScoped<TorneoRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.TemporadaRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.NoticiasRepository>();

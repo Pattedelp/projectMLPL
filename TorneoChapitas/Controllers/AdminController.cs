@@ -45,8 +45,19 @@ namespace TorneoAmigos.Controllers
                 .OrderBy(e => e.Nombre).ToList();
             ViewBag.EquiposB = _repo.GetEquiposByDivision(2).ToList();
             ViewBag.EquiposRetirados = _repo.GetEquiposRetirados();
+            ViewBag.PrimeraCActiva = _tempRepo.PrimeraCActiva();
+            ViewBag.EquiposC = _repo.GetEquiposByDivision(3).ToList();
             ViewBag.TodasEncuestas = _encuestas.GetTodasLasEncuestas();
             return View(vm);
+        }
+
+
+        // ── PRIMERA C TOGGLE ────────────────────────────
+        [HttpPost]
+        public IActionResult TogglePrimeraC([FromBody] TogglePrimeraCDto dto)
+        {
+            _tempRepo.SetConfig("primera_c_activa", dto.Activa ? "true" : "false");
+            return Json(new { ok = true, activa = dto.Activa });
         }
 
         // ── RETIRAR / REACTIVAR JUGADOR ─────────────────
@@ -140,6 +151,9 @@ namespace TorneoAmigos.Controllers
                 Descenso1Id        = dto.Descenso1Id        > 0 ? dto.Descenso1Id        : null,
                 Descenso2Id        = dto.Descenso2Id        > 0 ? dto.Descenso2Id        : null,
                 DescensoPromoId    = dto.DescensoPromoId    > 0 ? dto.DescensoPromoId    : null,
+                CampeonCId         = dto.CampeonCId         > 0 ? dto.CampeonCId         : null,
+                AscensoCId1        = dto.AscensoCId1        > 0 ? dto.AscensoCId1        : null,
+                AscensoCId2        = dto.AscensoCId2        > 0 ? dto.AscensoCId2        : null,
                 SinDescensos       = dto.SinDescensos
             };
 
@@ -513,8 +527,13 @@ namespace TorneoAmigos.Controllers
         public int DescensoPromoId { get; set; }
         public int CampeonPrimeraId { get; set; }
         public int CampeonBId { get; set; }
+        public int CampeonCId { get; set; }
+        public int AscensoCId1 { get; set; }
+        public int AscensoCId2 { get; set; }
         public bool SinDescensos { get; set; }
     }
+
+    public class TogglePrimeraCDto { public bool Activa { get; set; } }
 
     public class FinalizarTemporadaDto
     {

@@ -94,6 +94,10 @@
 <div class="home-sections">
     @await Html.PartialAsync("_MiniTabla", Model.PrimeraDivision)
     @await Html.PartialAsync("_MiniTabla", Model.NacionalB)
+    @if (ViewBag.PrimeraCActiva == true && Model.PrimeraC != null && Model.PrimeraC.Equipos.Any())
+    {
+        @await Html.PartialAsync("_MiniTabla", Model.PrimeraC)
+    }
 </div>
 
 @{

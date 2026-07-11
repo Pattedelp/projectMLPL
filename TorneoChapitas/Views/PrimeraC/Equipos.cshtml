@@ -1,0 +1,45 @@
+@model List<Equipo>
+@{
+    ViewBag.Title = "Primera C Nacional - Equipos";
+}
+
+<div class="page-hero">
+    <div class="page-hero-icon">🏟️</div>
+    <div class="page-hero-text">
+        <h1>Primera C Nacional</h1>
+        <p>Equipos de la división</p>
+    </div>
+</div>
+
+<nav class="section-nav">
+    <a asp-controller="PrimeraC" asp-action="Posiciones">Posiciones</a>
+    <a asp-controller="PrimeraC" asp-action="Fixture">Fixture</a>
+    <a asp-controller="PrimeraC" asp-action="Equipos" class="active">Equipos</a>
+</nav>
+
+@if (!Model.Any())
+{
+    <div style="text-align:center;padding:60px 20px;color:var(--color-muted);">
+        <div style="font-size:48px;margin-bottom:16px;">🏟️</div>
+        <p style="font-size:16px;">No hay equipos en Primera C Nacional todavía.</p>
+        <p style="font-size:13px;margin-top:8px;">Podés agregar jugadores desde el panel Admin.</p>
+    </div>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;max-width:960px;margin:0 auto;">
+        @foreach (var e in Model)
+        {
+            <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@e.Id"
+               style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;text-decoration:none;display:block;text-align:center;">
+                @if (!string.IsNullOrEmpty(e.FlagCode))
+                {
+                    <div style="font-size:32px;margin-bottom:8px;">
+                        <img src="https://flagcdn.com/32x24/@(e.FlagCode).png" alt="" style="border-radius:2px;" onerror="this.style.display='none'" />
+                    </div>
+                }
+                <div style="font-family:var(--font-heading);font-size:15px;color:var(--color-text);">@e.Nombre</div>
+            </a>
+        }
+    </div>
+}

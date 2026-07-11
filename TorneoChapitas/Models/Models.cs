@@ -90,6 +90,7 @@ namespace TorneoAmigos.Models
     {
         public DivisionViewModel PrimeraDivision { get; set; } = new();
         public DivisionViewModel NacionalB { get; set; } = new();
+        public DivisionViewModel? PrimeraC { get; set; }
         public int TotalPartidosJugados { get; set; }
         public int TotalGoles { get; set; }
         public List<Noticia> UltimasNoticias { get; set; } = new();

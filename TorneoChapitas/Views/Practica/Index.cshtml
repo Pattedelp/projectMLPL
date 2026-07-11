@@ -105,7 +105,14 @@
 
     // ── Matter.js ────────────────────────────────────────────────────
     const { Engine, Bodies, Body, Composite, Events, Runner, Vector } = Matter;
-    const engine = Engine.create({ gravity: { x:0, y:0 } });
+    // positionIterations/velocityIterations altos → colisiones de roce (tangenciales)
+    // se resuelven con precisión, sin rebotes bruscos en direcciones raras
+    const engine = Engine.create({
+        gravity: { x:0, y:0 },
+        positionIterations: 12,
+        velocityIterations: 10,
+        constraintIterations: 4
+    });
     const world  = engine.world;
     Runner.run(Runner.create(), engine);
 
@@ -114,49 +121,43 @@
     const BALL_R    = 9;
     const PASS_MAX  = 3;
 
-    // Físicas copiadas de Gemini
+    // Físicas copiadas de Gemini (pelota con menos fricción para que llegue lejos tras un roce)
     const PIECE_OPT = { frictionAir: 0.035, restitution: 0.4, friction: 0, frictionStatic: 0 };
-    const BALL_OPT  = { frictionAir: 0.015, restitution: 0.8, friction: 0, frictionStatic: 0 };
+    const BALL_OPT  = { frictionAir: 0.014, restitution: 0.85, friction: 0, frictionStatic: 0 };
     const WALL_OPT  = { isStatic: true, restitution: 0.6, friction: 0 };
     const POST_OPT  = { isStatic: true, restitution: 0.4, friction: 0 };
     const MASA_PIEZA= 5;
-    const MASA_BOLA = 0.8;
+    const MASA_BOLA = 0.5;
 
-    // Potencia copiada de Gemini: magnitud * 0.0008, tope 0.18
+    // Potencia copiada de Gemini: magnitud * 0.0008, tope
     const POT_FACTOR= 0.0008;
     const POT_MAX   = 0.32;
     const REST_V    = 1.5;   // velocidad Matter bajo la cual se considera quieto
-
-    // Constantes SOLO para la simulación de trayectoria (no afectan la física real)
-    const SIM_FRICTION = 280;
-    const SIM_REST     = 0.68;
-    const SIM_BALL_F   = 200;
-    const SIM_BALL_IMP = 0.82;
-    const SIM_PIECE_M  = 4.0;
-    const SIM_BALL_M   = 0.8;
 
     // ── Formaciones ──────────────────────────────────────────────────
     function stripeY(s)      { const sH=(bounds.bottom-bounds.top)/13; return bounds.bottom-(s-0.5)*sH; }
     function stripeYRival(s) { const sH=(bounds.bottom-bounds.top)/13; return bounds.top+(s-0.5)*sH; }
 
     const FORMACIONES = {
-        // Medido pixel-perfect de la imagen oficial del juego
+        // Medido del selector oficial. La SEPARACIÓN entre fichas de una misma línea
+        // es funcional: deja un hueco por donde la pelota pasa rozando, lo que permite
+        // hacer saques de costado que vuelven a un compañero.
         // s = franja (1=arco propio, 6=línea de medio). x = offset px desde centro.
         '1-3-2': {
-            atq:[{x:0,s:1},{x:-55,s:3},{x:0,s:3},{x:55,s:3},{x:-35,s:5},{x:35,s:5}],
-            def:[{x:0,s:1},{x:-60,s:2},{x:0,s:2},{x:60,s:2},{x:-35,s:3},{x:35,s:3}]
+            atq:[{x:0,s:1}, {x:-58,s:3},{x:0,s:3},{x:58,s:3}, {x:-30,s:5},{x:30,s:5}],
+            def:[{x:0,s:1}, {x:-58,s:2},{x:0,s:2},{x:58,s:2}, {x:-30,s:3},{x:30,s:3}]
         },
         '1-2-3': {
-            atq:[{x:0,s:1},{x:-35,s:3},{x:35,s:3},{x:-80,s:5},{x:0,s:5},{x:80,s:5}],
-            def:[{x:0,s:1},{x:-70,s:2},{x:0,s:2},{x:70,s:2},{x:-35,s:3},{x:35,s:3}]
+            atq:[{x:0,s:1}, {x:-38,s:3},{x:38,s:3}, {x:-78,s:5},{x:0,s:5},{x:78,s:5}],
+            def:[{x:0,s:1}, {x:-38,s:2},{x:38,s:2}, {x:-78,s:3},{x:0,s:3},{x:78,s:3}]
         },
         '1-4-1': {
-            atq:[{x:0,s:1},{x:-95,s:3},{x:-32,s:3},{x:32,s:3},{x:95,s:3},{x:0,s:5}],
-            def:[{x:0,s:1},{x:0,s:4},{x:-65,s:2},{x:-22,s:2},{x:22,s:2},{x:65,s:2}]
+            atq:[{x:0,s:1}, {x:-96,s:3},{x:-34,s:3},{x:34,s:3},{x:96,s:3}, {x:0,s:5}],
+            def:[{x:0,s:1}, {x:0,s:4}, {x:-96,s:2},{x:-34,s:2},{x:34,s:2},{x:96,s:2}]
         },
         '1-2-1-2': {
-            atq:[{x:0,s:1},{x:-50,s:2},{x:50,s:2},{x:0,s:4},{x:-35,s:5},{x:35,s:5}],
-            def:[{x:0,s:1},{x:-50,s:2},{x:50,s:2},{x:0,s:3},{x:-50,s:4},{x:50,s:4}]
+            atq:[{x:0,s:1}, {x:-52,s:2},{x:52,s:2}, {x:0,s:4}, {x:-40,s:5},{x:40,s:5}],
+            def:[{x:0,s:1}, {x:-52,s:2},{x:52,s:2}, {x:0,s:3}, {x:-40,s:4},{x:40,s:4}]
         }
     };
     const NOMBRES = ['1-3-2','1-2-3','1-4-1','1-2-1-2'];
@@ -194,32 +195,32 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // ── Crear paredes Matter ─────────────────────────────────────────
-    function buildWalls() {
-        if (walls.length) { walls.forEach(w => Composite.remove(world, w)); walls=[]; }
+    // ── Crear paredes Matter (en el mundo indicado) ──────────────────
+    function makeWalls() {
         const T = 12;
         const gapLeft  = CX - GOAL_W/2 - bounds.left;
         const gapRight = bounds.right - (CX + GOAL_W/2);
         const midLeft  = bounds.left  + gapLeft/2;
         const midRight = bounds.right - gapRight/2;
+        return [
+            Bodies.rectangle(bounds.left  - T/2, H/2, T, H, WALL_OPT),
+            Bodies.rectangle(bounds.right + T/2, H/2, T, H, WALL_OPT),
+            Bodies.rectangle(midLeft,  bounds.top - T/2, gapLeft,  T, WALL_OPT),
+            Bodies.rectangle(midRight, bounds.top - T/2, gapRight, T, WALL_OPT),
+            Bodies.rectangle(midLeft,  bounds.bottom + T/2, gapLeft,  T, WALL_OPT),
+            Bodies.rectangle(midRight, bounds.bottom + T/2, gapRight, T, WALL_OPT),
+            Bodies.rectangle(CX, bounds.top    - GOAL_DEPTH + T/2, GOAL_W, T, { isStatic:true, restitution:0.1, friction:0 }),
+            Bodies.rectangle(CX, bounds.bottom + GOAL_DEPTH - T/2, GOAL_W, T, { isStatic:true, restitution:0.1, friction:0 }),
+            Bodies.circle(CX-GOAL_W/2, bounds.top,    5, POST_OPT),
+            Bodies.circle(CX+GOAL_W/2, bounds.top,    5, POST_OPT),
+            Bodies.circle(CX-GOAL_W/2, bounds.bottom, 5, POST_OPT),
+            Bodies.circle(CX+GOAL_W/2, bounds.bottom, 5, POST_OPT)
+        ];
+    }
 
-        // Laterales
-        walls.push(Bodies.rectangle(bounds.left  - T/2, H/2, T, H,       WALL_OPT));
-        walls.push(Bodies.rectangle(bounds.right + T/2, H/2, T, H,       WALL_OPT));
-        // Techo (con hueco de arco)
-        walls.push(Bodies.rectangle(midLeft,  bounds.top - T/2, gapLeft,  T, WALL_OPT));
-        walls.push(Bodies.rectangle(midRight, bounds.top - T/2, gapRight, T, WALL_OPT));
-        // Suelo (con hueco de arco)
-        walls.push(Bodies.rectangle(midLeft,  bounds.bottom + T/2, gapLeft,  T, WALL_OPT));
-        walls.push(Bodies.rectangle(midRight, bounds.bottom + T/2, gapRight, T, WALL_OPT));
-        // Fondo de los arcos (red)
-        walls.push(Bodies.rectangle(CX, bounds.top    - GOAL_DEPTH + T/2, GOAL_W, T, { isStatic:true, restitution:0.1, friction:0 }));
-        walls.push(Bodies.rectangle(CX, bounds.bottom + GOAL_DEPTH - T/2, GOAL_W, T, { isStatic:true, restitution:0.1, friction:0 }));
-        // Postes
-        walls.push(Bodies.circle(CX-GOAL_W/2, bounds.top,    5, POST_OPT));
-        walls.push(Bodies.circle(CX+GOAL_W/2, bounds.top,    5, POST_OPT));
-        walls.push(Bodies.circle(CX-GOAL_W/2, bounds.bottom, 5, POST_OPT));
-        walls.push(Bodies.circle(CX+GOAL_W/2, bounds.bottom, 5, POST_OPT));
+    function buildWalls() {
+        if (walls.length) { walls.forEach(w => Composite.remove(world, w)); walls=[]; }
+        walls = makeWalls();
         Composite.add(world, walls);
     }
 
@@ -262,13 +263,30 @@
             const other = isBall(bodyA) ? bodyB : bodyA;
             if (!pieces.includes(other)) return;
             if (other.team === 0) {
-                if (lastFlicked && other !== lastFlicked && !pendingReceiver && passes < PASS_MAX)
+                // La pelota tocó una ficha MÍA → buen pase (si hubo un tiro y no es la misma ficha)
+                if (lastFlicked && other !== lastFlicked && !pendingReceiver && passes < PASS_MAX) {
                     pendingReceiver = other;
+                    passes++;
+                    passesEl.textContent = 'Passes: '+passes+'/'+PASS_MAX;
+                    mostrarBuenPase();
+                }
             } else {
+                // La pelota tocó una ficha RIVAL → se pierde la posesión
                 passes=0; pendingReceiver=null; lastFlicked=null;
                 passesEl.textContent = 'Passes: 0/'+PASS_MAX;
             }
         });
+    }
+
+    function mostrarBuenPase() {
+        golMsg.textContent = '¡BUEN PASE!';
+        golMsg.style.fontSize = '30px';
+        golMsg.classList.add('show');
+        setTimeout(()=>{
+            golMsg.classList.remove('show');
+            golMsg.textContent = '¡GOL!';
+            golMsg.style.fontSize = '';
+        }, 900);
     }
 
     // ── Selector de formación ────────────────────────────────────────
@@ -364,6 +382,7 @@
         if (side==='top') scoreYo++; else scoreRival++;
         scoreYoEl.textContent=scoreYo; scoreRivalEl.textContent=scoreRival;
         Body.setVelocity(mBall,{x:0,y:0});
+        golMsg.textContent='¡GOL!'; golMsg.style.fontSize='';
         golMsg.classList.add('show');
         setTimeout(()=>{ golMsg.classList.remove('show'); armarEquipos(); },1100);
     }
@@ -376,8 +395,8 @@
         if (!scored && inX && bp.y > bounds.bottom+ GOAL_DEPTH*0.4) showGol('bottom');
 
         if (pendingReceiver) {
-            const allStop = Math.hypot(mBall.velocity.x,mBall.velocity.y)<REST_V &&
-                            pieces.every(p=>Math.hypot(p.velocity.x,p.velocity.y)<REST_V);
+            const allStop = Math.hypot(mBall.velocity.x,mBall.velocity.y)<REST_V*1.5 &&
+                            pieces.every(p=>Math.hypot(p.velocity.x,p.velocity.y)<REST_V*1.5);
             if (allStop) {
                 const bx=mBall.position.x, by=mBall.position.y;
                 let dx=bx-CX, dy=by-bounds.top, d=Math.hypot(dx,dy)||1;
@@ -387,8 +406,7 @@
                 Body.setPosition(pendingReceiver,{x:px,y:py});
                 Body.setVelocity(pendingReceiver,{x:0,y:0});
                 Body.setVelocity(mBall,{x:0,y:0});
-                lastFlicked=null; passes++;
-                passesEl.textContent='Passes: '+passes+'/'+PASS_MAX;
+                lastFlicked=null;
                 pendingReceiver=null;
             }
         }
@@ -474,113 +492,67 @@
     // Matter: applyForce(F) → dv = F/mass por step (step ≈ 16.67ms)
     // En nuestro espacio lógico W=390, el runner corre a 60fps con delta 16.67ms
     // Empíricamente: vel_logica ≈ pot * 3200 (calibrado contra movimiento real)
-    function potToVel(pot) { return pot * 5000; }
+    // ── Predicción de trayectoria con MUNDO FANTASMA (Matter real) ────
+    // Se clona el estado actual en un motor Matter invisible, se aplica el
+    // mismo disparo y se corre acelerado. Como usa el mismo motor que el juego,
+    // la trayectoria predicha es IDÉNTICA a lo que va a pasar realmente.
+    function predecirTrayectoria(aimingPiece, forceVec) {
+        // Motor fantasma independiente (mismas iteraciones que el real para coincidir)
+        const ghostEngine = Engine.create({
+            gravity: { x:0, y:0 },
+            positionIterations: 12,
+            velocityIterations: 10,
+            constraintIterations: 4
+        });
+        const ghostWorld  = ghostEngine.world;
 
-    function simPiece(sx, sy, vx, vy, snap, ballPos) {
-        const DT = 1/120;
-        const pts = [{x:sx, y:sy}];
-        let ls = 0;
-        for (let i = 0; i < 8000; i++) {
-            const s = Math.hypot(vx, vy);
-            if (s < 8) break;
-            vx = vx * Math.max(0, s - SIM_FRICTION*DT) / s;
-            vy = vy * Math.max(0, s - SIM_FRICTION*DT) / s;
-            sx += vx*DT; sy += vy*DT;
-            // paredes
-            if(sx-PIECE_R<bounds.left)  {sx=bounds.left +PIECE_R; vx=-vx*SIM_REST;}
-            if(sx+PIECE_R>bounds.right) {sx=bounds.right-PIECE_R; vx=-vx*SIM_REST;}
-            if(sy-PIECE_R<bounds.top)   {sy=bounds.top  +PIECE_R; vy=-vy*SIM_REST;}
-            if(sy+PIECE_R>bounds.bottom){sy=bounds.bottom-PIECE_R; vy=-vy*SIM_REST;}
-            // sample
-            if(i-ls>=15){pts.push({x:sx,y:sy}); ls=i;}
-            // colisión con pelota (prioridad)
-            if(ballPos){
-                const d=Math.hypot(ballPos.x-sx, ballPos.y-sy);
-                if(d < PIECE_R+BALL_R && d>0){
-                    pts.push({x:sx,y:sy});
-                    const nx=(ballPos.x-sx)/d, ny=(ballPos.y-sy)/d;
-                    const v1n=vx*nx+vy*ny;
-                    const bv=(SIM_PIECE_M*v1n*(1+SIM_BALL_IMP))/(SIM_PIECE_M+SIM_BALL_M);
-                    return {pts, bvx:bv*nx, bvy:bv*ny, hitBall:true, hitPiece:false};
-                }
+        // Clonar paredes
+        Composite.add(ghostWorld, makeWalls());
+
+        // Clonar fichas (mismas posiciones, masa y props físicas)
+        let ghostAiming = null, ghostBall = null;
+        pieces.forEach(p => {
+            const g = Bodies.circle(p.position.x, p.position.y, PIECE_R, PIECE_OPT);
+            Body.setMass(g, MASA_PIEZA);
+            g.team = p.team;
+            Composite.add(ghostWorld, g);
+            if (p === aimingPiece) ghostAiming = g;
+        });
+        // Clonar pelota
+        ghostBall = Bodies.circle(mBall.position.x, mBall.position.y, BALL_R, BALL_OPT);
+        Body.setMass(ghostBall, MASA_BOLA);
+        Composite.add(ghostWorld, ghostBall);
+
+        // Aplicar el mismo disparo
+        Body.applyForce(ghostAiming, ghostAiming.position, forceVec);
+
+        // Correr la simulación registrando posiciones
+        const piecePts = [{ x: ghostAiming.position.x, y: ghostAiming.position.y }];
+        const ballPts  = [{ x: ghostBall.position.x,  y: ghostBall.position.y  }];
+        const STEP_MS = 1000 / 60;
+        const MAX_STEPS = 260;
+        let ballStartedMoving = false;
+
+        for (let i = 0; i < MAX_STEPS; i++) {
+            Engine.update(ghostEngine, STEP_MS);
+
+            if (i % 3 === 0) piecePts.push({ x: ghostAiming.position.x, y: ghostAiming.position.y });
+
+            const bv = Math.hypot(ghostBall.velocity.x, ghostBall.velocity.y);
+            if (bv > 0.3) ballStartedMoving = true;
+            if (ballStartedMoving && i % 3 === 0) {
+                ballPts.push({ x: ghostBall.position.x, y: ghostBall.position.y });
             }
-            // colisión con ficha obstáculo
-            for(const sp of snap){
-                const d=Math.hypot(sp.x-sx, sp.y-sy);
-                if(d < PIECE_R*2 && d>0){
-                    pts.push({x:sx,y:sy});
-                    const nx=(sp.x-sx)/d, ny=(sp.y-sy)/d;
-                    const v1n=vx*nx+vy*ny;
-                    // velocidad que recibe la ficha golpeada
-                    const spv=v1n*0.55;
-                    return {pts, bvx:0, bvy:0, hitBall:false, hitPiece:true,
-                            spvx:spv*nx, spvy:spv*ny, spx:sp.x, spy:sp.y};
-                }
-            }
+
+            // cortar si todo está casi quieto
+            const pv = Math.hypot(ghostAiming.velocity.x, ghostAiming.velocity.y);
+            if (i > 10 && pv < 0.4 && bv < 0.4) break;
         }
-        pts.push({x:sx,y:sy});
-        return {pts, bvx:0, bvy:0, hitBall:false, hitPiece:false};
-    }
+        piecePts.push({ x: ghostAiming.position.x, y: ghostAiming.position.y });
+        if (ballStartedMoving) ballPts.push({ x: ghostBall.position.x, y: ghostBall.position.y });
 
-    function simFichaGolpeada(sx, sy, vx, vy, ballPos) {
-        // Simula la ficha rival/propia que fue golpeada para ver si alcanza la pelota
-        const DT = 1/120;
-        for(let j=0; j<4000; j++){
-            const s=Math.hypot(vx,vy); if(s<8) break;
-            vx=vx*Math.max(0,s-SIM_FRICTION*DT)/s;
-            vy=vy*Math.max(0,s-SIM_FRICTION*DT)/s;
-            sx+=vx*DT; sy+=vy*DT;
-            if(sx-PIECE_R<bounds.left)  {sx=bounds.left +PIECE_R; vx=-vx*SIM_REST;}
-            if(sx+PIECE_R>bounds.right) {sx=bounds.right-PIECE_R; vx=-vx*SIM_REST;}
-            if(sy-PIECE_R<bounds.top)   {sy=bounds.top  +PIECE_R; vy=-vy*SIM_REST;}
-            if(sy+PIECE_R>bounds.bottom){sy=bounds.bottom-PIECE_R; vy=-vy*SIM_REST;}
-            if(ballPos){
-                const d=Math.hypot(ballPos.x-sx, ballPos.y-sy);
-                if(d<PIECE_R+BALL_R&&d>0){
-                    const nx=(ballPos.x-sx)/d, ny=(ballPos.y-sy)/d;
-                    const v1n=vx*nx+vy*ny;
-                    const bv=(SIM_PIECE_M*v1n*(1+SIM_BALL_IMP))/(SIM_PIECE_M+SIM_BALL_M);
-                    return {bvx:bv*nx, bvy:bv*ny};
-                }
-            }
-        }
-        return null;
+        return { piecePts, ballPts: ballStartedMoving ? ballPts : [] };
     }
-
-    function simBall(bx, by, bvx, bvy) {
-        const DT=1/120, pts=[{x:bx,y:by}]; let ls=0;
-        let pieceHits=0; // limitar a 1 rebote contra fichas para evitar patrón raro
-        for(let j=0; j<8000; j++){
-            const s=Math.hypot(bvx,bvy); if(s<6) break;
-            bvx=bvx*Math.max(0,s-SIM_BALL_F*DT)/s;
-            bvy=bvy*Math.max(0,s-SIM_BALL_F*DT)/s;
-            bx+=bvx*DT; by+=bvy*DT;
-            // paredes
-            if(bx-BALL_R<bounds.left)  {bx=bounds.left +BALL_R; bvx=-bvx*SIM_REST;}
-            if(bx+BALL_R>bounds.right) {bx=bounds.right-BALL_R; bvx=-bvx*SIM_REST;}
-            if(by-BALL_R<bounds.top)   {by=bounds.top  +BALL_R; bvy=-bvy*SIM_REST;}
-            if(by+BALL_R>bounds.bottom){by=bounds.bottom-BALL_R; bvy=-bvy*SIM_REST;}
-            // rebote contra fichas: máximo 1 para no crear líneas caóticas
-            if(pieceHits<1){
-                for(const sp of snapPieces){
-                    const d=Math.hypot(sp.x-bx, sp.y-by);
-                    if(d < PIECE_R+BALL_R && d>0){
-                        const nx=(bx-sp.x)/d, ny=(by-sp.y)/d;
-                        const overlap=(PIECE_R+BALL_R)-d;
-                        bx+=nx*overlap; by+=ny*overlap;
-                        const vn=bvx*nx+bvy*ny;
-                        if(vn<0){ bvx-=(1+SIM_BALL_IMP)*vn*nx; bvy-=(1+SIM_BALL_IMP)*vn*ny; }
-                        pieceHits++;
-                        break;
-                    }
-                }
-            }
-            if(j-ls>=14){pts.push({x:bx,y:by}); ls=j;}
-        }
-        pts.push({x:bx,y:by}); return pts;
-    }
-
-    let snapPieces=[];
 
     function drawArrow() {
         if (!aiming || !dragStart || !dragCur || !mBall) return;
@@ -589,33 +561,20 @@
         let pot=dist*POT_FACTOR; if(pot>POT_MAX) pot=POT_MAX;
         const pct=pot/POT_MAX;
         const ndx=dx/dist, ndy=dy/dist;
-        const vel=potToVel(pot);
-        const vx0=ndx*vel, vy0=ndy*vel;
 
-        // Snapshot de fichas (excluir la que se está moviendo)
-        snapPieces = pieces.filter(p=>p!==aiming).map(p=>({x:p.position.x,y:p.position.y,team:p.team}));
-        const ballPos = {x:mBall.position.x, y:mBall.position.y};
-
-        const res = simPiece(dragStart.x, dragStart.y, vx0, vy0, snapPieces, ballPos);
+        // Vector de fuerza IDÉNTICO al que se aplica en pointerUp
+        const forceVec = { x: ndx*pot, y: ndy*pot };
+        const { piecePts, ballPts } = predecirTrayectoria(aiming, forceVec);
 
         // ── Trayectoria chapita (blanco punteado) ──
-        if(res.pts.length>1){
+        if(piecePts.length>1){
             ctx.save(); ctx.setLineDash([5,6]);
             ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.8;
-            ctx.beginPath(); res.pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+            ctx.beginPath(); piecePts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
             ctx.stroke(); ctx.setLineDash([]); ctx.restore();
         }
 
         // ── Trayectoria pelota (amarillo) ──
-        let ballPts=[];
-        if(res.hitBall){
-            ballPts = simBall(ballPos.x, ballPos.y, res.bvx, res.bvy);
-        } else if(res.hitPiece) {
-            // La ficha golpeada puede a su vez tocar la pelota
-            const r2 = simFichaGolpeada(res.spx, res.spy, res.spvx, res.spvy, ballPos);
-            if(r2) ballPts = simBall(ballPos.x, ballPos.y, r2.bvx, r2.bvy);
-        }
-
         if(ballPts.length>1){
             ctx.save(); ctx.setLineDash([5,7]);
             ctx.strokeStyle='rgba(240,192,64,0.75)'; ctx.lineWidth=2;

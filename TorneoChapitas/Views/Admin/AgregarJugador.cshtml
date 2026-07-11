@@ -44,6 +44,10 @@
             <select id="sel-division" class="form-control" style="max-width:220px;">
                 <option value="2" selected>🥈 Primera Nacional</option>
                 <option value="1">🏆 Primera División</option>
+                @if (ViewBag.PrimeraCActiva == true)
+                {
+                    <option value="3">🏟️ Primera C Nacional</option>
+                }
             </select>
         </div>
 
@@ -152,7 +156,7 @@ async function agregarJugador() {
             item.innerHTML = `
                 ${paisCode ? `<img src="https://flagcdn.com/20x15/${paisCode}.png" style="border-radius:2px;" />` : '<span>🏴</span>'}
                 <strong style="font-size:14px;">${nombre}</strong>
-                <span style="font-size:12px;color:var(--color-muted);">${divisionId === 1 ? 'Primera División' : 'Primera Nacional'}</span>
+                <span style="font-size:12px;color:var(--color-muted);">${divisionId === 1 ? 'Primera División' : divisionId === 3 ? 'Primera C Nacional' : 'Primera Nacional'}</span>
                 <span style="font-size:11px;color:${esReactivado ? '#f0c040' : 'var(--color-green)'};margin-left:auto;">
                     ${esReactivado ? '↩️ Reactivado' : '✓ Agregado'}
                 </span>

@@ -566,6 +566,15 @@ namespace TorneoAmigos.Data
                 // Generar fixture
                 GenerarFixture(conn, tx, 1, equiposPrimera);
                 GenerarFixture(conn, tx, 2, equiposB);
+                if (equiposNuevos.Any(e => e.divisionId == 3) || equiposPrimera.Count == 0)
+                {
+                    var equiposC = equiposNuevos.Where(e => e.divisionId == 3).Select(e => e.divisionId).ToList();
+                    // Se genera al activar fixture de C por separado
+                }
+                // Primera C: fixture separado con opción ida y vuelta
+                var idsC = GetEquiposIdsByDivision(3, conn);
+                if (idsC.Any())
+                    GenerarFixture(conn, tx, 3, idsC, PrimeraCIdaVuelta());
 
                 tx.Commit();
                 return tempId;
@@ -589,11 +598,13 @@ namespace TorneoAmigos.Data
 
             var equiposPrimera = GetEquiposIdsByDivision(1, conn);
             var equiposB       = GetEquiposIdsByDivision(2, conn);
+            var equiposC       = GetEquiposIdsByDivision(3, conn);
 
             using var tx = conn.BeginTransaction();
             BorrarFixture(conn, tx);
             if (equiposPrimera.Any()) GenerarFixture(conn, tx, 1, equiposPrimera);
             if (equiposB.Any())       GenerarFixture(conn, tx, 2, equiposB);
+            if (equiposC.Any())       GenerarFixture(conn, tx, 3, equiposC, PrimeraCIdaVuelta());
             tx.Commit();
             return true;
         }
@@ -632,15 +643,15 @@ namespace TorneoAmigos.Data
             new NpgsqlCommand("DELETE FROM fechas", conn, tx).ExecuteNonQuery();
         }
 
-        private void GenerarFixture(NpgsqlConnection conn, NpgsqlTransaction tx, int divisionId, List<int> equipos)
+        private void GenerarFixture(NpgsqlConnection conn, NpgsqlTransaction tx, int divisionId, List<int> equipos, bool idaYVuelta = false)
         {
             if (equipos.Count < 2) return;
 
-            // Algoritmo round-robin (todos contra todos, ida)
             var lista = new List<int>(equipos);
-            if (lista.Count % 2 != 0) lista.Add(-1); // bye si es impar
+            if (lista.Count % 2 != 0) lista.Add(-1);
             int n = lista.Count;
-            int numFechas = n - 1;
+            int numFechasIda = n - 1;
+            int numFechas = idaYVuelta ? numFechasIda * 2 : numFechasIda;
 
             var fechaIds = new List<int>();
             for (int f = 1; f <= numFechas; f++)
@@ -655,23 +666,26 @@ namespace TorneoAmigos.Data
                 fechaIds.Add(fechaId);
             }
 
-            // Habilitar fecha 1 automáticamente
             using (var cmd = new NpgsqlCommand("UPDATE fechas SET habilitada = true WHERE id = @Id", conn, tx))
             {
                 cmd.Parameters.AddWithValue("@Id", fechaIds[0]);
                 cmd.ExecuteNonQuery();
             }
 
-            // Round robin
-            for (int fecha = 0; fecha < numFechas; fecha++)
+            // Guardar partidos de ida para invertirlos en vuelta
+            var partidosIda = new List<(int local, int visitante)>();
+
+            var listaIda = new List<int>(lista);
+            for (int fecha = 0; fecha < numFechasIda; fecha++)
             {
                 int fechaId = fechaIds[fecha];
                 for (int i = 0; i < n / 2; i++)
                 {
-                    int local    = lista[i];
-                    int visitante = lista[n - 1 - i];
-                    if (local == -1 || visitante == -1) continue; // bye
+                    int local     = listaIda[i];
+                    int visitante = listaIda[n - 1 - i];
+                    if (local == -1 || visitante == -1) continue;
 
+                    partidosIda.Add((local, visitante));
                     using var cmd = new NpgsqlCommand(@"
                         INSERT INTO partidos (fechaid, divisionid, equipolocalid, equipovisitanteid, jugado)
                         VALUES (@F, @D, @L, @V, false)", conn, tx);
@@ -681,10 +695,32 @@ namespace TorneoAmigos.Data
                     cmd.Parameters.AddWithValue("@V", visitante);
                     cmd.ExecuteNonQuery();
                 }
-                // Rotar lista (mantener el primero fijo)
-                var ultimo = lista[lista.Count - 1];
-                lista.RemoveAt(lista.Count - 1);
-                lista.Insert(1, ultimo);
+                var ultimo = listaIda[listaIda.Count - 1];
+                listaIda.RemoveAt(listaIda.Count - 1);
+                listaIda.Insert(1, ultimo);
+            }
+
+            // Vuelta: mismos partidos pero con local/visitante invertidos
+            if (idaYVuelta)
+            {
+                int partidoIdx = 0;
+                for (int fecha = numFechasIda; fecha < numFechas; fecha++)
+                {
+                    int fechaId = fechaIds[fecha];
+                    int partidosPorFecha = n / 2;
+                    for (int i = 0; i < partidosPorFecha && partidoIdx < partidosIda.Count; i++, partidoIdx++)
+                    {
+                        var (local, visitante) = partidosIda[partidoIdx];
+                        using var cmd = new NpgsqlCommand(@"
+                            INSERT INTO partidos (fechaid, divisionid, equipolocalid, equipovisitanteid, jugado)
+                            VALUES (@F, @D, @L, @V, false)", conn, tx);
+                        cmd.Parameters.AddWithValue("@F", fechaId);
+                        cmd.Parameters.AddWithValue("@D", divisionId);
+                        cmd.Parameters.AddWithValue("@L", visitante); // invertido
+                        cmd.Parameters.AddWithValue("@V", local);     // invertido
+                        cmd.ExecuteNonQuery();
+                    }
+                }
             }
         }
 
@@ -1474,6 +1510,7 @@ namespace TorneoAmigos.Data
         }
 
         public bool PrimeraCActiva() => GetConfig("primera_c_activa") == "true";
+        public bool PrimeraCIdaVuelta() => GetConfig("primera_c_ida_vuelta") == "true";
 
         // ── HISTORIAL LEGACY ─────────────────────────────
         public List<LegacyTemporada> GetLegacyTemporadas()

@@ -46,6 +46,7 @@ namespace TorneoAmigos.Controllers
             ViewBag.EquiposB = _repo.GetEquiposByDivision(2).ToList();
             ViewBag.EquiposRetirados = _repo.GetEquiposRetirados();
             ViewBag.PrimeraCActiva = _tempRepo.PrimeraCActiva();
+            ViewBag.PrimeraCIdaVuelta = _tempRepo.PrimeraCIdaVuelta();
             ViewBag.EquiposC = _repo.GetEquiposByDivision(3).ToList();
             ViewBag.TodasEncuestas = _encuestas.GetTodasLasEncuestas();
             return View(vm);
@@ -57,6 +58,13 @@ namespace TorneoAmigos.Controllers
         public IActionResult TogglePrimeraC([FromBody] TogglePrimeraCDto dto)
         {
             _tempRepo.SetConfig("primera_c_activa", dto.Activa ? "true" : "false");
+            return Json(new { ok = true, activa = dto.Activa });
+        }
+
+        [HttpPost]
+        public IActionResult TogglePrimeraCIdaVuelta([FromBody] TogglePrimeraCDto dto)
+        {
+            _tempRepo.SetConfig("primera_c_ida_vuelta", dto.Activa ? "true" : "false");
             return Json(new { ok = true, activa = dto.Activa });
         }
 

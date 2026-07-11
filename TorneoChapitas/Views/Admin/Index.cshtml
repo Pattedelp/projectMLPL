@@ -517,6 +517,18 @@ else
             </div>
         </label>
     </div>
+    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 24px;margin-top:10px;display:flex;align-items:center;gap:16px;">
+        <div style="flex:1;">
+            <div style="font-size:13px;font-weight:500;color:var(--color-text);">🔁 Fixture ida y vuelta</div>
+            <div style="font-size:11px;color:var(--color-muted);margin-top:2px;">Activá si hay pocos equipos — genera fechas de ida y vuelta. Se aplica al regenerar el fixture.</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <span style="font-size:13px;color:var(--color-muted);" id="lbl-ida-vuelta">@(ViewBag.PrimeraCIdaVuelta == true ? "Activo" : "Inactivo")</span>
+            <div class="toggle-switch @(ViewBag.PrimeraCIdaVuelta == true ? "on" : "")" id="toggle-ida-vuelta" onclick="toggleIdaVuelta(this)">
+                <div class="toggle-knob"></div>
+            </div>
+        </label>
+    </div>
 </div>
 
 <!-- ENCUESTAS -->
@@ -883,6 +895,16 @@ async function regenerarFixture() {
 async function togglePrimeraC(el) {
     const activa = !el.classList.contains('on');
     const r = await fetch('/Admin/TogglePrimeraC', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ activa })
+    });
+    const d = await r.json();
+    if (d.ok) location.reload();
+}
+
+async function toggleIdaVuelta(el) {
+    const activa = !el.classList.contains('on');
+    const r = await fetch('/Admin/TogglePrimeraCIdaVuelta', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ activa })
     });

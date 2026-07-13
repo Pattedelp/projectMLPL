@@ -2,7 +2,10 @@
 @{
     ViewBag.Title = "Primera C Nacional - Fixture";
     ViewBag.ActivePage = "primera-c";
-    bool esAdmin = ViewBag.EsAdmin == true;
+    var controller = "PrimeraC";
+    var icono      = "🏟️";
+    var divisionId = 3;
+    var esAdmin    = User.IsInRole("Admin");
 }
 
 <div class="page-hero">
@@ -19,55 +22,275 @@
     <a asp-controller="PrimeraC" asp-action="Equipos">Equipos</a>
 </nav>
 
-@if (Model.Fixture == null || !Model.Fixture.Any())
-{
-    <div style="text-align:center;padding:60px 20px;color:var(--color-muted);">
-        <div style="font-size:48px;margin-bottom:16px;">🏟️</div>
-        <p style="font-size:16px;">No hay fixture generado para Primera C todavía.</p>
-    </div>
-}
-else
-{
-    <div class="fixture-layout">
-        <div class="fixture-fechas">
-            @foreach (var grupo in Model.Fixture)
-            {
-                <div class="fecha-card @(grupo.Habilitada ? "" : "fecha-bloqueada")">
-                    <div class="fecha-header">
-                        <span class="fecha-titulo">@grupo.NombreFecha</span>
-                        @if (!grupo.Habilitada)
-                        { <span class="fecha-lock">🔒</span> }
-                    </div>
-                    <div class="fecha-partidos">
+<div class="fixture-layout">
+
+    <!-- FIXTURE -->
+    <div class="fixture-col">
+        @foreach (var grupo in Model.Fixture)
+        {
+            var bloqueada = !grupo.Fecha.Habilitada && !esAdmin;
+            <div class="fixture-seccion @(bloqueada ? "fecha-bloqueada" : "")">
+                <div class="fixture-fecha-header">
+                    <h3>@grupo.Fecha.Nombre</h3>
+                    @if (esAdmin)
+                    {
+                        <label class="toggle-habilitada" title="Habilitar para usuarios">
+                            <input type="checkbox"
+                                   class="check-habilitada"
+                                   data-fecha-id="@grupo.Fecha.Id"
+                                   @(grupo.Fecha.Habilitada ? "checked" : "") />
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">@(grupo.Fecha.Habilitada ? "Visible" : "Oculta")</span>
+                        </label>
+                    }
+                    else if (grupo.Fecha.Habilitada)
+                    {
+                        <span class="fecha-badge-visible">● Disponible</span>
+                    }
+                    <div class="fecha-line"></div>
+                    <span style="font-size:12px;color:var(--color-muted)">
+                        @grupo.Partidos.Count(p => p.Jugado)/@grupo.Partidos.Count jugados
+                    </span>
+                </div>
+
+                @if (bloqueada)
+                {
+                    <!-- Vista bloqueada para no admins -->
+                    <div class="fecha-blur-wrapper">
                         @foreach (var p in grupo.Partidos)
                         {
-                            <div class="partido-row @(p.Jugado ? "jugado" : "")">
-                                <div class="equipo-local">
-                                    @if (!string.IsNullOrEmpty(p.FlagLocal))
-                                    { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" class="flag-sm" alt="" onerror="this.style.display='none'" /> }
-                                    <span>@p.NombreLocal</span>
-                                </div>
-                                <div class="resultado-box">
-                                    @if (p.Jugado)
-                                    { <span class="score">@p.GolesLocal - @p.GolesVisitante</span> }
-                                    else if (grupo.Habilitada && esAdmin)
-                                    { <a href="#" class="btn-cargar" onclick="abrirModal(@p.PartidoId, '@p.NombreLocal', '@p.FlagLocal', '@p.NombreVisitante', '@p.FlagVisitante', @(p.GolesLocal??0), @(p.GolesVisitante??0)); return false;">+</a> }
-                                    else
-                                    { <span class="score score-pending">vs</span> }
-                                </div>
-                                <div class="equipo-visitante">
-                                    <span>@p.NombreVisitante</span>
-                                    @if (!string.IsNullOrEmpty(p.FlagVisitante))
-                                    { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" class="flag-sm" alt="" onerror="this.style.display='none'" /> }
+                            <div class="partido-card partido-blur">
+                                <div class="partido-equipos">
+                                    <span class="partido-team right">@p.EquipoLocal?.Nombre</span>
+                                    <div class="partido-score pendiente">vs</div>
+                                    <span class="partido-team">@p.EquipoVisitante?.Nombre</span>
                                 </div>
                             </div>
                         }
+                        <div class="fecha-lock-overlay">
+                            🔒 Esta fecha aún no está disponible
+                        </div>
                     </div>
-                </div>
-            }
-        </div>
-        <div class="fixture-tabla">
+                }
+                else
+                {
+                    <!-- Vista normal -->
+                    @foreach (var p in grupo.Partidos)
+                    {
+                        var flagL = p.EquipoLocal?.FlagCode ?? "";
+                        var flagV = p.EquipoVisitante?.FlagCode ?? "";
+                        var nomL  = p.EquipoLocal?.Nombre ?? "";
+                        var nomV  = p.EquipoVisitante?.Nombre ?? "";
+
+                        <div class="partido-card @(p.TipoPartido != "regular" ? "partido-reducido" : "")" id="partido-@p.Id">
+                            @if (p.TipoPartido != "regular")
+                            {
+                                var badge = p.TipoPartido switch {
+                                    "reducido_semi" => ("🔁 Semifinal Reducido", "#3a82c8"),
+                                    "reducido_final" => ("🔁 Final Reducido", "#7c3aed"),
+                                    "promocion" => ("⚔️ Partido de Promoción", "#e05555"),
+                                    _ => ("", "")
+                                };
+                                <div style="font-size:10px;letter-spacing:1px;text-align:center;color:@badge.Item2;
+                                            font-family:var(--font-heading);padding:4px 0;text-transform:uppercase;">
+                                    @badge.Item1
+                                </div>
+                            }
+                            <div class="partido-equipos">
+                                <span class="partido-team right">
+                                    @if (!string.IsNullOrEmpty(flagL))
+                                    {
+                                        <img src="https://flagcdn.com/20x15/@(flagL).png" class="flag-img" alt=""
+                                             onerror="this.style.display='none'" />
+                                    }
+                                    @nomL
+                                </span>
+                                @if (p.Jugado)
+                                {
+                                    <div class="partido-score" id="score-@p.Id">@p.GolesLocal - @p.GolesVisitante</div>
+                                }
+                                else
+                                {
+                                    <div class="partido-score pendiente" id="score-@p.Id">vs</div>
+                                }
+                                <span class="partido-team">
+                                    @nomV
+                                    @if (!string.IsNullOrEmpty(flagV))
+                                    {
+                                        <img src="https://flagcdn.com/20x15/@(flagV).png" class="flag-img" alt=""
+                                             onerror="this.style.display='none'" />
+                                    }
+                                </span>
+                            </div>
+                            <div class="partido-meta" id="meta-@p.Id">
+                                @if (p.Jugado)
+                                {
+                                    <span class="partido-estado-jugado">✓ jugado</span>
+                                    @if (esAdmin)
+                                    {
+                                        <a href="#" class="btn-editar"
+                                           onclick="abrirModal(@p.Id,'@nomL','@flagL','@nomV','@flagV',@(p.GolesLocal??0),@(p.GolesVisitante??0));return false;">
+                                            editar
+                                        </a>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="partido-estado-pendiente">Pendiente</span>
+                                    @if (esAdmin)
+                                    {
+                                        <a href="#" class="btn-cargar"
+                                           onclick="abrirModal(@p.Id,'@nomL','@flagL','@nomV','@flagV',0,0);return false;">
+                                            + resultado
+                                        </a>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        }
+    </div>
+
+    <!-- TABLA EN VIVO -->
+    <div class="tabla-live-col">
+        <div class="tabla-live-header">📊 Tabla en vivo</div>
+        <div id="tabla-viva">
             @await Html.PartialAsync("_TablaViva", Model.TablaPosiciones)
         </div>
     </div>
+
+</div>
+
+<!-- MODAL resultado -->
+<div id="modal-overlay" class="modal-overlay" onclick="cerrarModal()" style="display:none"></div>
+<div id="modal-resultado" class="modal-resultado" style="display:none">
+    <div class="modal-header">
+        <h3>Cargar Resultado</h3>
+        <button onclick="cerrarModal()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+        <div class="form-partido-header">
+            <div class="form-team-name">
+                <img id="modal-flag-local" src="" class="flag-modal" alt="" onerror="this.style.display='none'" style="display:none" />
+                <div id="modal-local"></div>
+            </div>
+            <div class="form-vs">vs</div>
+            <div class="form-team-name">
+                <div id="modal-visitante"></div>
+                <img id="modal-flag-visitante" src="" class="flag-modal" alt="" onerror="this.style.display='none'" style="display:none" />
+            </div>
+        </div>
+        <div class="score-inputs">
+            <input type="number" id="input-local" min="0" max="99" value="0" class="score-input" />
+            <div class="score-sep">-</div>
+            <input type="number" id="input-visitante" min="0" max="99" value="0" class="score-input" />
+        </div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;">
+            <button class="btn-primary" id="btn-guardar" onclick="guardarResultado()">Guardar</button>
+            <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+        </div>
+        <p id="modal-error" style="color:var(--color-red);font-size:13px;text-align:center;margin-top:8px;display:none"></p>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let partidoActual = null;
+const divisionId  = @divisionId;
+
+function abrirModal(id, local, flagL, visitante, flagV, gl, gv) {
+    partidoActual = id;
+    document.getElementById('modal-local').textContent     = local;
+    document.getElementById('modal-visitante').textContent = visitante;
+    const fl = document.getElementById('modal-flag-local');
+    const fv = document.getElementById('modal-flag-visitante');
+    if (flagL) { fl.src = `https://flagcdn.com/32x24/${flagL}.png`; fl.style.display='inline'; } else fl.style.display='none';
+    if (flagV) { fv.src = `https://flagcdn.com/32x24/${flagV}.png`; fv.style.display='inline'; } else fv.style.display='none';
+    document.getElementById('input-local').value     = gl;
+    document.getElementById('input-visitante').value = gv;
+    document.getElementById('modal-error').style.display = 'none';
+    document.getElementById('modal-overlay').style.display  = 'block';
+    document.getElementById('modal-resultado').style.display = 'block';
+    document.getElementById('input-local').focus();
+    document.getElementById('input-local').select();
+}
+
+function cerrarModal() {
+    document.getElementById('modal-overlay').style.display   = 'none';
+    document.getElementById('modal-resultado').style.display = 'none';
+    partidoActual = null;
+}
+
+async function guardarResultado() {
+    const gl = parseInt(document.getElementById('input-local').value);
+    const gv = parseInt(document.getElementById('input-visitante').value);
+    if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) { mostrarError('Ingresá valores válidos.'); return; }
+    const btn = document.getElementById('btn-guardar');
+    btn.textContent = 'Guardando...'; btn.disabled = true;
+    try {
+        const resp = await fetch('/Resultado/Guardar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ partidoId: partidoActual, golesLocal: gl, golesVisitante: gv })
+        });
+        const data = await resp.json();
+        if (data.ok) {
+            const scoreEl = document.getElementById('score-' + partidoActual);
+            scoreEl.className = 'partido-score';
+            scoreEl.textContent = gl + ' - ' + gv;
+            const metaEl = document.getElementById('meta-' + partidoActual);
+            const nomL = document.getElementById('modal-local').textContent;
+            const nomV = document.getElementById('modal-visitante').textContent;
+            const fLS  = document.getElementById('modal-flag-local').src.match(/\/([^/]+)\.png/)?.[1]||'';
+            const fVS  = document.getElementById('modal-flag-visitante').src.match(/\/([^/]+)\.png/)?.[1]||'';
+            metaEl.innerHTML = `<span class="partido-estado-jugado">✓ jugado</span>
+                <a href="#" class="btn-editar"
+                   onclick="abrirModal(${partidoActual},'${nomL}','${fLS}','${nomV}','${fVS}',${gl},${gv});return false;">
+                   editar</a>`;
+            const tr = await fetch(`/Resultado/TablaViva?divisionId=${divisionId}`);
+            document.getElementById('tabla-viva').innerHTML = await tr.text();
+            cerrarModal();
+        } else { mostrarError('Error al guardar.'); }
+    } catch { mostrarError('Error de conexión.'); }
+    btn.textContent = 'Guardar'; btn.disabled = false;
+}
+
+function mostrarError(msg) {
+    const el = document.getElementById('modal-error');
+    el.textContent = msg; el.style.display = 'block';
+}
+
+// Toggle habilitar fecha (solo admin)
+document.querySelectorAll('.check-habilitada').forEach(chk => {
+    chk.addEventListener('change', async function() {
+        const fechaId   = this.dataset.fechaId;
+        const habilitada = this.checked;
+        const label     = this.closest('.toggle-habilitada').querySelector('.toggle-label');
+        try {
+            const resp = await fetch('/Resultado/ToggleFecha', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fechaId: parseInt(fechaId), habilitada })
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                label.textContent = habilitada ? 'Visible' : 'Oculta';
+                // Recargar la página para que se vea el blur/unblur
+                setTimeout(() => location.reload(), 400);
+            } else {
+                this.checked = !habilitada; // revertir
+            }
+        } catch {
+            this.checked = !habilitada;
+        }
+    });
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && partidoActual) guardarResultado();
+    if (e.key === 'Escape') cerrarModal();
+});
+</script>
 }

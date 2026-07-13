@@ -34,16 +34,21 @@ namespace TorneoAmigos.Controllers
         {
             var check = CheckActiva(); if (check != null) return check;
             ViewBag.ActivePage = "primera-c";
+            ViewBag.EsAdmin = User.IsInRole("Admin");
             try
             {
-                var fixture = _repo.GetFixture(3);
-                ViewBag.EsAdmin = User.IsInRole("Admin");
-                return View(fixture);
+                var vm = new DivisionViewModel
+                {
+                    Division        = _repo.GetDivisionById(3),
+                    TablaPosiciones = _repo.GetTablaPosiciones(3),
+                    Fixture         = _repo.GetFixture(3),
+                    Equipos         = _repo.GetEquiposByDivision(3)
+                };
+                return View(vm);
             }
             catch
             {
-                ViewBag.EsAdmin = User.IsInRole("Admin");
-                return View(new List<GrupoFecha>());
+                return View(new DivisionViewModel { Equipos = new(), Fixture = new(), TablaPosiciones = new() });
             }
         }
 

@@ -458,15 +458,23 @@ namespace TorneoAmigos.Data
 
                 // Registrar títulos en el palmarés (temporadaNombre ya fue obtenido arriba)
 
-                // Campeón Primera División: usar borrador si existe, si no el 1° de tabla
+                // Campeón Primera División
                 var campeonPrimId = cierre?.CampeonPrimeraId ?? (tablaPrimera.Any() ? tablaPrimera.First().EquipoId : 0);
                 if (campeonPrimId > 0)
                     AgregarTitulo(campeonPrimId, "campeon_torneo", "Campeón Primera División", temporadaId, temporadaNombre);
 
-                // Campeón de la B: usar borrador si existe, si no el 1° de tabla B
+                // Campeón de la B
                 var campeonBId = cierre?.CampeonBId ?? (tablaB.Any() ? tablaB.First().EquipoId : 0);
                 if (campeonBId > 0)
                     AgregarTitulo(campeonBId, "campeon_primera_b", "Campeón Primera Nacional", temporadaId, temporadaNombre);
+
+                // Campeón Copa Argentina
+                if (cierre?.CampeonCopaId.HasValue == true && cierre.CampeonCopaId > 0)
+                    AgregarTitulo(cierre.CampeonCopaId.Value, "campeon_copa", "Campeón Copa Argentina", temporadaId, temporadaNombre);
+
+                // Campeón Supercopa
+                if (cierre?.CampeonSupercopaId.HasValue == true && cierre.CampeonSupercopaId > 0)
+                    AgregarTitulo(cierre.CampeonSupercopaId.Value, "campeon_supercopa", "Campeón Supercopa Argentina", temporadaId, temporadaNombre);
 
                 return true;
             }
@@ -512,7 +520,8 @@ namespace TorneoAmigos.Data
         public int CrearNuevaTemporada(string nombre, List<int> equiposPrimera, List<int> equiposB,
             List<(string nombre, int divisionId)> equiposNuevos,
             int cantDescensos = 2, int cantAscensos = 2, bool tienePromocion = false,
-            int? posPromocionPrimera = null, int? posPromocionB = null)
+            int? posPromocionPrimera = null, int? posPromocionB = null,
+            List<int>? equiposC = null)
         {
             using var conn = GetConnection();
             conn.Open();
@@ -566,13 +575,10 @@ namespace TorneoAmigos.Data
                 // Generar fixture
                 GenerarFixture(conn, tx, 1, equiposPrimera);
                 GenerarFixture(conn, tx, 2, equiposB);
-                if (equiposNuevos.Any(e => e.divisionId == 3) || equiposPrimera.Count == 0)
-                {
-                    var equiposC = equiposNuevos.Where(e => e.divisionId == 3).Select(e => e.divisionId).ToList();
-                    // Se genera al activar fixture de C por separado
-                }
-                // Primera C: fixture separado con opción ida y vuelta
-                var idsC = GetEquiposIdsByDivision(3, conn);
+                // Primera C: usar lista pasada o buscar los de división 3
+                var idsC = (equiposC != null && equiposC.Any())
+                    ? equiposC
+                    : GetEquiposIdsByDivision(3, conn);
                 if (idsC.Any())
                     GenerarFixture(conn, tx, 3, idsC, PrimeraCIdaVuelta());
 

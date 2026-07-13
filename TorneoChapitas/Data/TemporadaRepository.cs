@@ -567,7 +567,9 @@ namespace TorneoAmigos.Data
                     EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2, activo = true WHERE id = @Id", id);
 
                 // Desactivar equipos que no participan
-                EjecutarUpdateLista(conn, tx, equiposPrimera.Concat(equiposB).ToList());
+                var todosActivos = equiposPrimera.Concat(equiposB);
+                if (equiposC != null) todosActivos = todosActivos.Concat(equiposC);
+                EjecutarUpdateLista(conn, tx, todosActivos.ToList());
 
                 // Borrar fixture anterior
                 BorrarFixture(conn, tx);

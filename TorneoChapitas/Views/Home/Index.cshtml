@@ -39,14 +39,14 @@
         <div class="stat-icon">👥</div>
         <div class="stat-info">
             <div class="stat-label">Equipos</div>
-            <div class="stat-value">@(Model.PrimeraDivision.Equipos.Count + Model.NacionalB.Equipos.Count)</div>
+            <div class="stat-value">@(Model.PrimeraDivision.Equipos.Count + Model.NacionalB.Equipos.Count + (Model.PrimeraC?.Equipos.Count ?? 0))</div>
         </div>
     </div>
     <div class="stat-card">
         <div class="stat-icon">🏆</div>
         <div class="stat-info">
             <div class="stat-label">Divisiones</div>
-            <div class="stat-value">2</div>
+            <div class="stat-value">@(ViewBag.PrimeraCActiva == true ? 3 : 2)</div>
         </div>
     </div>
 </div>

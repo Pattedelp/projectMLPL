@@ -1,4 +1,4 @@
-@model List<GrupoFecha>
+@model DivisionViewModel
 @{
     ViewBag.Title = "Primera C Nacional - Fixture";
     ViewBag.ActivePage = "primera-c";
@@ -19,7 +19,7 @@
     <a asp-controller="PrimeraC" asp-action="Equipos">Equipos</a>
 </nav>
 
-@if (!Model.Any())
+@if (Model.Fixture == null || !Model.Fixture.Any())
 {
     <div style="text-align:center;padding:60px 20px;color:var(--color-muted);">
         <div style="font-size:48px;margin-bottom:16px;">🏟️</div>
@@ -28,8 +28,46 @@
 }
 else
 {
-    @foreach (var grupo in Model)
-    {
-        @await Html.PartialAsync("_TablaViva", grupo)
-    }
+    <div class="fixture-layout">
+        <div class="fixture-fechas">
+            @foreach (var grupo in Model.Fixture)
+            {
+                <div class="fecha-card @(grupo.Habilitada ? "" : "fecha-bloqueada")">
+                    <div class="fecha-header">
+                        <span class="fecha-titulo">@grupo.NombreFecha</span>
+                        @if (!grupo.Habilitada)
+                        { <span class="fecha-lock">🔒</span> }
+                    </div>
+                    <div class="fecha-partidos">
+                        @foreach (var p in grupo.Partidos)
+                        {
+                            <div class="partido-row @(p.Jugado ? "jugado" : "")">
+                                <div class="equipo-local">
+                                    @if (!string.IsNullOrEmpty(p.FlagLocal))
+                                    { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" class="flag-sm" alt="" onerror="this.style.display='none'" /> }
+                                    <span>@p.NombreLocal</span>
+                                </div>
+                                <div class="resultado-box">
+                                    @if (p.Jugado)
+                                    { <span class="score">@p.GolesLocal - @p.GolesVisitante</span> }
+                                    else if (grupo.Habilitada && esAdmin)
+                                    { <a href="#" class="btn-cargar" onclick="abrirModal(@p.PartidoId, '@p.NombreLocal', '@p.FlagLocal', '@p.NombreVisitante', '@p.FlagVisitante', @(p.GolesLocal??0), @(p.GolesVisitante??0)); return false;">+</a> }
+                                    else
+                                    { <span class="score score-pending">vs</span> }
+                                </div>
+                                <div class="equipo-visitante">
+                                    <span>@p.NombreVisitante</span>
+                                    @if (!string.IsNullOrEmpty(p.FlagVisitante))
+                                    { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" class="flag-sm" alt="" onerror="this.style.display='none'" /> }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="fixture-tabla">
+            @await Html.PartialAsync("_TablaViva", Model.TablaPosiciones)
+        </div>
+    </div>
 }

@@ -49,6 +49,7 @@ namespace TorneoAmigos.Models
         public Temporada Temporada { get; set; } = new();
         public List<TemporadaResultado> ResultadosPrimera { get; set; } = new();
         public List<TemporadaResultado> ResultadosNacionalB { get; set; } = new();
+        public List<TemporadaResultado> ResultadosPrimeraC { get; set; } = new();
     }
 
     public class NuevaTemporadaViewModel

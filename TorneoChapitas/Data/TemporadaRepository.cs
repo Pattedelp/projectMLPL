@@ -1787,12 +1787,11 @@ namespace TorneoAmigos.Data
                     FROM palmares p
                     LEFT JOIN temporadas t ON p.temporada_id = t.id
                     WHERE p.tipo_titulo = @T
-                    ORDER BY COALESCE(
-                        t.numero,
+                    ORDER BY
                         CASE WHEN REGEXP_REPLACE(p.temporada_nombre, '[^0-9]', '', 'g') = '' THEN NULL
                              ELSE CAST(REGEXP_REPLACE(p.temporada_nombre, '[^0-9]', '', 'g') AS INTEGER)
-                        END
-                    ) DESC NULLS LAST, p.created_at DESC", conn);
+                        END DESC NULLS LAST,
+                        p.created_at DESC", conn);
                 cmd.Parameters.AddWithValue("@T", trofeo.TipoTitulo);
                 using var r = cmd.ExecuteReader();
                 while (r.Read())

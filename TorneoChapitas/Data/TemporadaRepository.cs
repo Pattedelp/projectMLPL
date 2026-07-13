@@ -382,21 +382,6 @@ namespace TorneoAmigos.Data
                 GuardarResultados(conn, tx, temporadaId, 1, tablaPrimera);
                 // Guardar resultados Primera Nacional
                 GuardarResultados(conn, tx, temporadaId, 2, tablaB);
-                // Guardar resultados Primera C (si está activa)
-                if (PrimeraCActiva())
-                {
-                    var tablaCSave = new List<PosicionViewModel>();
-                    using (var cmdCS = new NpgsqlCommand(@"
-                        SELECT e.id, e.nombre, COALESCE(e.pais_code,'')
-                        FROM equipos e WHERE e.divisionid=3 AND e.activo=true ORDER BY e.id", conn, tx))
-                    {
-                        using var rcs = cmdCS.ExecuteReader();
-                        int posCS = 1;
-                        while (rcs.Read())
-                            tablaCSave.Add(new PosicionViewModel { Posicion = posCS++, EquipoId = rcs.GetInt32(0), NombreEquipo = rcs.GetString(1) });
-                    }
-                    if (tablaCSave.Any()) GuardarResultados(conn, tx, temporadaId, 3, tablaCSave);
-                }
                 // Marcar temporada como finalizada
                 using var cmd = new NpgsqlCommand(
                     "UPDATE temporadas SET finalizada = true, activa = false, fecha_fin = NOW() WHERE id = @Id", conn, tx);
@@ -582,9 +567,7 @@ namespace TorneoAmigos.Data
                     EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2, activo = true WHERE id = @Id", id);
 
                 // Desactivar equipos que no participan
-                var todosActivos = equiposPrimera.Concat(equiposB);
-                if (equiposC != null) todosActivos = todosActivos.Concat(equiposC);
-                EjecutarUpdateLista(conn, tx, todosActivos.ToList());
+                EjecutarUpdateLista(conn, tx, equiposPrimera.Concat(equiposB).ToList());
 
                 // Borrar fixture anterior
                 BorrarFixture(conn, tx);
@@ -1804,7 +1787,10 @@ namespace TorneoAmigos.Data
                     FROM palmares p
                     LEFT JOIN temporadas t ON p.temporada_id = t.id
                     WHERE p.tipo_titulo = @T
-                    ORDER BY COALESCE(t.numero, 0) DESC, p.created_at DESC", conn);
+                    ORDER BY COALESCE(
+                        t.numero,
+                        NULLIF(CAST(REGEXP_REPLACE(p.temporada_nombre, '[^0-9]', '', 'g') AS INTEGER), 0)
+                    ) DESC NULLS LAST, p.created_at DESC", conn);
                 cmd.Parameters.AddWithValue("@T", trofeo.TipoTitulo);
                 using var r = cmd.ExecuteReader();
                 while (r.Read())

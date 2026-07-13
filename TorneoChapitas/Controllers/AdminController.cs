@@ -245,6 +245,13 @@ namespace TorneoAmigos.Controllers
             int maxLegacy  = _tempRepo.GetMaxNumeroTemporadaLegacy();
             int siguienteNum = Math.Max(maxSistema, maxLegacy) + 1;
 
+            var equiposC = _repo.GetEquiposByDivision(3);
+            ViewBag.EquiposC = equiposC.Select(e => new EquipoCheckbox
+            {
+                Id = e.Id, Nombre = e.Nombre, FlagCode = e.FlagCode,
+                DivisionId = e.DivisionId, Seleccionado = true
+            }).ToList();
+
             var vm = new NuevaTemporadaViewModel
             {
                 NumeroTemporada  = siguienteNum,
@@ -267,6 +274,7 @@ namespace TorneoAmigos.Controllers
             string nombreTemporada,
             List<int>? equiposPrimera,
             List<int>? equiposB,
+            List<int>? equiposC,
             List<string>? nuevosNombres,
             List<int>? nuevasDivisiones,
             int cantDescensos = 2,
@@ -277,6 +285,7 @@ namespace TorneoAmigos.Controllers
         {
             equiposPrimera ??= new();
             equiposB       ??= new();
+            equiposC       ??= new();
 
             var nuevos = new List<(string nombre, int divisionId)>();
             if (nuevosNombres != null && nuevasDivisiones != null)
@@ -289,7 +298,8 @@ namespace TorneoAmigos.Controllers
                 _tempRepo.CrearNuevaTemporada(nombreTemporada, equiposPrimera, equiposB, nuevos,
                     cantDescensos, cantAscensos, tienePromocion,
                     tienePromocion ? posPromocionPrimera : null,
-                    tienePromocion ? posPromocionB : null);
+                    tienePromocion ? posPromocionB : null,
+                    equiposC);
                 TempData["Mensaje"] = "¡Nueva temporada creada con fixture generado!";
                 return RedirectToAction("Index", "Home");
             }

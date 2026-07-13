@@ -63,6 +63,39 @@
         </div>
     </div>
 
+    <!-- PRIMERA C (solo si está activa) -->
+    @if (ViewBag.PrimeraCActiva == true)
+    {
+        var equiposC = ViewBag.EquiposC as List<EquipoCheckbox> ?? new();
+        <div class="admin-section">
+            <h2 class="admin-section-title">🏟️ Primera C Nacional</h2>
+            <p style="color:var(--color-muted);font-size:13px;margin-bottom:16px;">
+                Destildá los equipos que no participen.
+            </p>
+            @if (equiposC.Any())
+            {
+                <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+                    @foreach (var e in equiposC)
+                    {
+                        <label style="display:flex;align-items:center;gap:8px;background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:10px 14px;cursor:pointer;font-size:13px;">
+                            <input type="checkbox" name="equiposC" value="@e.Id" checked
+                                   style="accent-color:#7c3aed;width:16px;height:16px;" />
+                            @if (!string.IsNullOrEmpty(e.FlagCode))
+                            {
+                                <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" class="flag-img" alt="" />
+                            }
+                            <span>@e.Nombre</span>
+                        </label>
+                    }
+                </div>
+            }
+            else
+            {
+                <p style="font-size:13px;color:var(--color-muted);">No hay equipos en Primera C todavía. Podés agregar nuevos jugadores abajo.</p>
+            }
+        </div>
+    }
+
     <!-- AGREGAR NUEVOS JUGADORES -->
     <div class="admin-section">
         <h2 class="admin-section-title">➕ Agregar Jugadores Nuevos</h2>
@@ -135,43 +168,47 @@
 function togglePromocion(chk) {
     document.getElementById('config-promocion').style.display = chk.checked ? 'grid' : 'none';
 }
-// Países disponibles
+
 const PAISES = [
-    {code:'se',name:'Suecia 🇸🇪'},{code:'rs',name:'Serbia 🇷🇸'},{code:'sn',name:'Senegal 🇸🇳'},{code:'cm',name:'Camerún 🇨🇲'},
-    {code:'ca',name:'Canadá 🇨🇦'},{code:'qa',name:'Qatar 🇶🇦'},{code:'gh',name:'Ghana 🇬🇭'},
-    {code:'dz',name:'Argelia 🇩🇿'},{code:'au',name:'Australia 🇦🇺'},{code:'cn',name:'China 🇨🇳'},
-    {code:'hr',name:'Croacia 🇭🇷'},{code:'eg',name:'Egipto 🇪🇬'},{code:'gb',name:'Inglaterra 🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
-    {code:'fr',name:'Francia 🇫🇷'},{code:'id',name:'Indonesia 🇮🇩'},{code:'jp',name:'Japón 🇯🇵'},
-    {code:'my',name:'Malasia 🇲🇾'},{code:'mx',name:'México 🇲🇽'},{code:'ma',name:'Marruecos 🇲🇦'},
-    {code:'ng',name:'Nigeria 🇳🇬'},{code:'pe',name:'Perú 🇵🇪'},{code:'pt',name:'Portugal 🇵🇹'},
-    {code:'ru',name:'Rusia 🇷🇺'},{code:'sa',name:'Arabia Saudita 🇸🇦'},{code:'kr',name:'Corea del Sur 🇰🇷'},
-    {code:'th',name:'Tailandia 🇹🇭'},{code:'tn',name:'Túnez 🇹🇳'},{code:'tr',name:'Turquía 🇹🇷'},
-    {code:'pl',name:'Polonia 🇵🇱'}
+    {code:'de',name:'Alemania'},{code:'dz',name:'Argelia'},{code:'sa',name:'Arabia Saudita'},
+    {code:'ar',name:'Argentina'},{code:'au',name:'Australia'},{code:'be',name:'Bélgica'},
+    {code:'br',name:'Brasil'},{code:'ca',name:'Canadá'},{code:'cm',name:'Camerún'},
+    {code:'cn',name:'China'},{code:'co',name:'Colombia'},{code:'kr',name:'Corea del Sur'},
+    {code:'cr',name:'Costa Rica'},{code:'hr',name:'Croacia'},{code:'dk',name:'Dinamarca'},
+    {code:'ec',name:'Ecuador'},{code:'eg',name:'Egipto'},{code:'es',name:'España'},
+    {code:'us',name:'Estados Unidos'},{code:'ph',name:'Filipinas'},{code:'fr',name:'Francia'},
+    {code:'gh',name:'Ghana'},{code:'gb-wls',name:'Gales'},{code:'gb',name:'Inglaterra'},
+    {code:'id',name:'Indonesia'},{code:'ir',name:'Irán'},{code:'it',name:'Italia'},
+    {code:'jp',name:'Japón'},{code:'my',name:'Malasia'},{code:'ma',name:'Marruecos'},
+    {code:'mx',name:'México'},{code:'ng',name:'Nigeria'},{code:'nl',name:'Países Bajos'},
+    {code:'pe',name:'Perú'},{code:'pl',name:'Polonia'},{code:'pt',name:'Portugal'},
+    {code:'qa',name:'Qatar'},{code:'ru',name:'Rusia'},{code:'sn',name:'Senegal'},
+    {code:'rs',name:'Serbia'},{code:'se',name:'Suecia'},{code:'ch',name:'Suiza'},
+    {code:'th',name:'Tailandia'},{code:'tn',name:'Túnez'},{code:'tr',name:'Turquía'},
+    {code:'ua',name:'Ucrania'},{code:'uy',name:'Uruguay'},{code:'vn',name:'Vietnam'},
 ];
 
 let paisesTomados = {};
 
-// Cargar países tomados
 fetch('/Admin/GetPaisesTomados')
     .then(r => r.json())
-    .then(data => {
-        data.forEach(e => { paisesTomados[e.flagCode] = e.equipo; });
-    });
+    .then(data => { data.forEach(e => { paisesTomados[e.flagCode] = e.equipo; }); });
 
-function buildSelectPaises(selectedCode) {
+function buildSelectPaises() {
     let html = '<option value="">-- Sin bandera --</option>';
     PAISES.forEach(p => {
         const tomado = paisesTomados[p.code];
         if (tomado) {
             html += `<option value="${p.code}" disabled style="color:#666;">${p.name} (${tomado})</option>`;
         } else {
-            html += `<option value="${p.code}" ${p.code === selectedCode ? 'selected' : ''}>${p.name}</option>`;
+            html += `<option value="${p.code}">${p.name}</option>`;
         }
     });
     return html;
 }
 
 function agregarNuevo() {
+    const primeraCActiva = @(ViewBag.PrimeraCActiva == true ? "true" : "false");
     const div = document.createElement('div');
     div.className = 'nuevo-equipo-row';
     div.style.cssText = 'display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;';
@@ -179,11 +216,12 @@ function agregarNuevo() {
         <input type="text" name="nuevosNombres" placeholder="Nombre del jugador"
                class="form-control" style="width:180px" />
         <select name="nuevasPaisCodesN" class="form-control" style="width:200px">
-            ${buildSelectPaises('')}
+            ${buildSelectPaises()}
         </select>
         <select name="nuevasDivisiones" class="form-control" style="width:160px">
             <option value="1">Primera División</option>
             <option value="2" selected>Primera Nacional</option>
+            ${primeraCActiva ? '<option value="3">Primera C Nacional</option>' : ''}
         </select>
         <button type="button" onclick="this.parentElement.remove()"
                 class="btn-cancelar" style="padding:8px 12px;">✕</button>

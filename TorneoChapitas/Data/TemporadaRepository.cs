@@ -382,6 +382,21 @@ namespace TorneoAmigos.Data
                 GuardarResultados(conn, tx, temporadaId, 1, tablaPrimera);
                 // Guardar resultados Primera Nacional
                 GuardarResultados(conn, tx, temporadaId, 2, tablaB);
+                // Guardar resultados Primera C (si está activa)
+                if (PrimeraCActiva())
+                {
+                    var tablaCSave = new List<PosicionViewModel>();
+                    using (var cmdCS = new NpgsqlCommand(@"
+                        SELECT e.id, e.nombre, COALESCE(e.pais_code,'')
+                        FROM equipos e WHERE e.divisionid=3 AND e.activo=true ORDER BY e.id", conn, tx))
+                    {
+                        using var rcs = cmdCS.ExecuteReader();
+                        int posCS = 1;
+                        while (rcs.Read())
+                            tablaCSave.Add(new PosicionViewModel { Posicion = posCS++, EquipoId = rcs.GetInt32(0), NombreEquipo = rcs.GetString(1) });
+                    }
+                    if (tablaCSave.Any()) GuardarResultados(conn, tx, temporadaId, 3, tablaCSave);
+                }
                 // Marcar temporada como finalizada
                 using var cmd = new NpgsqlCommand(
                     "UPDATE temporadas SET finalizada = true, activa = false, fecha_fin = NOW() WHERE id = @Id", conn, tx);

@@ -3,9 +3,9 @@
     ViewBag.Title = Model.Temporada.Nombre;
     var partidosPrimera  = ViewBag.PartidosPrimera  as List<HistoricoPartido> ?? new();
     var partidosNacional = ViewBag.PartidosNacional as List<HistoricoPartido> ?? new();
+    var partidosPrimeraC = ViewBag.PartidosPrimeraC as List<HistoricoPartido> ?? new();
+    bool tienePrimeraC   = Model.ResultadosPrimeraC.Any() || partidosPrimeraC.Any();
 
-    // Función para agrupar partidos por fecha
-    // Si tienen fecha_numero, usar eso; si no, agrupar automáticamente por N partidos
     List<(int Fecha, List<HistoricoPartido> Partidos)> AgruparPorFecha(List<HistoricoPartido> partidos, int equiposPorFecha) {
         var result = new List<(int, List<HistoricoPartido>)>();
         if (!partidos.Any()) return result;
@@ -24,11 +24,14 @@
 
     int eqPrimera  = Model.ResultadosPrimera.Count;
     int eqNacional = Model.ResultadosNacionalB.Count;
+    int eqC        = Model.ResultadosPrimeraC.Count;
     int ppfPrimera  = eqPrimera  > 0 ? eqPrimera / 2  : 5;
     int ppfNacional = eqNacional > 0 ? eqNacional / 2 : 5;
+    int ppfC        = eqC        > 0 ? eqC / 2        : 3;
 
     var fechasPrimera  = AgruparPorFecha(partidosPrimera, ppfPrimera);
     var fechasNacional = AgruparPorFecha(partidosNacional, ppfNacional);
+    var fechasPrimeraC = AgruparPorFecha(partidosPrimeraC, ppfC);
 }
 
 <div class="page-hero">
@@ -47,9 +50,12 @@
 <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
     <button onclick="showTab('primera')"  id="tab-primera"  class="tab-btn active">🏆 Primera División</button>
     <button onclick="showTab('nacional')" id="tab-nacional" class="tab-btn">🥈 Primera Nacional</button>
+    @if (tienePrimeraC)
+    {
+        <button onclick="showTab('primerac')" id="tab-primerac" class="tab-btn">🏟️ Primera C</button>
+    }
 </div>
 
-@* Helper macro para tabla de posiciones *@
 @{
     void TablaPos(List<TemporadaResultado> resultados) {
         <div class="tabla-wrapper">
@@ -142,6 +148,23 @@
     </div>
 </div>
 
+<!-- PRIMERA C NACIONAL -->
+@if (tienePrimeraC)
+{
+    <div id="tab-primerac-content" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="det-grid">
+            <div>
+                <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Posiciones Finales</h3>
+                @{ TablaPos(Model.ResultadosPrimeraC); }
+            </div>
+            <div>
+                <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
+                @{ ResultadosFechas(fechasPrimeraC); }
+            </div>
+        </div>
+    </div>
+}
+
 <style>
 .tab-btn { padding:8px 16px;border-radius:8px;background:var(--color-bg2);border:1px solid var(--color-border);color:var(--color-muted);font-size:13px;font-weight:500;cursor:pointer; }
 .tab-btn.active { background:var(--color-gold);color:var(--color-bg);border-color:var(--color-gold); }
@@ -151,10 +174,13 @@
 @section Scripts {
 <script>
 function showTab(tab) {
-    document.getElementById('tab-primera-content').style.display  = tab === 'primera'  ? 'block' : 'none';
-    document.getElementById('tab-nacional-content').style.display = tab === 'nacional' ? 'block' : 'none';
-    document.getElementById('tab-primera').classList.toggle('active',  tab === 'primera');
-    document.getElementById('tab-nacional').classList.toggle('active', tab === 'nacional');
+    document.getElementById('tab-primera-content').style.display   = tab === 'primera'  ? 'block' : 'none';
+    document.getElementById('tab-nacional-content').style.display  = tab === 'nacional' ? 'block' : 'none';
+    const tabC = document.getElementById('tab-primerac-content');
+    if (tabC) tabC.style.display = tab === 'primerac' ? 'block' : 'none';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('tab-' + tab);
+    if (btn) btn.classList.add('active');
 }
 </script>
 }

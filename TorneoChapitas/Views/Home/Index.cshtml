@@ -91,7 +91,7 @@
 }
 
 <!-- MINI TABLAS -->
-<div class="home-sections">
+<div class="home-sections @(ViewBag.PrimeraCActiva == true ? "home-sections-3" : "")">
     @await Html.PartialAsync("_MiniTabla", Model.PrimeraDivision)
     @await Html.PartialAsync("_MiniTabla", Model.NacionalB)
     @if (ViewBag.PrimeraCActiva == true && Model.PrimeraC != null && Model.PrimeraC.Equipos.Any())
@@ -99,6 +99,19 @@
         @await Html.PartialAsync("_MiniTabla", Model.PrimeraC)
     }
 </div>
+
+<style>
+.home-sections-3 {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 24px;
+}
+.home-sections-3 > * {
+    flex: 1 1 300px;
+    max-width: 420px;
+}
+</style>
 
 @{
     var encuestas   = ViewBag.Encuestas   as List<Encuesta>          ?? new();

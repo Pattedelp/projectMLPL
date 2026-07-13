@@ -33,6 +33,8 @@ namespace TorneoAmigos.Controllers
             ViewBag.Encuestas   = new List<Encuesta>(); // temporalmente deshabilitado para test
             //ViewBag.Encuestas   = _encuestas.GetEncuestasActivas();
             ViewBag.PrimeraCActiva = _tempRepo.PrimeraCActiva();
+            if (_tempRepo.PrimeraCActiva())
+                vm.PrimeraC = BuildVM(3);
             ViewBag.RankingFifa = null; // Moved to /Ranking page
             return View(vm);
         }

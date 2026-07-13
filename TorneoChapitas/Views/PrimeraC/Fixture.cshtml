@@ -1,6 +1,7 @@
 @model List<GrupoFecha>
 @{
     ViewBag.Title = "Primera C Nacional - Fixture";
+    ViewBag.ActivePage = "primera-c";
     bool esAdmin = ViewBag.EsAdmin == true;
 }
 
@@ -25,7 +26,10 @@
         <p style="font-size:16px;">No hay fixture generado para Primera C todavía.</p>
     </div>
 }
-@foreach (var grupo in Model)
+else
 {
-    @await Html.PartialAsync("_TablaViva", grupo)
+    @foreach (var grupo in Model)
+    {
+        @await Html.PartialAsync("_TablaViva", grupo)
+    }
 }

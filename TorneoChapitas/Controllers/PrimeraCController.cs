@@ -26,8 +26,14 @@ namespace TorneoAmigos.Controllers
         {
             var check = CheckActiva(); if (check != null) return check;
             ViewBag.ActivePage = "primera-c";
-            var tabla = _repo.GetTablaPosiciones(3);
-            return View(tabla);
+            var vm = new DivisionViewModel
+            {
+                Division        = _repo.GetDivisionById(3),
+                TablaPosiciones = _repo.GetTablaPosiciones(3),
+                Fixture         = _repo.GetFixture(3),
+                Equipos         = _repo.GetEquiposByDivision(3)
+            };
+            return View(vm);
         }
 
         public IActionResult Fixture()

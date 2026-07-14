@@ -1,103 +1,78 @@
 @model DivisionViewModel
 @{
-    var esPrimera = Model.Division?.Id == 1;
-    ViewBag.ActivePage = esPrimera ? "primera" : "nacb";
-    ViewBag.Title = Model.Division?.Nombre + " - Posiciones";
-    var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
-    var icono = esPrimera ? "🏆" : "🥈";
+    ViewBag.Title = "Primera C Nacional - Posiciones";
+    ViewBag.ActivePage = "primera-c";
 }
 
 <div class="page-hero">
-    <div class="page-hero-icon">@icono</div>
+    <div class="page-hero-icon">🏟️</div>
     <div class="page-hero-text">
-        <h1>@Model.Division?.Nombre</h1>
-        <p>Torneo Chapitas · AAC</p>
+        <h1>Primera C Nacional</h1>
+        <p>Tabla de posiciones</p>
     </div>
 </div>
 
 <nav class="section-nav">
-    <a asp-controller="@controller" asp-action="Posiciones" class="active">Posiciones</a>
-    <a asp-controller="@controller" asp-action="Fixture">Fixture</a>
-    <a asp-controller="@controller" asp-action="Equipos">Equipos</a>
+    <a asp-controller="PrimeraC" asp-action="Posiciones" class="active">Posiciones</a>
+    <a asp-controller="PrimeraC" asp-action="Fixture">Fixture</a>
+    <a asp-controller="PrimeraC" asp-action="Equipos">Equipos</a>
 </nav>
 
-<div class="tabla-wrapper">
-    <table class="tabla-posiciones">
-        <thead>
-            <tr>
-                <th>#</th><th>Equipo</th>
-                <th title="Partidos Jugados">PJ</th>
-                <th title="Ganados">G</th>
-                <th title="Perdidos">P</th>
-                <th title="Goles a Favor">GF</th>
-                <th title="Goles en Contra">GC</th>
-                <th title="Diferencia">DIF</th>
-                <th title="Puntos">PTS</th>
-                <th title="Últimos 5 partidos" style="min-width:80px;">Forma</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var f in Model.TablaPosiciones)
-            {
-                <tr class="zona-@f.Zona">
-                    <td class="col-pos">@f.Posicion</td>
-                    <td class="col-equipo">
-                        <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@f.EquipoId"
-                           style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
-                        @if (!string.IsNullOrEmpty(f.FlagCode))
-                        {
-                            <img src="https://flagcdn.com/20x15/@(f.FlagCode).png"
-                                 class="flag-img" alt="@f.NombreEquipo"
-                                 onerror="this.style.display='none'" />
-                        }
-                        @f.NombreEquipo
-                        </a>
-                        @if (f.Zona == "campeon")
-                        {
-                            <span style="color:var(--color-gold);font-size:12px;margin-left:4px">👑</span>
-                        }
-                    </td>
-                    <td class="col-num">@f.PartidosJugados</td>
-                    <td class="col-g">@f.Ganados</td>
-                    <td class="col-p">@f.Perdidos</td>
-                    <td class="col-num">@f.GolesAFavor</td>
-                    <td class="col-num">@f.GolesEnContra</td>
-                    <td class="@(f.DiferenciaGoles > 0 ? "col-dif-pos" : f.DiferenciaGoles < 0 ? "col-dif-neg" : "col-dif-neu")">
-                        @(f.DiferenciaGoles > 0 ? "+" : "")@f.DiferenciaGoles
-                    </td>
-                    <td class="col-pts">@f.Puntos</td>
-                    <td style="padding:4px 6px;">
-                        <div style="display:flex;gap:3px;">
-                            @foreach (var r in f.Forma)
-                            {
-                                <span style="width:18px;height:18px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;
-                                             font-size:10px;font-weight:700;
-                                             background:@(r.EndsWith("C") ? "#3a82c8" : r=="V" ? "var(--color-green)" : "var(--color-red)");
-                                             color:#fff;">@(r.Substring(0,1))</span>
-                            }
-                        </div>
-                    </td>
+@if (!Model.TablaPosiciones.Any())
+{
+    <div style="text-align:center;padding:60px 20px;color:var(--color-muted);">
+        <div style="font-size:48px;margin-bottom:16px;">🏟️</div>
+        <p style="font-size:16px;">No hay equipos en Primera C Nacional todavía.</p>
+    </div>
+}
+else
+{
+    <div class="tabla-wrapper">
+        <table class="tabla-posiciones tabla-sin-promocion">
+            <thead>
+                <tr>
+                    <th>#</th><th>Equipo</th><th>PJ</th><th>V</th><th>D</th><th>GF</th><th>GC</th><th>DIF</th><th>PTS</th><th></th>
                 </tr>
-            }
-        </tbody>
-    </table>
-</div>
-
-<div class="tabla-leyenda" style="margin-top:16px">
-    @if (esPrimera)
-    {
-        <span><span class="leyenda-dot" style="background:var(--color-gold)"></span> Campeón</span>
-        <span><span class="leyenda-dot" style="background:var(--color-red)"></span> Desciende</span>
-    }
-    else
-    {
-        <span><span class="leyenda-dot" style="background:var(--color-green)"></span> Asciende</span>
-    }
-    <span style="margin-left:auto;font-size:11px;color:var(--color-muted)">
-        ⚡ Victoria 5-4 = 2pts ganador · 1pt perdedor &nbsp;|&nbsp; Victoria 5-0/1/2/3 = 3pts · 0pts
-    </span>
-</div>
+            </thead>
+            <tbody>
+                @foreach (var f in Model.TablaPosiciones)
+                {
+                    <tr class="zona-@f.Zona">
+                        <td class="col-pos">@f.Posicion</td>
+                        <td class="col-equipo">
+                            <a asp-controller="Equipos" asp-action="Detalle" asp-route-id="@f.EquipoId"
+                               style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                            @if (!string.IsNullOrEmpty(f.FlagCode))
+                            { <img src="https://flagcdn.com/20x15/@(f.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
+                            @f.NombreEquipo
+                            </a>
+                        </td>
+                        <td class="col-num">@f.PartidosJugados</td>
+                        <td class="col-num">@f.Ganados</td>
+                        <td class="col-num">@f.Perdidos</td>
+                        <td class="col-num">@f.GolesAFavor</td>
+                        <td class="col-num">@f.GolesEnContra</td>
+                        <td class="col-num">@(f.DiferenciaGoles > 0 ? "+" : "")@f.DiferenciaGoles</td>
+                        <td class="col-pts">@f.Puntos</td>
+                        <td style="padding:2px 4px;">
+                            <div style="display:flex;gap:2px;">
+                                @foreach (var r in f.Forma)
+                                {
+                                    <span style="width:14px;height:14px;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;background:@(r.EndsWith("C") ? "#3a82c8" : r=="V" ? "var(--color-green)" : "var(--color-red)");color:#fff;">@(r.Substring(0,1))</span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="tabla-leyenda" style="margin-top:16px">
+        <span><span class="leyenda-dot" style="background:var(--color-green)"></span> Asciende a Primera Nacional</span>
+    </div>
+}
 
 <style>
-.zona-descenso-c { border-left: 3px solid #7c3aed; background: rgba(124,58,237,0.06); }
+.tabla-sin-promocion tr.zona-promocion { background: transparent !important; border-left: none !important; }
+.tabla-sin-promocion tr.zona-reducido  { background: transparent !important; border-left: none !important; }
 </style>

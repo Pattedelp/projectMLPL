@@ -395,7 +395,7 @@ namespace TorneoAmigos.Data
                     else if (pos1 >= 3 && pos1 <= 6)  // reducido: 3° al 6°
                         ordenada[i].Zona = "promocion-b";
                     else if (pos1 > ordenada.Count - 2)  // últimos 2 descienden a C
-                        ordenada[i].Zona = "descenso-c";
+                        ordenada[i].Zona = "descenso";
                     else
                         ordenada[i].Zona = "";
                 }

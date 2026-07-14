@@ -1,8 +1,10 @@
 @model TorneoAmigos.Models.DivisionViewModel
 @{
-    var esPrimera = Model.Division?.Id == 1;
-    var controller = esPrimera ? "PrimeraDivision" : "NacionalB";
-    var icono = esPrimera ? "🏆" : "🥈";
+    var divId = Model.Division?.Id ?? 1;
+    var esPrimera = divId == 1;
+    var esPrimeraC = divId == 3;
+    var controller = esPrimera ? "PrimeraDivision" : esPrimeraC ? "PrimeraC" : "NacionalB";
+    var icono = esPrimera ? "🏆" : esPrimeraC ? "🏟️" : "🥈";
 }
 <div class="division-widget">
     <div class="widget-header">

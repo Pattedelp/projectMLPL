@@ -413,6 +413,27 @@
                     </div>
 
 
+
+                    <!-- Descensos B → Primera C (solo si está activa) -->
+                    @if (ViewBag.PrimeraCActiva == true)
+                    {
+                        <div>
+                            <label style="font-size:11px;color:#7c3aed;letter-spacing:1px;display:block;margin-bottom:6px;">📉 Descensos (de Primera Nacional → Primera C)</label>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                <select id="sel-descenso-b1" class="form-control" style="font-size:13px;">
+                                    <option value="0">-- Automático (penúltimo de la B) --</option>
+                                    @foreach (var e in equiposB)
+                                    { <option value="@e.Id" selected="@(cierre != null && cierre.DescensoB1Id == e.Id)">@e.Nombre</option> }
+                                </select>
+                                <select id="sel-descenso-b2" class="form-control" style="font-size:13px;">
+                                    <option value="0">-- Automático (último de la B) --</option>
+                                    @foreach (var e in equiposB)
+                                    { <option value="@e.Id" selected="@(cierre != null && cierre.DescensoB2Id == e.Id)">@e.Nombre</option> }
+                                </select>
+                            </div>
+                        </div>
+                    }
+
                     <!-- Primera C (solo si está activa) -->
                     @if (ViewBag.PrimeraCActiva == true)
                     {
@@ -513,18 +534,6 @@ else
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
             <span style="font-size:13px;color:var(--color-muted);" id="lbl-primera-c">@(ViewBag.PrimeraCActiva == true ? "Activa" : "Inactiva")</span>
             <div class="toggle-switch @(ViewBag.PrimeraCActiva == true ? "on" : "")" id="toggle-primera-c" onclick="togglePrimeraC(this)">
-                <div class="toggle-knob"></div>
-            </div>
-        </label>
-    </div>
-    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 24px;margin-top:10px;display:flex;align-items:center;gap:16px;">
-        <div style="flex:1;">
-            <div style="font-size:13px;font-weight:500;color:var(--color-text);">🔁 Fixture ida y vuelta</div>
-            <div style="font-size:11px;color:var(--color-muted);margin-top:2px;">Activá si hay pocos equipos — genera fechas de ida y vuelta. Se aplica al regenerar el fixture.</div>
-        </div>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-            <span style="font-size:13px;color:var(--color-muted);" id="lbl-ida-vuelta">@(ViewBag.PrimeraCIdaVuelta == true ? "Activo" : "Inactivo")</span>
-            <div class="toggle-switch @(ViewBag.PrimeraCIdaVuelta == true ? "on" : "")" id="toggle-ida-vuelta" onclick="toggleIdaVuelta(this)">
                 <div class="toggle-knob"></div>
             </div>
         </label>
@@ -902,16 +911,6 @@ async function togglePrimeraC(el) {
     if (d.ok) location.reload();
 }
 
-async function toggleIdaVuelta(el) {
-    const activa = !el.classList.contains('on');
-    const r = await fetch('/Admin/TogglePrimeraCIdaVuelta', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ activa })
-    });
-    const d = await r.json();
-    if (d.ok) location.reload();
-}
-
 async function retirarJugador() {
     const id = document.getElementById('sel-retirar').value;
     const msg = document.getElementById('msg-retirar');
@@ -987,6 +986,8 @@ async function guardarCierre() {
         campeonCId:         parseInt(document.getElementById('sel-campeon-c')?.value  || 0) || 0,
         ascensoCId1:        parseInt(document.getElementById('sel-ascenso-c1')?.value || 0) || 0,
         ascensoCId2:        parseInt(document.getElementById('sel-ascenso-c2')?.value || 0) || 0,
+        descensoB1Id:       parseInt(document.getElementById('sel-descenso-b1')?.value || 0) || 0,
+        descensoB2Id:       parseInt(document.getElementById('sel-descenso-b2')?.value || 0) || 0,
         sinDescensos:       document.getElementById('chk-sin-descensos').checked
     };
 

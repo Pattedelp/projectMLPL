@@ -162,6 +162,8 @@ namespace TorneoAmigos.Controllers
                 CampeonCId         = dto.CampeonCId         > 0 ? dto.CampeonCId         : null,
                 AscensoCId1        = dto.AscensoCId1        > 0 ? dto.AscensoCId1        : null,
                 AscensoCId2        = dto.AscensoCId2        > 0 ? dto.AscensoCId2        : null,
+                DescensoB1Id       = dto.DescensoB1Id       > 0 ? dto.DescensoB1Id       : null,
+                DescensoB2Id       = dto.DescensoB2Id       > 0 ? dto.DescensoB2Id       : null,
                 SinDescensos       = dto.SinDescensos
             };
 
@@ -548,6 +550,8 @@ namespace TorneoAmigos.Controllers
         public int CampeonCId { get; set; }
         public int AscensoCId1 { get; set; }
         public int AscensoCId2 { get; set; }
+        public int DescensoB1Id { get; set; }
+        public int DescensoB2Id { get; set; }
         public bool SinDescensos { get; set; }
     }
 

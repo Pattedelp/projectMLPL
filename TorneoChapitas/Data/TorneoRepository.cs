@@ -132,6 +132,20 @@ namespace TorneoAmigos.Data
             return lista;
         }
 
+        private List<Equipo> GetEquiposByDivisionIncluyendoInactivos(int divisionId)
+        {
+            var lista = new List<Equipo>();
+            const string sql = @"SELECT id, divisionid, nombre, escudo, colorprincipal, colorsecundario, activo, COALESCE(pais_code,'') as pais_code
+                                 FROM equipos WHERE divisionid = @D ORDER BY nombre";
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@D", divisionId);
+            conn.Open();
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) lista.Add(MapEquipo(r));
+            return lista;
+        }
+
         // ── EQUIPO INDIVIDUAL ────────────────────
         public Equipo? GetEquipoById(int id)
         {
@@ -256,6 +270,16 @@ namespace TorneoAmigos.Data
                 partidos.SelectMany(p => new[] { p.EquipoLocalId, p.EquipoVisitanteId })
                         .Where(id => id > 0));
 
+            // Incluir también equipos inactivos que hayan jugado (ej: retirados durante la temporada)
+            var idsActivos = new HashSet<int>(equipos.Select(e => e.Id));
+            var idsFaltantes = equiposConPartido.Where(id => !idsActivos.Contains(id)).ToList();
+            if (idsFaltantes.Any())
+            {
+                var equiposInactivos = GetEquiposByDivisionIncluyendoInactivos(divisionId);
+                foreach (var e in equiposInactivos.Where(e => idsFaltantes.Contains(e.Id)))
+                    equipos.Add(e);
+            }
+
             // Solo mostrar equipos que participaron en el torneo
             var equiposFiltrados = equipos
                 .Where(e => equiposConPartido.Contains(e.Id))
@@ -357,12 +381,21 @@ namespace TorneoAmigos.Data
                     else
                         ordenada[i].Zona = "";
                 }
+                else if (divisionId == 3) // Primera C — solo ascensos, sin promoción
+                {
+                    if (pos1 <= 2)
+                        ordenada[i].Zona = "ascenso";
+                    else
+                        ordenada[i].Zona = "";
+                }
                 else // Nacional B
                 {
                     if (pos1 <= cantAscensos)
                         ordenada[i].Zona = "ascenso";
                     else if (pos1 >= 3 && pos1 <= 6)  // reducido: 3° al 6°
                         ordenada[i].Zona = "promocion-b";
+                    else if (pos1 > ordenada.Count - 2)  // últimos 2 descienden a C
+                        ordenada[i].Zona = "descenso-c";
                     else
                         ordenada[i].Zona = "";
                 }

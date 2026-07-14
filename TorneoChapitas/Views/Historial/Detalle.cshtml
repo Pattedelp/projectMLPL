@@ -29,9 +29,9 @@
     int ppfNacional = eqNacional > 0 ? eqNacional / 2 : 5;
     int ppfC        = eqC        > 0 ? eqC / 2        : 3;
 
-    var fechasPrimera  = AgruparPorFecha(partidosPrimera, ppfPrimera);
-    var fechasNacional = AgruparPorFecha(partidosNacional, ppfNacional);
-    var fechasPrimeraC = AgruparPorFecha(partidosPrimeraC, ppfC);
+    var fechasPrimera  = AgruparPorFecha(partidosPrimera.Where(p => p.Torneo == "Liga").ToList(), ppfPrimera);
+    var fechasNacional = AgruparPorFecha(partidosNacional.Where(p => p.Torneo == "Liga").ToList(), ppfNacional);
+    var fechasPrimeraC = AgruparPorFecha(partidosPrimeraC.Where(p => p.Torneo == "Liga").ToList(), ppfC);
 }
 
 <div class="page-hero">
@@ -87,8 +87,8 @@
         </div>
     }
 
-    void ResultadosFechas(List<(int Fecha, List<HistoricoPartido> Partidos)> fechas) {
-        if (!fechas.Any()) {
+    void ResultadosFechas(List<(int Fecha, List<HistoricoPartido> Partidos)> fechas, List<HistoricoPartido> todosPartidos) {
+        if (!fechas.Any() && !todosPartidos.Any(p => p.Torneo != "Liga")) {
             <p style="color:var(--color-muted);font-size:13px;">No hay resultados registrados.</p>
             return;
         }
@@ -98,6 +98,36 @@
                     Fecha @numFecha
                 </div>
                 @foreach (var p in partidos) {
+                    bool lg = p.GolesLocal > p.GolesVisitante;
+                    <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
+                        <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                            <span style="font-weight:@(lg ? "700" : "400");color:@(lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreLocal</span>
+                            @if (!string.IsNullOrEmpty(p.FlagLocal))
+                            { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                        </div>
+                        <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">
+                            @p.GolesLocal - @p.GolesVisitante
+                        </div>
+                        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                            @if (!string.IsNullOrEmpty(p.FlagVisitante))
+                            { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                            <span style="font-weight:@(!lg ? "700" : "400");color:@(!lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreVisitante</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        @{
+            var especiales = todosPartidos.Where(p => p.Torneo != "Liga")
+                .GroupBy(p => p.Torneo)
+                .OrderBy(g => g.Key == "Reducido (Semifinal)" ? 0 : g.Key == "Reducido (Final)" ? 1 : 2);
+        }
+        @foreach (var grupo in especiales) {
+            <div style="background:var(--color-bg2);border:1px solid rgba(58,130,200,0.4);border-radius:8px;overflow:hidden;margin-bottom:8px;margin-top:8px;">
+                <div style="background:rgba(58,130,200,0.15);padding:6px 14px;font-size:11px;letter-spacing:1px;color:#3a82c8;text-transform:uppercase;">
+                    @grupo.Key
+                </div>
+                @foreach (var p in grupo) {
                     bool lg = p.GolesLocal > p.GolesVisitante;
                     <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
                         <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
@@ -129,7 +159,7 @@
         </div>
         <div>
             <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
-            @{ ResultadosFechas(fechasPrimera); }
+            @{ ResultadosFechas(fechasPrimera, partidosPrimera); }
         </div>
     </div>
 </div>
@@ -143,7 +173,7 @@
         </div>
         <div>
             <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
-            @{ ResultadosFechas(fechasNacional); }
+            @{ ResultadosFechas(fechasNacional, partidosNacional); }
         </div>
     </div>
 </div>
@@ -159,7 +189,7 @@
             </div>
             <div>
                 <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
-                @{ ResultadosFechas(fechasPrimeraC); }
+                @{ ResultadosFechas(fechasPrimeraC, partidosPrimeraC); }
             </div>
         </div>
     </div>

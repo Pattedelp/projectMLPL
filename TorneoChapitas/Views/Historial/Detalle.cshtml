@@ -117,10 +117,16 @@
                 }
             </div>
         }
-        var especiales = todosPartidos.Where(p => p.Torneo != "Liga")
+        PartidosEspeciales(todosPartidos);
+    }
+
+    void PartidosEspeciales(List<HistoricoPartido> todosPartidos) {
+        var grupos = todosPartidos
+            .Where(p => p.Torneo != "Liga")
             .GroupBy(p => p.Torneo)
-            .OrderBy(g => g.Key == "Reducido (Semifinal)" ? 0 : g.Key == "Reducido (Final)" ? 1 : 2);
-        foreach (var grupo in especiales) {
+            .OrderBy(g => g.Key == "Reducido (Semifinal)" ? 0 : g.Key == "Reducido (Final)" ? 1 : 2)
+            .ToList();
+        foreach (var grupo in grupos) {
             <div style="background:var(--color-bg2);border:1px solid rgba(58,130,200,0.4);border-radius:8px;overflow:hidden;margin-bottom:8px;margin-top:8px;">
                 <div style="background:rgba(58,130,200,0.15);padding:6px 14px;font-size:11px;letter-spacing:1px;color:#3a82c8;text-transform:uppercase;">
                     @grupo.Key

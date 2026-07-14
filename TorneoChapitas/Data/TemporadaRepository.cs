@@ -90,7 +90,9 @@ namespace TorneoAmigos.Data
                        tc.descenso_promo_id,     edp.nombre,
                        tc.campeon_c_id,           ecc.nombre,
                        tc.ascenso_c1_id,          ec1.nombre,
-                       tc.ascenso_c2_id,          ec2.nombre
+                       tc.ascenso_c2_id,          ec2.nombre,
+                       tc.descenso_b1_id,         edb1.nombre,
+                       tc.descenso_b2_id,         edb2.nombre
                 FROM temporada_cierre tc
                 LEFT JOIN equipos ec  ON tc.campeon_copa_id      = ec.id
                 LEFT JOIN equipos es  ON tc.campeon_supercopa_id = es.id
@@ -105,6 +107,8 @@ namespace TorneoAmigos.Data
                 LEFT JOIN equipos ecc ON tc.campeon_c_id          = ecc.id
                 LEFT JOIN equipos ec1 ON tc.ascenso_c1_id         = ec1.id
                 LEFT JOIN equipos ec2 ON tc.ascenso_c2_id         = ec2.id
+                LEFT JOIN equipos edb1 ON tc.descenso_b1_id       = edb1.id
+                LEFT JOIN equipos edb2 ON tc.descenso_b2_id       = edb2.id
                 WHERE tc.temporada_id = @T";
             using var conn = GetConnection();
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -140,7 +144,11 @@ namespace TorneoAmigos.Data
                 AscensoCId1            = r.IsDBNull(25) ? null : r.GetInt32(25),
                 AscensoCNombre1        = r.IsDBNull(26) ? null : r.GetString(26),
                 AscensoCId2            = r.IsDBNull(27) ? null : r.GetInt32(27),
-                AscensoCNombre2        = r.IsDBNull(28) ? null : r.GetString(28)
+                AscensoCNombre2        = r.IsDBNull(28) ? null : r.GetString(28),
+                DescensoB1Id           = r.IsDBNull(29) ? null : r.GetInt32(29),
+                DescensoB1Nombre       = r.IsDBNull(30) ? null : r.GetString(30),
+                DescensoB2Id           = r.IsDBNull(31) ? null : r.GetInt32(31),
+                DescensoB2Nombre       = r.IsDBNull(32) ? null : r.GetString(32)
             };
         }
 
@@ -274,8 +282,9 @@ namespace TorneoAmigos.Data
                      ascenso_1_id, ascenso_2_id, ascenso_3_id,
                      descenso_1_id, descenso_2_id, descenso_promo_id,
                      campeon_c_id, ascenso_c1_id, ascenso_c2_id,
+                     descenso_b1_id, descenso_b2_id,
                      sin_descensos, updated_at)
-                VALUES (@T, @CC, @CS, @CP, @CB, @A1, @A2, @A3, @D1, @D2, @DP, @Cc, @Ac1, @Ac2, @SD, NOW())
+                VALUES (@T, @CC, @CS, @CP, @CB, @A1, @A2, @A3, @D1, @D2, @DP, @Cc, @Ac1, @Ac2, @Db1, @Db2, @SD, NOW())
                 ON CONFLICT (temporada_id) DO UPDATE SET
                     campeon_copa_id      = EXCLUDED.campeon_copa_id,
                     campeon_supercopa_id = EXCLUDED.campeon_supercopa_id,
@@ -290,6 +299,8 @@ namespace TorneoAmigos.Data
                     campeon_c_id         = EXCLUDED.campeon_c_id,
                     ascenso_c1_id        = EXCLUDED.ascenso_c1_id,
                     ascenso_c2_id        = EXCLUDED.ascenso_c2_id,
+                    descenso_b1_id       = EXCLUDED.descenso_b1_id,
+                    descenso_b2_id       = EXCLUDED.descenso_b2_id,
                     sin_descensos        = EXCLUDED.sin_descensos,
                     updated_at           = NOW()";
             using var conn = GetConnection();
@@ -308,6 +319,8 @@ namespace TorneoAmigos.Data
             cmd.Parameters.AddWithValue("@Cc",  (object?)cierre.CampeonCId       ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Ac1", (object?)cierre.AscensoCId1      ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Ac2", (object?)cierre.AscensoCId2      ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Db1", (object?)cierre.DescensoB1Id      ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Db2", (object?)cierre.DescensoB2Id      ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@SD",  cierre.SinDescensos);
             conn.Open();
             return cmd.ExecuteNonQuery() > 0;
@@ -334,11 +347,17 @@ namespace TorneoAmigos.Data
                     INSERT INTO enfrentamientos_historicos
                         (equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, torneo, temporada_nombre, division_id, fecha_numero)
                     SELECT p.equipolocalid, p.equipovisitanteid, p.goleslocal, p.golesvisitante,
-                           'Liga', @TNom, p.divisionid, f.numero
+                           CASE COALESCE(p.tipo_partido,'regular')
+                               WHEN 'reducido_semi'  THEN 'Reducido (Semifinal)'
+                               WHEN 'reducido_final' THEN 'Reducido (Final)'
+                               WHEN 'promocion'      THEN 'Promoción'
+                               ELSE 'Liga'
+                           END,
+                           @TNom, p.divisionid, f.numero
                     FROM partidos p
                     JOIN fechas f ON p.fechaid = f.id
                     WHERE p.jugado = true
-                      AND COALESCE(p.tipo_partido, 'regular') = 'regular'
+                      AND COALESCE(p.tipo_partido, 'regular') IN ('regular','reducido_semi','reducido_final','promocion')
                       AND NOT EXISTS (
                           SELECT 1 FROM enfrentamientos_historicos eh
                           WHERE eh.equipo_local_id = p.equipolocalid
@@ -416,7 +435,58 @@ namespace TorneoAmigos.Data
 
                 // Descenso por promoción (si gana el de la B, el de Primera baja)
                 if (cierre?.DescensoPromoId.HasValue == true && cierre.DescensoPromoId > 0)
+                {
                     EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2 WHERE id = @Id", cierre.DescensoPromoId.Value);
+                    // Marcar descendio en temporada_resultados
+                    using var cmdDp = new NpgsqlCommand(
+                        "UPDATE temporada_resultados SET descendio = true WHERE temporada_id = @T AND equipo_id = @E", conn, tx);
+                    cmdDp.Parameters.AddWithValue("@T", temporadaId);
+                    cmdDp.Parameters.AddWithValue("@E", cierre.DescensoPromoId.Value);
+                    cmdDp.ExecuteNonQuery();
+                }
+
+                // Ascenso 3 por promoción
+                if (cierre?.Ascenso3Id.HasValue == true && cierre.Ascenso3Id > 0)
+                {
+                    // Marcar ascendio en temporada_resultados
+                    using var cmdA3 = new NpgsqlCommand(
+                        "UPDATE temporada_resultados SET ascendio = true WHERE temporada_id = @T AND equipo_id = @E", conn, tx);
+                    cmdA3.Parameters.AddWithValue("@T", temporadaId);
+                    cmdA3.Parameters.AddWithValue("@E", cierre.Ascenso3Id.Value);
+                    cmdA3.ExecuteNonQuery();
+                }
+
+                // Descensos B → Primera C
+                if (PrimeraCActiva())
+                {
+                    var tablaB2 = new List<PosicionViewModel>();
+                    using (var cmdB = new NpgsqlCommand(@"
+                        SELECT e.id, COUNT(*) FILTER (WHERE p.jugado AND (
+                               (p.equipolocalid=e.id AND p.goleslocal>p.golesvisitante) OR
+                               (p.equipovisitanteid=e.id AND p.golesvisitante>p.goleslocal))) as v
+                        FROM equipos e
+                        LEFT JOIN partidos p ON (p.equipolocalid=e.id OR p.equipovisitanteid=e.id) AND p.divisionid=2
+                        WHERE e.divisionid=2 AND e.activo=true
+                        GROUP BY e.id ORDER BY v ASC", conn, tx))
+                    {
+                        using var rB = cmdB.ExecuteReader();
+                        while (rB.Read()) tablaB2.Add(new PosicionViewModel { EquipoId = rB.GetInt32(0) });
+                    }
+                    var db1 = cierre?.DescensoB1Id ?? (tablaB2.Count >= 2 ? tablaB2[tablaB2.Count - 2].EquipoId : 0);
+                    var db2 = cierre?.DescensoB2Id ?? (tablaB2.Count >= 1 ? tablaB2[tablaB2.Count - 1].EquipoId : 0);
+                    if (db1 > 0)
+                    {
+                        EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 3 WHERE id = @Id", db1);
+                        using var cmdDb1 = new NpgsqlCommand("UPDATE temporada_resultados SET descendio = true WHERE temporada_id = @T AND equipo_id = @E", conn, tx);
+                        cmdDb1.Parameters.AddWithValue("@T", temporadaId); cmdDb1.Parameters.AddWithValue("@E", db1); cmdDb1.ExecuteNonQuery();
+                    }
+                    if (db2 > 0)
+                    {
+                        EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 3 WHERE id = @Id", db2);
+                        using var cmdDb2 = new NpgsqlCommand("UPDATE temporada_resultados SET descendio = true WHERE temporada_id = @T AND equipo_id = @E", conn, tx);
+                        cmdDb2.Parameters.AddWithValue("@T", temporadaId); cmdDb2.Parameters.AddWithValue("@E", db2); cmdDb2.ExecuteNonQuery();
+                    }
+                }
 
                 // Primera C: ascensos a Primera Nacional (si Primera C está activa)
                 if (PrimeraCActiva())

@@ -214,7 +214,10 @@ namespace TorneoAmigos.Data
                     UNION ALL
 
                     SELECT eh.goles_local, eh.goles_visitante, eh.equipo_local_id, eh.equipo_visitante_id,
-                           COALESCE(eh.temporada_nombre, 'Histórico') as temporada_nombre, -1000000 - eh.id as ord
+                           CASE 
+                               WHEN eh.torneo = 'Liga' THEN COALESCE(eh.temporada_nombre, 'Histórico')
+                               ELSE COALESCE(eh.torneo, '') || CASE WHEN eh.temporada_nombre IS NOT NULL AND eh.temporada_nombre != '' THEN ' · ' || eh.temporada_nombre ELSE '' END
+                           END as temporada_nombre, -1000000 - eh.id as ord
                     FROM enfrentamientos_historicos eh
                     WHERE (eh.equipo_local_id = @A AND eh.equipo_visitante_id = @B)
                        OR (eh.equipo_local_id = @B AND eh.equipo_visitante_id = @A)

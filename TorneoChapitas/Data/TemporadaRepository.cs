@@ -559,7 +559,8 @@ namespace TorneoAmigos.Data
             {
                 var f = tabla[i];
                 bool campeon   = divisionId == 1 && i == 0;
-                bool descendio = !sinDescensos && divisionId == 1 && i >= totalEquipos - 2;
+                bool descendio = (!sinDescensos && divisionId == 1 && i >= totalEquipos - 2)
+                              || (divisionId == 2 && PrimeraCActiva() && i >= totalEquipos - 2);
                 bool ascendio  = divisionId == 2 && i < 2;
 
                 using var cmd = new NpgsqlCommand(@"

@@ -4,7 +4,9 @@
     var partidosPrimera  = ViewBag.PartidosPrimera  as List<HistoricoPartido> ?? new();
     var partidosNacional = ViewBag.PartidosNacional as List<HistoricoPartido> ?? new();
     var partidosPrimeraC = ViewBag.PartidosPrimeraC as List<HistoricoPartido> ?? new();
+    var partidosEspeciales = ViewBag.PartidosEspeciales as List<HistoricoPartido> ?? new();
     bool tienePrimeraC   = Model.ResultadosPrimeraC.Any() || partidosPrimeraC.Any();
+    bool tieneEspeciales = partidosEspeciales.Any();
 
     List<(int Fecha, List<HistoricoPartido> Partidos)> AgruparPorFecha(List<HistoricoPartido> partidos, int equiposPorFecha) {
         var result = new List<(int, List<HistoricoPartido>)>();
@@ -53,6 +55,10 @@
     @if (tienePrimeraC)
     {
         <button onclick="showTab('primerac')" id="tab-primerac" class="tab-btn">🏟️ Primera C</button>
+    }
+    @if (tieneEspeciales)
+    {
+        <button onclick="showTab('especiales')" id="tab-especiales" class="tab-btn">⚡ Especiales</button>
     }
 </div>
 
@@ -120,7 +126,34 @@
         PartidosEspeciales(todosPartidos);
     }
 
-    void PartidosEspeciales(List<HistoricoPartido> todosPartidos) {
+    void PartidosEspeciales(List<HistoricoPartido> partidos) {
+        var grupos = partidos.GroupBy(p => p.Torneo).OrderBy(g => g.Key).ToList();
+        foreach (var grupo in grupos) {
+            <div style="background:var(--color-bg2);border:1px solid rgba(255,200,0,0.3);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+                <div style="background:rgba(255,200,0,0.08);padding:6px 14px;font-size:11px;letter-spacing:1px;color:var(--color-gold);text-transform:uppercase;">
+                    @grupo.Key
+                </div>
+                @foreach (var p in grupo) {
+                    bool lg = p.GolesLocal > p.GolesVisitante;
+                    <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
+                        <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                            <span style="font-weight:@(lg ? "700" : "400");color:@(lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreLocal</span>
+                            @if (!string.IsNullOrEmpty(p.FlagLocal))
+                            { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                        </div>
+                        <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">
+                            @p.GolesLocal - @p.GolesVisitante
+                        </div>
+                        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                            @if (!string.IsNullOrEmpty(p.FlagVisitante))
+                            { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                            <span style="font-weight:@(!lg ? "700" : "400");color:@(!lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreVisitante</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
         var grupos = todosPartidos
             .Where(p => p.Torneo != "Liga")
             .GroupBy(p => p.Torneo)
@@ -199,6 +232,14 @@
     </div>
 }
 
+@if (tieneEspeciales)
+{
+    <div id="tab-especiales-content" style="display:none;">
+        <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Partidos Especiales</h3>
+        @{ PartidosEspeciales(partidosEspeciales); }
+    </div>
+}
+
 <style>
 .tab-btn { padding:8px 16px;border-radius:8px;background:var(--color-bg2);border:1px solid var(--color-border);color:var(--color-muted);font-size:13px;font-weight:500;cursor:pointer; }
 .tab-btn.active { background:var(--color-gold);color:var(--color-bg);border-color:var(--color-gold); }
@@ -208,10 +249,12 @@
 @section Scripts {
 <script>
 function showTab(tab) {
-    document.getElementById('tab-primera-content').style.display   = tab === 'primera'  ? 'block' : 'none';
-    document.getElementById('tab-nacional-content').style.display  = tab === 'nacional' ? 'block' : 'none';
+    document.getElementById('tab-primera-content').style.display   = tab === 'primera'    ? 'block' : 'none';
+    document.getElementById('tab-nacional-content').style.display  = tab === 'nacional'   ? 'block' : 'none';
     const tabC = document.getElementById('tab-primerac-content');
     if (tabC) tabC.style.display = tab === 'primerac' ? 'block' : 'none';
+    const tabE = document.getElementById('tab-especiales-content');
+    if (tabE) tabE.style.display = tab === 'especiales' ? 'block' : 'none';
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     const btn = document.getElementById('tab-' + tab);
     if (btn) btn.classList.add('active');

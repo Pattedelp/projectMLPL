@@ -428,6 +428,25 @@ namespace TorneoAmigos.Controllers
             return Json(new { ok = true });
         }
 
+
+        // ── PARTIDOS ESPECIALES ─────────────────────────
+        [HttpPost]
+        public IActionResult CargarPartidoEspecial([FromBody] PartidoEspecialDto dto)
+        {
+            if (dto.LocalId <= 0 || dto.VisitanteId <= 0 || string.IsNullOrWhiteSpace(dto.Torneo))
+                return Json(new { ok = false, msg = "Datos incompletos" });
+
+            var temporada = _tempRepo.GetTemporadaActiva();
+            if (temporada == null) return Json(new { ok = false, msg = "No hay temporada activa" });
+
+            try
+            {
+                _tempRepo.CargarPartidoEspecial(dto.LocalId, dto.VisitanteId, dto.GolesLocal, dto.GolesVisitante, dto.Torneo, temporada.Nombre);
+                return Json(new { ok = true });
+            }
+            catch (Exception ex) { return Json(new { ok = false, msg = ex.Message }); }
+        }
+
         [HttpGet]
         public IActionResult AgregarJugador()
         {
@@ -575,5 +594,14 @@ namespace TorneoAmigos.Controllers
         public int CampeonId { get; set; }
         public int SubcampeonId { get; set; }
         public int CampeonCopaId { get; set; }
+    }
+
+    public class PartidoEspecialDto
+    {
+        public int LocalId { get; set; }
+        public int VisitanteId { get; set; }
+        public int GolesLocal { get; set; }
+        public int GolesVisitante { get; set; }
+        public string Torneo { get; set; } = "";
     }
 }

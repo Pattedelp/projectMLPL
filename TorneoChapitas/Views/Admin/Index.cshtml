@@ -413,27 +413,6 @@
                     </div>
 
 
-
-                    <!-- Descensos B → Primera C (solo si está activa) -->
-                    @if (ViewBag.PrimeraCActiva == true)
-                    {
-                        <div>
-                            <label style="font-size:11px;color:#7c3aed;letter-spacing:1px;display:block;margin-bottom:6px;">📉 Descensos (de Primera Nacional → Primera C)</label>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                                <select id="sel-descenso-b1" class="form-control" style="font-size:13px;">
-                                    <option value="0">-- Automático (penúltimo de la B) --</option>
-                                    @foreach (var e in equiposB)
-                                    { <option value="@e.Id" selected="@(cierre != null && cierre.DescensoB1Id == e.Id)">@e.Nombre</option> }
-                                </select>
-                                <select id="sel-descenso-b2" class="form-control" style="font-size:13px;">
-                                    <option value="0">-- Automático (último de la B) --</option>
-                                    @foreach (var e in equiposB)
-                                    { <option value="@e.Id" selected="@(cierre != null && cierre.DescensoB2Id == e.Id)">@e.Nombre</option> }
-                                </select>
-                            </div>
-                        </div>
-                    }
-
                     <!-- Primera C (solo si está activa) -->
                     @if (ViewBag.PrimeraCActiva == true)
                     {
@@ -538,6 +517,46 @@ else
             </div>
         </label>
     </div>
+</div>
+
+<!-- PARTIDOS ESPECIALES -->
+<div class="admin-section">
+    <h2 class="admin-section-title">⚡ Partidos Especiales</h2>
+    <p style="font-size:13px;color:var(--color-muted);margin-bottom:16px;">
+        Cargá partidos de desempate, triangulares u otros encuentros fuera del fixture. Se guardan en el historial y cuentan en el mano a mano.
+    </p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Local</label>
+            <select id="pe-local" class="form-control" style="font-size:13px;">
+                <option value="0">-- Elegí equipo --</option>
+                @foreach (var e in (List<Equipo>)ViewBag.EquiposTodos)
+                { <option value="@e.Id">@e.Nombre</option> }
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Visitante</label>
+            <select id="pe-visitante" class="form-control" style="font-size:13px;">
+                <option value="0">-- Elegí equipo --</option>
+                @foreach (var e in (List<Equipo>)ViewBag.EquiposTodos)
+                { <option value="@e.Id">@e.Nombre</option> }
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Goles Local</label>
+            <input type="number" id="pe-goles-local" class="form-control" value="0" min="0" max="20" style="font-size:13px;" />
+        </div>
+        <div>
+            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Goles Visitante</label>
+            <input type="number" id="pe-goles-visitante" class="form-control" value="0" min="0" max="20" style="font-size:13px;" />
+        </div>
+    </div>
+    <div style="margin-bottom:12px;">
+        <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Descripción del partido (ej: "Desempate T19", "Triangular")</label>
+        <input type="text" id="pe-torneo" class="form-control" placeholder="ej: Desempate T19" style="font-size:13px;" />
+    </div>
+    <button onclick="cargarPartidoEspecial()" class="btn-primary">Guardar partido</button>
+    <div id="pe-msg" style="margin-top:8px;font-size:13px;"></div>
 </div>
 
 <!-- ENCUESTAS -->
@@ -986,8 +1005,6 @@ async function guardarCierre() {
         campeonCId:         parseInt(document.getElementById('sel-campeon-c')?.value  || 0) || 0,
         ascensoCId1:        parseInt(document.getElementById('sel-ascenso-c1')?.value || 0) || 0,
         ascensoCId2:        parseInt(document.getElementById('sel-ascenso-c2')?.value || 0) || 0,
-        descensoB1Id:       parseInt(document.getElementById('sel-descenso-b1')?.value || 0) || 0,
-        descensoB2Id:       parseInt(document.getElementById('sel-descenso-b2')?.value || 0) || 0,
         sinDescensos:       document.getElementById('chk-sin-descensos').checked
     };
 
@@ -1014,6 +1031,36 @@ async function confirmarFinalizar() {
     const d = await r.json();
     if (d.ok) { alert('✅ Temporada finalizada correctamente.'); location.reload(); }
     else alert('Error: ' + d.msg);
+}
+async function cargarPartidoEspecial() {
+    const localId    = parseInt(document.getElementById('pe-local').value);
+    const visitanteId = parseInt(document.getElementById('pe-visitante').value);
+    const golesLocal  = parseInt(document.getElementById('pe-goles-local').value);
+    const golesVisitante = parseInt(document.getElementById('pe-goles-visitante').value);
+    const torneo     = document.getElementById('pe-torneo').value.trim();
+    const msg        = document.getElementById('pe-msg');
+
+    if (!localId || !visitanteId || localId === visitanteId) { msg.textContent = '⚠️ Elegí dos equipos distintos.'; return; }
+    if (!torneo) { msg.textContent = '⚠️ Escribí una descripción del partido.'; return; }
+
+    const r = await fetch('/Admin/CargarPartidoEspecial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ localId, visitanteId, golesLocal, golesVisitante, torneo })
+    });
+    const d = await r.json();
+    if (d.ok) {
+        msg.style.color = 'var(--color-green)';
+        msg.textContent = '✅ Partido guardado correctamente.';
+        document.getElementById('pe-local').value = '0';
+        document.getElementById('pe-visitante').value = '0';
+        document.getElementById('pe-goles-local').value = '0';
+        document.getElementById('pe-goles-visitante').value = '0';
+        document.getElementById('pe-torneo').value = '';
+    } else {
+        msg.style.color = 'var(--color-red)';
+        msg.textContent = '❌ Error: ' + (d.msg || 'desconocido');
+    }
 }
 </script>
 }

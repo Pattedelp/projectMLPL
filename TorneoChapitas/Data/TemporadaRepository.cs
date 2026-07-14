@@ -1422,6 +1422,23 @@ namespace TorneoAmigos.Data
             Tipo = r.GetString(2), Nombre = r.GetString(3), Finalizada = r.GetBoolean(4)
         };
 
+        public void CargarPartidoEspecial(int localId, int visitanteId, int golesLocal, int golesVisitante, string torneo, string temporadaNombre)
+        {
+            using var conn = GetConnection();
+            using var cmd = new NpgsqlCommand(@"
+                INSERT INTO enfrentamientos_historicos
+                    (equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, torneo, temporada_nombre, division_id)
+                VALUES (@L, @V, @GL, @GV, @T, @TN, 0)", conn);
+            cmd.Parameters.AddWithValue("@L",  localId);
+            cmd.Parameters.AddWithValue("@V",  visitanteId);
+            cmd.Parameters.AddWithValue("@GL", golesLocal);
+            cmd.Parameters.AddWithValue("@GV", golesVisitante);
+            cmd.Parameters.AddWithValue("@T",  torneo);
+            cmd.Parameters.AddWithValue("@TN", temporadaNombre);
+            conn.Open();
+            cmd.ExecuteNonQuery();
+        }
+
         // ── PALMARÉS ───────────────────────────────────
 
         public void BorrarTitulo(string tipoTitulo, int? temporadaId)

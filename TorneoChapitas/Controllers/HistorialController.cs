@@ -4,6 +4,7 @@ using TorneoAmigos.Models;
 
 namespace TorneoAmigos.Controllers
 {
+    // Público — cualquiera puede ver el historial
     public class HistorialController : Controller
     {
         private readonly TemporadaRepository _repo;
@@ -33,13 +34,15 @@ namespace TorneoAmigos.Controllers
             {
                 Temporada           = temporada,
                 ResultadosPrimera   = resultados.Where(r => r.DivisionId == 1).ToList(),
-                ResultadosNacionalB = resultados.Where(r => r.DivisionId == 2).ToList(),
-                ResultadosPrimeraC  = resultados.Where(r => r.DivisionId == 3).ToList()
+                ResultadosNacionalB = resultados.Where(r => r.DivisionId == 2).ToList()
             };
 
-            ViewBag.PartidosPrimera  = _repo.GetPartidosHistorico(temporada.Nombre, 1);
-            ViewBag.PartidosNacional = _repo.GetPartidosHistorico(temporada.Nombre, 2);
-            ViewBag.PartidosPrimeraC = _repo.GetPartidosHistorico(temporada.Nombre, 3);
+            ViewBag.PartidosPrimera    = _repo.GetPartidosHistorico(temporada.Nombre, 1);
+            ViewBag.PartidosNacional   = _repo.GetPartidosHistorico(temporada.Nombre, 2);
+            ViewBag.PartidosPrimeraC   = _repo.GetPartidosHistorico(temporada.Nombre, 3);
+            ViewBag.PartidosEspeciales = _repo.GetPartidosHistorico(temporada.Nombre, 0)
+                .Where(p => p.Torneo != "Copa Argentina" && p.Torneo != "Supercopa Argentina")
+                .ToList();
             return View(vm);
         }
     }

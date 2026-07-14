@@ -154,37 +154,6 @@
             </div>
         }
     }
-        var grupos = todosPartidos
-            .Where(p => p.Torneo != "Liga")
-            .GroupBy(p => p.Torneo)
-            .OrderBy(g => g.Key == "Reducido (Semifinal)" ? 0 : g.Key == "Reducido (Final)" ? 1 : 2)
-            .ToList();
-        foreach (var grupo in grupos) {
-            <div style="background:var(--color-bg2);border:1px solid rgba(58,130,200,0.4);border-radius:8px;overflow:hidden;margin-bottom:8px;margin-top:8px;">
-                <div style="background:rgba(58,130,200,0.15);padding:6px 14px;font-size:11px;letter-spacing:1px;color:#3a82c8;text-transform:uppercase;">
-                    @grupo.Key
-                </div>
-                @foreach (var p in grupo) {
-                    bool lg = p.GolesLocal > p.GolesVisitante;
-                    <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
-                        <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
-                            <span style="font-weight:@(lg ? "700" : "400");color:@(lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreLocal</span>
-                            @if (!string.IsNullOrEmpty(p.FlagLocal))
-                            { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
-                        </div>
-                        <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">
-                            @p.GolesLocal - @p.GolesVisitante
-                        </div>
-                        <div style="flex:1;display:flex;align-items:center;gap:6px;">
-                            @if (!string.IsNullOrEmpty(p.FlagVisitante))
-                            { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
-                            <span style="font-weight:@(!lg ? "700" : "400");color:@(!lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreVisitante</span>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-    }
 }
 
 <!-- PRIMERA DIVISIÓN -->

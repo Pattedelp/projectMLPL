@@ -38,11 +38,15 @@
         <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;max-height:320px;overflow-y:auto;">
             @foreach (var e in Model.Enfrentamientos)
             {
-                <div style="background:var(--color-bg3);border-radius:6px;padding:8px 14px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:14px;">
-                    <span style="@(e.GolesA > e.GolesB ? "color:var(--color-green);font-weight:700;" : "")">@e.GolesA</span>
-                    <span style="color:var(--color-muted);">-</span>
-                    <span style="@(e.GolesB > e.GolesA ? "color:var(--color-green);font-weight:700;" : "")">@e.GolesB</span>
-                    <span style="font-size:11px;color:var(--color-muted);margin-left:8px;">(@(e.ALocal ? Model.EquipoA.Nombre + " local" : Model.EquipoB.Nombre + " local") · @e.TemporadaNombre)</span>
+                bool ganoA = e.GolesA > e.GolesB;
+                bool ganoB = e.GolesB > e.GolesA;
+                string bgColor = ganoA ? "rgba(40,167,69,0.08)" : ganoB ? "rgba(220,53,69,0.08)" : "var(--color-bg3)";
+                string borderColor = ganoA ? "rgba(40,167,69,0.4)" : ganoB ? "rgba(220,53,69,0.4)" : "var(--color-border)";
+                <div style="background:@bgColor;border:1px solid @borderColor;border-radius:6px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;">
+                    <span style="font-weight:@(ganoA ? "700" : "400");color:@(ganoA ? "var(--color-green)" : ganoB ? "var(--color-muted)" : "var(--color-text)");">@Model.EquipoA.Nombre</span>
+                    <span style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">@e.GolesA - @e.GolesB</span>
+                    <span style="font-weight:@(ganoB ? "700" : "400");color:@(ganoB ? "var(--color-red)" : ganoA ? "var(--color-muted)" : "var(--color-text)");">@Model.EquipoB.Nombre</span>
+                    <span style="font-size:11px;color:var(--color-muted);white-space:nowrap;">@e.TemporadaNombre</span>
                 </div>
             }
         </div>

@@ -970,7 +970,7 @@ namespace TorneoAmigos.Data
         }
 
         public int SortearCopaArgentina(int temporadaId, List<int> equiposPrimera, List<int> equiposB,
-            List<int>? equiposNuevosB = null)
+            List<int>? equiposNuevosB = null, List<int>? equiposC = null)
         {
             using var conn = GetConnection();
             conn.Open();
@@ -1041,6 +1041,23 @@ namespace TorneoAmigos.Data
                 int nP = equiposPrimera.Count;
                 int nS = equiposB.Count;
 
+                // ── FASE PREVIA 0: Primera C vs peores de B ──────────
+                // Si hay equipos de Primera C, se enfrentan contra los últimos de B
+                // Los ganadores pasan a FP1 como si fueran de la B
+                var equiposCRand = new List<int>();
+                var S_reservados_fp0 = new List<int>(); // peores de B que van a FP0
+
+                if (equiposC != null && equiposC.Any())
+                {
+                    equiposCRand = equiposC.OrderBy(_ => rng.Next()).ToList();
+                    // Tomar los últimos N de B (donde N = cant equipos C) para FP0
+                    int cantC = equiposCRand.Count;
+                    S_reservados_fp0 = equiposB.TakeLast(cantC).ToList();
+                    // Quitar esos de la lista de B para el resto del sorteo
+                    equiposB = equiposB.Take(nS - cantC).ToList();
+                    nS = equiposB.Count;
+                }
+
                 var P_octavos = equiposPrimera.Take(8).ToList();   // P1-P8 → Octavos
                 var P_previa  = equiposPrimera.Skip(8).ToList();   // P9+ → FP2
 
@@ -1074,8 +1091,9 @@ namespace TorneoAmigos.Data
 
                 // ── CREAR RONDAS ─────────────────────────────────────────────
                 var rondas = new List<(string nombre, int orden, bool habilitada)>();
-                if (S_fp1.Any()) rondas.Add(("Fase Previa 1", 1, true));
-                rondas.Add(("Fase Previa 2", 2, !S_fp1.Any()));
+                if (equiposCRand.Any()) rondas.Add(("Fase Previa 0", 0, true));
+                if (S_fp1.Any()) rondas.Add(("Fase Previa 1", 1, !equiposCRand.Any()));
+                rondas.Add(("Fase Previa 2", 2, !S_fp1.Any() && !equiposCRand.Any()));
                 rondas.Add(("Octavos de Final", 3, false));
                 rondas.Add(("Cuartos de Final", 4, false));
                 rondas.Add(("Semifinales",      5, false));
@@ -1091,6 +1109,14 @@ namespace TorneoAmigos.Data
                     cmd.Parameters.AddWithValue("@O", orden);
                     cmd.Parameters.AddWithValue("@H", habilitada);
                     rondaIds[nombre] = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // ── FASE PREVIA 0: Primera C vs peores de B ─────────────
+                if (equiposCRand.Any() && rondaIds.ContainsKey("Fase Previa 0"))
+                {
+                    var S_fp0_rand = S_reservados_fp0.OrderBy(_ => rng.Next()).ToList();
+                    for (int i = 0; i < equiposCRand.Count && i < S_fp0_rand.Count; i++)
+                        InsertarPartidoCopa(conn, tx, rondaIds["Fase Previa 0"], copaId, S_fp0_rand[i], equiposCRand[i], i);
                 }
 
                 // ── FASE PREVIA 1: peores de S entre sí ─────────────────────
@@ -1268,11 +1294,12 @@ namespace TorneoAmigos.Data
                     {
                         // Para FP1 → FP2: buscar el primer slot completamente vacío (local=NULL)
                         // Para otras rondas: usar posicion/2
+                        bool esFP0 = nombreRonda?.Contains("Fase Previa 0") == true;
                         bool esFP1 = nombreRonda?.Contains("Fase Previa 1") == true;
 
-                        if (esFP1)
+                        if (esFP0 || esFP1)
                         {
-                            // Buscar primer partido en FP2 donde local_id IS NULL
+                            // Buscar primer partido en siguiente ronda donde local_id IS NULL
                             using var cmdAdv = new NpgsqlCommand(@"
                                 UPDATE copa_partidos
                                 SET equipo_local_id = @G

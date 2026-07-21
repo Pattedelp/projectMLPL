@@ -182,6 +182,54 @@ namespace TorneoAmigos.Data
             return cmd.ExecuteNonQuery() > 0;
         }
 
+        public List<(string Division, List<PartidoPendienteDto> Partidos)> GetPartidosPendientesParaCopiar()
+        {
+            var resultado = new List<(string, List<PartidoPendienteDto>)>();
+            var divisiones = new[] { (1, "🏆 Primera División"), (2, "🥈 Primera Nacional"), (3, "🏟️ Primera C Nacional") };
+
+            foreach (var (divId, nombre) in divisiones)
+            {
+                var lista = new List<PartidoPendienteDto>();
+                const string sql = @"
+                    SELECT el.nombre, COALESCE(el.pais_code,''), ev.nombre, COALESCE(ev.pais_code,'')
+                    FROM partidos p
+                    JOIN equipos el ON p.equipolocalid = el.id
+                    JOIN equipos ev ON p.equipovisitanteid = ev.id
+                    JOIN fechas f ON p.fechaid = f.id
+                    WHERE p.divisionid = @D AND p.jugado = false AND f.habilitada = true
+                      AND COALESCE(p.tipo_partido,'regular') = 'regular'
+                    ORDER BY f.numero, p.id";
+                using var conn = GetConnection();
+                using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@D", divId);
+                conn.Open();
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    var flagL = r.GetString(1);
+                    var flagV = r.GetString(3);
+                    lista.Add(new PartidoPendienteDto
+                    {
+                        NombreLocal     = r.GetString(0),
+                        FlagLocal       = FlagEmoji(flagL),
+                        NombreVisitante = r.GetString(2),
+                        FlagVisitante   = FlagEmoji(flagV)
+                    });
+                }
+                if (lista.Any()) resultado.Add((nombre, lista));
+            }
+            return resultado;
+        }
+
+        private static string FlagEmoji(string code)
+        {
+            if (string.IsNullOrEmpty(code)) return "🏴";
+            if (code == "retired") return "✝️";
+            try {
+                return string.Concat(code.ToUpper().Select(c => char.ConvertFromUtf32(c + 0x1F1A5)));
+            } catch { return "🏴"; }
+        }
+
         // ── HEAD TO HEAD ─────────────────────────
         public HeadToHeadViewModel? GetHeadToHead(int equipoAId, int equipoBId)
         {
@@ -588,4 +636,12 @@ namespace TorneoAmigos.Data
             }
         };
     }
+}
+
+public class PartidoPendienteDto
+{
+    public string NombreLocal { get; set; } = "";
+    public string FlagLocal { get; set; } = "";
+    public string NombreVisitante { get; set; } = "";
+    public string FlagVisitante { get; set; } = "";
 }

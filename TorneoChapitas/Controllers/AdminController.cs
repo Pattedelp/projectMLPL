@@ -380,7 +380,8 @@ namespace TorneoAmigos.Controllers
 
             try
             {
-                _tempRepo.SortearCopaArgentina(temporada.Id, equiposPrimera, equiposBOrdenados, equiposNuevos);
+                var equiposC = dto?.EquiposC ?? _repo.GetEquiposByDivision(3).Select(e => e.Id).ToList();
+                _tempRepo.SortearCopaArgentina(temporada.Id, equiposPrimera, equiposBOrdenados, equiposNuevos, equiposC);
                 return Json(new { ok = true });
             }
             catch (Exception ex) { return Json(new { ok = false, msg = ex.Message }); }
@@ -429,7 +430,30 @@ namespace TorneoAmigos.Controllers
         }
 
 
-        // ── PARTIDOS ESPECIALES ─────────────────────────
+        // ── PARTIDOS PENDIENTES (COPIAR AL PORTAPAPELES) ────
+        [HttpGet]
+        public IActionResult GetPartidosPendientes()
+        {
+            var temporada = _tempRepo.GetTemporadaActiva();
+            if (temporada == null) return Json(new { texto = "No hay temporada activa." });
+
+            var pendientes = _repo.GetPartidosPendientesParaCopiar();
+            if (!pendientes.Any()) return Json(new { texto = "✅ Todos los partidos están jugados." });
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"⚽ *Partidos pendientes - {temporada.Nombre}*");
+            sb.AppendLine();
+            foreach (var (division, lista) in pendientes)
+            {
+                sb.AppendLine($"*{division}*");
+                foreach (var p in lista)
+                    sb.AppendLine($"{p.FlagLocal} {p.NombreLocal} vs {p.FlagVisitante} {p.NombreVisitante}");
+                sb.AppendLine();
+            }
+            return Json(new { texto = sb.ToString().Trim() });
+        }
+
+
         [HttpPost]
         public IActionResult CargarPartidoEspecial([FromBody] PartidoEspecialDto dto)
         {
@@ -587,6 +611,7 @@ namespace TorneoAmigos.Controllers
     {
         public List<int>? EquiposPrimera { get; set; }
         public List<int>? EquiposB { get; set; }
+        public List<int>? EquiposC { get; set; }
     }
 
     public class SortearSupercopaDto

@@ -519,46 +519,6 @@ else
     </div>
 </div>
 
-<!-- PARTIDOS ESPECIALES -->
-<div class="admin-section">
-    <h2 class="admin-section-title">⚡ Partidos Especiales</h2>
-    <p style="font-size:13px;color:var(--color-muted);margin-bottom:16px;">
-        Cargá partidos de desempate, triangulares u otros encuentros fuera del fixture. Se guardan en el historial y cuentan en el mano a mano.
-    </p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Local</label>
-            <select id="pe-local" class="form-control" style="font-size:13px;">
-                <option value="0">-- Elegí equipo --</option>
-                @foreach (var e in (List<Equipo>)ViewBag.EquiposTodos)
-                { <option value="@e.Id">@e.Nombre</option> }
-            </select>
-        </div>
-        <div>
-            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Visitante</label>
-            <select id="pe-visitante" class="form-control" style="font-size:13px;">
-                <option value="0">-- Elegí equipo --</option>
-                @foreach (var e in (List<Equipo>)ViewBag.EquiposTodos)
-                { <option value="@e.Id">@e.Nombre</option> }
-            </select>
-        </div>
-        <div>
-            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Goles Local</label>
-            <input type="number" id="pe-goles-local" class="form-control" value="0" min="0" max="20" style="font-size:13px;" />
-        </div>
-        <div>
-            <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Goles Visitante</label>
-            <input type="number" id="pe-goles-visitante" class="form-control" value="0" min="0" max="20" style="font-size:13px;" />
-        </div>
-    </div>
-    <div style="margin-bottom:12px;">
-        <label style="font-size:11px;color:var(--color-muted);display:block;margin-bottom:4px;">Descripción del partido (ej: "Desempate T19", "Triangular")</label>
-        <input type="text" id="pe-torneo" class="form-control" placeholder="ej: Desempate T19" style="font-size:13px;" />
-    </div>
-    <button onclick="cargarPartidoEspecial()" class="btn-primary">Guardar partido</button>
-    <div id="pe-msg" style="margin-top:8px;font-size:13px;"></div>
-</div>
-
 <!-- ENCUESTAS -->
 <div class="admin-section">
     <h2 class="admin-section-title">🗳️ Encuestas</h2>
@@ -1032,6 +992,21 @@ async function confirmarFinalizar() {
     if (d.ok) { alert('✅ Temporada finalizada correctamente.'); location.reload(); }
     else alert('Error: ' + d.msg);
 }
+async function copiarPendientes() {
+    const msg = document.getElementById('pendientes-msg');
+    msg.textContent = 'Cargando...';
+    try {
+        const r = await fetch('/Admin/GetPartidosPendientes');
+        const d = await r.json();
+        await navigator.clipboard.writeText(d.texto);
+        msg.style.color = 'var(--color-green)';
+        msg.textContent = '✅ ¡Copiado al portapapeles!';
+    } catch {
+        msg.style.color = 'var(--color-red)';
+        msg.textContent = '❌ Error al copiar.';
+    }
+}
+
 async function cargarPartidoEspecial() {
     const localId    = parseInt(document.getElementById('pe-local').value);
     const visitanteId = parseInt(document.getElementById('pe-visitante').value);

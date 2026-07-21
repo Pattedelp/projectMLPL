@@ -519,6 +519,16 @@ else
     </div>
 </div>
 
+<!-- COPIAR PARTIDOS PENDIENTES -->
+<div class="admin-section">
+    <h2 class="admin-section-title">📋 Partidos Pendientes</h2>
+    <p style="font-size:13px;color:var(--color-muted);margin-bottom:12px;">
+        Copiá al portapapeles los partidos sin resultado para compartir por WhatsApp.
+    </p>
+    <button onclick="copiarPendientes()" class="btn-primary">📋 Copiar partidos pendientes</button>
+    <div id="pendientes-msg" style="margin-top:8px;font-size:13px;"></div>
+</div>
+
 <!-- ENCUESTAS -->
 <div class="admin-section">
     <h2 class="admin-section-title">🗳️ Encuestas</h2>
@@ -633,6 +643,20 @@ else
 .toggle-switch.on .toggle-knob { left: 25px; }
 </style>
 <script>
+async function copiarPendientes() {
+    const msg = document.getElementById('pendientes-msg');
+    msg.textContent = 'Cargando...';
+    try {
+        const r = await fetch('/Admin/GetPartidosPendientes');
+        const d = await r.json();
+        await navigator.clipboard.writeText(d.texto);
+        msg.style.color = 'var(--color-green)';
+        msg.textContent = '✅ ¡Copiado al portapapeles!';
+    } catch {
+        msg.style.color = 'var(--color-red)';
+        msg.textContent = '❌ Error al copiar.';
+    }
+}
 // ── ENCUESTA ────────────────────────────────────────
 function agregarOpcion() {
     const list = document.getElementById('enc-opciones-list');

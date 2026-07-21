@@ -319,6 +319,7 @@ namespace TorneoAmigos.Controllers
             ViewBag.ActivePage = "admin";
             var todos = _repo.GetEquiposByDivision(1)
                 .Concat(_repo.GetEquiposByDivision(2))
+                .Concat(_repo.GetEquiposByDivision(3))
                 .Select(e => new EquipoCheckbox
                 {
                     Id = e.Id, Nombre = e.Nombre, FlagCode = e.FlagCode,

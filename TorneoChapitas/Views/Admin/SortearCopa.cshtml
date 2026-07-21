@@ -4,6 +4,8 @@
     ViewBag.ActivePage = "admin";
     var primera = Model.Where(e => e.DivisionId == 1).ToList();
     var b       = Model.Where(e => e.DivisionId == 2).ToList();
+    var equiposC = Model.Where(e => e.DivisionId == 3).ToList();
+bool hayC = equiposC.Any();
 }
 
 <div class="page-hero">

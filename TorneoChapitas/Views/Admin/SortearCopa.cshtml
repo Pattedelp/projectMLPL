@@ -66,6 +66,25 @@ bool hayC = equiposC.Any();
             </label>
         }
     </div>
+@if (hayC)
+{
+    <h3 style="font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:#7c3aed;margin-bottom:12px;">
+        🏟️ PRIMERA C NACIONAL (@equiposC.Count equipos)
+    </h3>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;">
+        @foreach (var e in equiposC)
+        {
+            <label style="display:flex;align-items:center;gap:8px;background:var(--color-bg3);border:1px solid var(--color-border);border-radius:8px;padding:10px 14px;cursor:pointer;font-size:13px;">
+                <input type="checkbox" class="check-c" value="@e.Id" checked style="accent-color:#7c3aed;width:16px;height:16px;" />
+                @if (!string.IsNullOrEmpty(e.FlagCode) && e.FlagCode != "retired")
+                {
+                    <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" style="width:20px;height:15px;border-radius:2px;" alt="" onerror="this.style.display='none'" />
+                }
+                @e.Nombre
+            </label>
+        }
+    </div>
+}
 
     <button class="btn-primary" onclick="confirmarSorteo()">🎲 Sortear Copa Argentina</button>
 </div>
@@ -80,15 +99,19 @@ document.querySelectorAll('.check-participante').forEach(c => {
 });
 
 async function confirmarSorteo() {
-    const primera = [...document.querySelectorAll('.check-primera:checked')].map(c => parseInt(c.value));
-    const b       = [...document.querySelectorAll('.check-b:checked')].map(c => parseInt(c.value));
+    const primera  = [...document.querySelectorAll('.check-primera:checked')].map(c => parseInt(c.value));
+    const b        = [...document.querySelectorAll('.check-b:checked')].map(c => parseInt(c.value));
+    const equiposC = [...document.querySelectorAll('.check-c:checked')].map(c => parseInt(c.value));
     if (primera.length < 1 || b.length < 1) { alert('Necesitás al menos 1 equipo de cada división.'); return; }
-    if (!confirm(`¿Sortear la Copa Argentina con ${primera.length} de Primera y ${b.length} de la B?`)) return;
+    const msg = equiposC.length > 0
+        ? `${primera.length} de Primera, ${b.length} de la B y ${equiposC.length} de la C`
+        : `${primera.length} de Primera y ${b.length} de la B`;
+    if (!confirm(`¿Sortear la Copa Argentina con ${msg}?`)) return;
 
     const r = await fetch('/Admin/SortearCopaArgentina', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ equiposPrimera: primera, equiposB: b })
+        body: JSON.stringify({ equiposPrimera: primera, equiposB: b, equiposC: equiposC })
     });
     const d = await r.json();
     if (d.ok) { alert('¡Copa Argentina sorteada!'); location.href = '/Copas/CopaArgentina'; }

@@ -17,28 +17,23 @@
 
 <!-- TABS -->
 <div style="display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;">
-    <button onclick="showTab('palmares')" id="tab-palmares" class="tab-btn active">🏆 Palmarés</button>
-    <button onclick="showTab('alltime')" id="tab-alltime" class="tab-btn">📊 Tabla Histórica</button>
+    <button onclick="showTab('palmares')"    id="tab-palmares"    class="tab-btn active">🏆 Palmarés</button>
+    <button onclick="showTab('alltime')"     id="tab-alltime"     class="tab-btn">📊 Tabla Histórica</button>
+    <button onclick="showTab('historiales')" id="tab-historiales" class="tab-btn">⚔️ Historiales Completos</button>
 </div>
 
 <!-- ============ PALMARÉS ============ -->
 <div id="section-palmares">
-
 @if (!Model.Palmares.Equipos.Any())
 {
     <div style="text-align:center;padding:60px 24px;">
         <div style="font-size:48px;margin-bottom:16px;">🏆</div>
-        <h3 style="font-family:var(--font-heading);color:var(--color-gold);letter-spacing:2px;">
-            AÚN NO HAY TÍTULOS
-        </h3>
-        <p style="color:var(--color-muted);font-size:14px;margin-top:8px;">
-            Los títulos se registran al finalizar cada torneo o copa.
-        </p>
+        <h3 style="font-family:var(--font-heading);color:var(--color-gold);letter-spacing:2px;">AÚN NO HAY TÍTULOS</h3>
+        <p style="color:var(--color-muted);font-size:14px;margin-top:8px;">Los títulos se registran al finalizar cada torneo o copa.</p>
     </div>
 }
 else
 {
-    <!-- TABLA GENERAL -->
     <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
         🏆 Tabla de Títulos
     </h2>
@@ -46,8 +41,7 @@ else
         <table class="tabla-posiciones">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Jugador</th>
+                    <th>#</th><th>Jugador</th>
                     <th title="Total títulos">Total</th>
                     <th title="Campeonatos de Liga">🏆 Liga</th>
                     <th title="Copa Argentina">🥇 Copa Arg.</th>
@@ -64,29 +58,18 @@ else
                     <tr style="cursor:pointer;" onclick="toggleDetalle('@e.NombreEquipo.ToLower().Replace(" ","_")')">
                         <td class="col-pos">@pos</td>
                         <td class="col-equipo">
-                            @if (e.FlagCode == "retired")
-                            {
-                                <span style="font-size:14px;margin-right:6px;color:var(--color-muted);" title="Jugador retirado">✝</span>
-                            }
-                            else if (!string.IsNullOrEmpty(e.FlagCode))
-                            {
-                                <img src="https://flagcdn.com/20x15/@(e.FlagCode).png"
-                                     class="flag-img" alt="" onerror="this.style.display='none'" />
-                            }
+                            @if (e.FlagCode == "retired") { <span style="font-size:14px;margin-right:6px;color:var(--color-muted);" title="Jugador retirado">✝</span> }
+                            else if (!string.IsNullOrEmpty(e.FlagCode)) { <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
                             <strong>@e.NombreEquipo</strong>
-                            @if (e.FlagCode == "retired")
-                            {
-                                <span style="font-size:11px;color:var(--color-muted);margin-left:6px;">retirado</span>
-                            }
+                            @if (e.FlagCode == "retired") { <span style="font-size:11px;color:var(--color-muted);margin-left:6px;">retirado</span> }
                         </td>
                         <td class="col-pts">@e.TotalTitulos</td>
                         <td class="col-num">@(e.CampeonatosLiga > 0 ? e.CampeonatosLiga.ToString() : "-")</td>
-                        <td class="col-num">@(e.CopaArgentina > 0 ? e.CopaArgentina.ToString() : "-")</td>
-                        <td class="col-num">@(e.Supercopa > 0 ? e.Supercopa.ToString() : "-")</td>
+                        <td class="col-num">@(e.CopaArgentina  > 0 ? e.CopaArgentina.ToString()  : "-")</td>
+                        <td class="col-num">@(e.Supercopa      > 0 ? e.Supercopa.ToString()      : "-")</td>
                         <td class="col-num">@(otros > 0 ? otros.ToString() : "-")</td>
                         <td style="color:var(--color-muted);font-size:12px;">ver ▾</td>
                     </tr>
-                    <!-- Fila de detalle expandible -->
                     <tr id="detalle-@e.NombreEquipo.ToLower().Replace(" ","_")" style="display:none;">
                         <td colspan="8" style="padding:0;background:var(--color-bg3);">
                             <div style="padding:16px 24px;">
@@ -94,13 +77,13 @@ else
                                     @foreach (var t in e.Titulos.OrderBy(x => x.TemporadaNombre))
                                     {
                                         var (icono, color) = t.TipoTitulo switch {
-                                            "campeon_torneo"     => ("🏆", "#f0c040"),
-                                            "campeon_copa"       => ("🥇", "#c0c0c0"),
-                                            "campeon_supercopa"  => ("⭐", "#3a82c8"),
-                                            "campeon_primera_b"  => ("🥈", "#8aabcc"),
-                                            "campeon_primera_c"  => ("🎖", "#8aabcc"),
-                                            "campeon_especial"   => ("🎪", "#9b59b6"),
-                                            _                    => ("🏅", "#8aabcc")
+                                            "campeon_torneo"    => ("🏆","#f0c040"),
+                                            "campeon_copa"      => ("🥇","#c0c0c0"),
+                                            "campeon_supercopa" => ("⭐","#3a82c8"),
+                                            "campeon_primera_b" => ("🥈","#8aabcc"),
+                                            "campeon_primera_c" => ("🎖","#8aabcc"),
+                                            "campeon_especial"  => ("🎪","#9b59b6"),
+                                            _                   => ("🏅","#8aabcc")
                                         };
                                         <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:8px;min-width:200px;">
                                             <span style="font-size:18px;">@icono</span>
@@ -120,7 +103,6 @@ else
         </table>
     </div>
 
-    <!-- ÚLTIMOS TÍTULOS -->
     @if (Model.Palmares.UltimosTitulos.Any())
     {
         <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
@@ -140,15 +122,8 @@ else
                     <span style="font-size:22px;flex-shrink:0;">@icono</span>
                     <div>
                         <div style="font-size:14px;font-weight:500;color:var(--color-text);display:flex;align-items:center;gap:8px;">
-                            @if (t.FlagCode == "retired")
-                            {
-                                <span style="font-size:13px;color:var(--color-muted);">✝</span>
-                            }
-                            else if (!string.IsNullOrEmpty(t.FlagCode))
-                            {
-                                <img src="https://flagcdn.com/16x12/@(t.FlagCode).png"
-                                     style="border-radius:1px;" alt="" onerror="this.style.display='none'" />
-                            }
+                            @if (t.FlagCode == "retired") { <span style="font-size:13px;color:var(--color-muted);">✝</span> }
+                            else if (!string.IsNullOrEmpty(t.FlagCode)) { <img src="https://flagcdn.com/16x12/@(t.FlagCode).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
                             @t.NombreEquipo
                         </div>
                         <div style="font-size:12px;color:var(--color-muted);">@t.NombreTitulo · @t.TemporadaNombre</div>
@@ -158,8 +133,7 @@ else
         </div>
     }
 }
-
-</div><!-- /section-palmares -->
+</div>
 
 <!-- ============ RANKING ALL-TIME ============ -->
 <div id="section-alltime" style="display:none;">
@@ -169,7 +143,6 @@ else
     <p style="font-size:12px;color:var(--color-muted);margin-bottom:20px;">
         Acumula todos los partidos de liga de Primera División registrados en el sistema. Ordenado por victorias totales.
     </p>
-
     @if (!Model.RankingAllTime.Any())
     {
         <p style="color:var(--color-muted);font-size:13px;">No hay datos suficientes todavía.</p>
@@ -180,8 +153,7 @@ else
             <table class="tabla-posiciones">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Jugador</th>
+                        <th>#</th><th>Jugador</th>
                         <th title="Partidos Jugados">PJ</th>
                         <th title="Victorias">V</th>
                         <th title="Derrotas">D</th>
@@ -196,19 +168,13 @@ else
                     @{ int posAt = 1; }
                     @foreach (var entry in Model.RankingAllTime)
                     {
-                        var dg = entry.GolesAFavor - entry.GolesEnContra;
+                        var dg  = entry.GolesAFavor - entry.GolesEnContra;
                         var pct = entry.PartidosJugados > 0 ? (int)(100.0 * entry.Victorias / entry.PartidosJugados) : 0;
                         <tr style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@entry.EquipoId'">
                             <td class="col-pos">@posAt</td>
                             <td class="col-equipo">
-                                @if (entry.FlagCode == "retired")
-                                {
-                                    <span style="font-size:14px;margin-right:6px;color:var(--color-muted);">✝</span>
-                                }
-                                else if (!string.IsNullOrEmpty(entry.FlagCode))
-                                {
-                                    <img src="https://flagcdn.com/20x15/@(entry.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" />
-                                }
+                                @if (entry.FlagCode == "retired") { <span style="font-size:14px;margin-right:6px;color:var(--color-muted);">✝</span> }
+                                else if (!string.IsNullOrEmpty(entry.FlagCode)) { <img src="https://flagcdn.com/20x15/@(entry.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
                                 <strong>@entry.NombreEquipo</strong>
                             </td>
                             <td class="col-num">@entry.PartidosJugados</td>
@@ -216,9 +182,7 @@ else
                             <td class="col-num" style="color:var(--color-red);">@entry.Derrotas</td>
                             <td class="col-num">@entry.GolesAFavor</td>
                             <td class="col-num">@entry.GolesEnContra</td>
-                            <td class="col-num" style="color:@(dg >= 0 ? "var(--color-green)" : "var(--color-red)")">
-                                @(dg >= 0 ? "+" : "")@dg
-                            </td>
+                            <td class="col-num" style="color:@(dg >= 0 ? "var(--color-green)" : "var(--color-red)")">@(dg >= 0 ? "+" : "")@dg</td>
                             <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@entry.PuntosTotal</td>
                             <td class="col-num"><span style="font-size:12px;">@pct%</span></td>
                         </tr>
@@ -230,20 +194,114 @@ else
     }
 </div>
 
+<!-- ============ HISTORIALES COMPLETOS ============ -->
+<div id="section-historiales" style="display:none;">
+    <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
+        ⚔️ Historiales Completos
+    </h2>
+    <p style="font-size:12px;color:var(--color-muted);margin-bottom:20px;">
+        Historial de cada jugador contra todos sus rivales. Incluye liga, copas y partidos de la temporada en curso.
+    </p>
+
+    @if (!Model.Historiales.Any())
+    {
+        <p style="color:var(--color-muted);font-size:13px;">No hay datos todavía.</p>
+    }
+    else
+    {
+        <div style="margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label style="font-size:13px;color:var(--color-muted);">Ver historial de:</label>
+            <select id="sel-equipo-historial" class="form-control" style="max-width:220px;font-size:13px;" onchange="mostrarHistorial(this.value)">
+                <option value="">-- Elegí un jugador --</option>
+                @foreach (var h in Model.Historiales)
+                {
+                    <option value="@h.EquipoId">@h.NombreEquipo</option>
+                }
+            </select>
+        </div>
+
+        @foreach (var h in Model.Historiales)
+        {
+            <div id="historial-@h.EquipoId" class="historial-panel" style="display:none;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                    @if (!string.IsNullOrEmpty(h.FlagCode) && h.FlagCode != "retired")
+                    { <img src="https://flagcdn.com/32x24/@(h.FlagCode).png" style="border-radius:3px;" alt="" onerror="this.style.display='none'" /> }
+                    <span style="font-family:var(--font-heading);font-size:17px;color:var(--color-text);">@h.NombreEquipo</span>
+                    <span style="font-size:12px;color:var(--color-muted);">— @h.Rivales.Count rivales</span>
+                </div>
+                <div class="tabla-wrapper">
+                    <table class="tabla-posiciones">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;">Rival</th>
+                                <th title="Diferencia victorias-derrotas">DIF</th>
+                                <th title="Partidos Jugados">PJ</th>
+                                <th title="Partidos Ganados">PG</th>
+                                <th title="Partidos Empatados">PE</th>
+                                <th title="Partidos Perdidos">PP</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rv in h.Rivales.OrderByDescending(r => r.Dif).ThenByDescending(r => r.PJ))
+                            {
+                                var difColor = rv.Dif > 0 ? "var(--color-green)" : rv.Dif < 0 ? "var(--color-red)" : "var(--color-muted)";
+                                var difStr   = rv.Dif > 0 ? $"+{rv.Dif}" : rv.Dif.ToString();
+                                <tr style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@h.EquipoId?rivalId=@rv.RivalId'">
+                                    <td class="col-equipo">
+                                        @if (!string.IsNullOrEmpty(rv.FlagRival) && rv.FlagRival != "retired")
+                                        { <img src="https://flagcdn.com/20x15/@(rv.FlagRival).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
+                                        <strong>@rv.NombreRival</strong>
+                                    </td>
+                                    <td class="col-num">
+                                        <span style="background:@(rv.Dif > 0 ? "rgba(40,167,69,0.15)" : rv.Dif < 0 ? "rgba(220,53,69,0.15)" : "var(--color-bg3)");color:@difColor;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-heading);">
+                                            @difStr
+                                        </span>
+                                    </td>
+                                    <td class="col-num">@rv.PJ</td>
+                                    <td class="col-num" style="color:var(--color-green);font-weight:600;">@rv.PG</td>
+                                    <td class="col-num" style="color:var(--color-muted);">@rv.PE</td>
+                                    <td class="col-num" style="color:var(--color-red);">@rv.PP</td>
+                                    <td style="font-size:11px;color:var(--color-muted);">ver ⚔</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</div>
+
 @section Scripts {
 <script>
 function toggleDetalle(id) {
     const row = document.getElementById('detalle-' + id);
     if (!row) return;
-    const isOpen = row.style.display !== 'none';
-    row.style.display = isOpen ? 'none' : 'table-row';
+    row.style.display = row.style.display !== 'none' ? 'none' : 'table-row';
 }
 function showTab(tab) {
-    document.getElementById('section-palmares').style.display = tab === 'palmares' ? 'block' : 'none';
-    document.getElementById('section-alltime').style.display  = tab === 'alltime'  ? 'block' : 'none';
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.add('active');
+    ['palmares','alltime','historiales'].forEach(t => {
+        document.getElementById('section-' + t).style.display = t === tab ? 'block' : 'none';
+        document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    });
 }
+function mostrarHistorial(eqId) {
+    document.querySelectorAll('.historial-panel').forEach(p => p.style.display = 'none');
+    if (eqId) {
+        const panel = document.getElementById('historial-' + eqId);
+        if (panel) panel.style.display = 'block';
+    }
+}
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const eqId   = params.get('equipo');
+    if (eqId) {
+        showTab('historiales');
+        const sel = document.getElementById('sel-equipo-historial');
+        if (sel) { sel.value = eqId; mostrarHistorial(eqId); }
+    }
+})();
 </script>
 <style>
 .tab-btn { padding:10px 18px;border-radius:8px;background:var(--color-bg2);border:1px solid var(--color-border);color:var(--color-muted);font-size:13px;font-weight:500;cursor:pointer; }

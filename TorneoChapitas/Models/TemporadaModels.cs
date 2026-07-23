@@ -154,6 +154,7 @@ namespace TorneoAmigos.Models
     {
         public PalmaresViewModel Palmares { get; set; } = new();
         public List<RankingAllTimeEntry> RankingAllTime { get; set; } = new();
+        public List<HistorialEquipo> Historiales { get; set; } = new();
     }
 
     public class RankingAllTimeEntry
@@ -504,5 +505,29 @@ namespace TorneoAmigos.Models
         public RecordPaternidad? Paternidad { get; set; }
         public List<EvolucionPosicion> Evolucion { get; set; } = new();
         public string NombreDivision { get; set; } = "Primera División";
+    }
+}
+
+// ── HISTORIALES COMPLETOS ─────────────────────────────────────
+namespace TorneoAmigos.Models
+{
+    public class HistorialRival
+    {
+        public int RivalId { get; set; }
+        public string NombreRival { get; set; } = "";
+        public string FlagRival { get; set; } = "";
+        public int PJ { get; set; }
+        public int PG { get; set; }
+        public int PP { get; set; }
+        public int PE { get; set; }
+        public int Dif => PG - PP;
+    }
+
+    public class HistorialEquipo
+    {
+        public int EquipoId { get; set; }
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public List<HistorialRival> Rivales { get; set; } = new();
     }
 }

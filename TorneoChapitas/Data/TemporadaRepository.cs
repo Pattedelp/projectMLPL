@@ -284,7 +284,7 @@ namespace TorneoAmigos.Data
                      campeon_c_id, ascenso_c1_id, ascenso_c2_id,
                      descenso_b1_id, descenso_b2_id,
                      sin_descensos, updated_at)
-                VALUES (@T, @CC, @CS, @CP, @CB, @A1, @A2, @A3, @D1, @D2, @DP, @CampC, @Ac1, @Ac2, @Db1, @Db2, @SD, NOW())
+                VALUES (@T, @CC, @CS, @CP, @CB, @A1, @A2, @A3, @D1, @D2, @DP, @Cc, @Ac1, @Ac2, @Db1, @Db2, @SD, NOW())
                 ON CONFLICT (temporada_id) DO UPDATE SET
                     campeon_copa_id      = EXCLUDED.campeon_copa_id,
                     campeon_supercopa_id = EXCLUDED.campeon_supercopa_id,
@@ -316,7 +316,7 @@ namespace TorneoAmigos.Data
             cmd.Parameters.AddWithValue("@D1", (object?)cierre.Descenso1Id        ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@D2", (object?)cierre.Descenso2Id        ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@DP",  (object?)cierre.DescensoPromoId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@CampC",  (object?)cierre.CampeonCId       ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Cc",  (object?)cierre.CampeonCId       ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Ac1", (object?)cierre.AscensoCId1      ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Ac2", (object?)cierre.AscensoCId2      ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Db1", (object?)cierre.DescensoB1Id      ?? DBNull.Value);
@@ -2010,7 +2010,8 @@ namespace TorneoAmigos.Data
             };
         }
 
-        // ── RÉCORDS HISTÓRICOS ───────────────────────────────────    
+        // ── RÉCORDS HISTÓRICOS ───────────────────────────────────
+
         public RecordInvicto? GetInvictoMasLargo()
         {
             const string sql = @"
@@ -2073,6 +2074,59 @@ namespace TorneoAmigos.Data
             catch { return null; }
         }
 
+        public RecordPaternidad? GetMayorPaternidad(int minPartidos = 5)
+        {
+            const string sql = @"
+                WITH cruces AS (
+                    SELECT eh.equipo_local_id AS loc, eh.equipo_visitante_id AS vis,
+                           CASE WHEN eh.goles_local > eh.goles_visitante THEN eh.equipo_local_id
+                                ELSE eh.equipo_visitante_id END AS ganador
+                    FROM enfrentamientos_historicos eh
+                    UNION ALL
+                    SELECT p.equipolocalid, p.equipovisitanteid,
+                           CASE WHEN p.goleslocal > p.golesvisitante THEN p.equipolocalid
+                                ELSE p.equipovisitanteid END
+                    FROM partidos p WHERE p.jugado = true
+                ),
+                duelos AS (
+                    SELECT LEAST(loc,vis) AS e1, GREATEST(loc,vis) AS e2,
+                           CASE WHEN ganador = LEAST(loc,vis)    THEN 1 ELSE 0 END AS g1,
+                           CASE WHEN ganador = GREATEST(loc,vis) THEN 1 ELSE 0 END AS g2
+                    FROM cruces WHERE loc <> vis
+                )
+                SELECT d.e1, e1.nombre, COALESCE(e1.pais_code,''),
+                       d.e2, e2.nombre, COALESCE(e2.pais_code,''),
+                       SUM(d.g1) AS v1, SUM(d.g2) AS v2, COUNT(*) AS tot
+                FROM duelos d
+                JOIN equipos e1 ON e1.id = d.e1
+                JOIN equipos e2 ON e2.id = d.e2
+                GROUP BY d.e1, e1.nombre, e1.pais_code, d.e2, e2.nombre, e2.pais_code
+                HAVING COUNT(*) >= @Min
+                ORDER BY ABS(SUM(d.g1) - SUM(d.g2)) DESC, COUNT(*) DESC
+                FETCH FIRST 1 ROW ONLY";
+            try
+            {
+                using var conn = GetConnection();
+                using var cmd  = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@Min", minPartidos);
+                conn.Open();
+                using var r = cmd.ExecuteReader();
+                if (!r.Read()) return null;
+                int id1=r.GetInt32(0); string n1=r.GetString(1); string p1=r.GetString(2);
+                int id2=r.GetInt32(3); string n2=r.GetString(4); string p2=r.GetString(5);
+                int v1=Convert.ToInt32(r.GetInt64(6)), v2=Convert.ToInt32(r.GetInt64(7)), tot=Convert.ToInt32(r.GetInt64(8));
+                bool m = v1 >= v2;
+                string dn=m?n1:n2, dp=m?p1:p2, vn=m?n2:n1, vp=m?p2:p1;
+                return new RecordPaternidad {
+                    DominadorId=m?id1:id2, DominadorNombre=dn,
+                    DominadorFlag=!string.IsNullOrEmpty(dp)?dp:BanderaMap.GetCode(dn),
+                    VictimaId=m?id2:id1, VictimaNombre=vn,
+                    VictimaFlag=!string.IsNullOrEmpty(vp)?vp:BanderaMap.GetCode(vn),
+                    VictoriasDominador=m?v1:v2, VictoriasVictima=m?v2:v1, TotalPartidos=tot
+                };
+            }
+            catch { return null; }
+        }
 
         public List<EvolucionPosicion> GetEvolucionPosiciones(int divisionId)
         {
@@ -2132,5 +2186,100 @@ namespace TorneoAmigos.Data
             return lista;
         }
 
+        // ── HISTORIALES COMPLETOS ────────────────────────────────────
+
+        public List<HistorialEquipo> GetHistorialesCompletos()
+        {
+            const string sql = @"
+                WITH todos AS (
+                    SELECT equipo_local_id    AS eq, equipo_visitante_id AS rival,
+                           goles_local        AS gf, goles_visitante     AS gc
+                    FROM enfrentamientos_historicos
+                    UNION ALL
+                    SELECT equipo_visitante_id, equipo_local_id,
+                           goles_visitante,     goles_local
+                    FROM enfrentamientos_historicos
+                    UNION ALL
+                    SELECT equipolocalid,     equipovisitanteid,
+                           goleslocal,        golesvisitante
+                    FROM partidos WHERE jugado = true
+                    UNION ALL
+                    SELECT equipovisitanteid, equipolocalid,
+                           golesvisitante,    goleslocal
+                    FROM partidos WHERE jugado = true
+                )
+                SELECT
+                    eq    AS equipo_id,
+                    rival AS rival_id,
+                    COUNT(*)                                         AS pj,
+                    COUNT(*) FILTER (WHERE gf > gc)                 AS pg,
+                    COUNT(*) FILTER (WHERE gf < gc)                 AS pp,
+                    COUNT(*) FILTER (WHERE gf = gc)                 AS pe
+                FROM todos
+                WHERE eq <> rival
+                GROUP BY eq, rival
+                ORDER BY eq, (COUNT(*) FILTER (WHERE gf > gc) - COUNT(*) FILTER (WHERE gf < gc)) DESC, COUNT(*) DESC";
+
+            var dict = new Dictionary<int, HistorialEquipo>();
+            try
+            {
+                using var conn = GetConnection();
+                using var cmd  = new NpgsqlCommand(sql, conn);
+                conn.Open();
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    int eqId    = r.GetInt32(0);
+                    int rivalId = r.GetInt32(1);
+                    if (!dict.ContainsKey(eqId))
+                        dict[eqId] = new HistorialEquipo { EquipoId = eqId };
+                    dict[eqId].Rivales.Add(new HistorialRival
+                    {
+                        RivalId = rivalId,
+                        PJ = Convert.ToInt32(r.GetInt64(2)),
+                        PG = Convert.ToInt32(r.GetInt64(3)),
+                        PP = Convert.ToInt32(r.GetInt64(4)),
+                        PE = Convert.ToInt32(r.GetInt64(5))
+                    });
+                }
+            }
+            catch { return new List<HistorialEquipo>(); }
+
+            if (!dict.Any()) return new List<HistorialEquipo>();
+            var allIds = dict.Keys.Union(dict.Values.SelectMany(h => h.Rivales.Select(r2 => r2.RivalId))).Distinct().ToList();
+            var nombres = new Dictionary<int, (string nombre, string flag)>();
+            try
+            {
+                using var conn2 = GetConnection();
+                using var cmd2  = new NpgsqlCommand(
+                    "SELECT id, nombre, COALESCE(pais_code,'') FROM equipos WHERE id = ANY(@Ids)", conn2);
+                cmd2.Parameters.AddWithValue("@Ids", allIds.ToArray());
+                conn2.Open();
+                using var r2 = cmd2.ExecuteReader();
+                while (r2.Read())
+                {
+                    var nombre = r2.GetString(1); var pais = r2.GetString(2);
+                    nombres[r2.GetInt32(0)] = (nombre, !string.IsNullOrEmpty(pais) ? pais : BanderaMap.GetCode(nombre));
+                }
+            }
+            catch { }
+
+            var resultado = new List<HistorialEquipo>();
+            foreach (var (id, h) in dict.OrderBy(x => nombres.ContainsKey(x.Key) ? nombres[x.Key].nombre : ""))
+            {
+                if (!nombres.ContainsKey(id)) continue;
+                h.NombreEquipo = nombres[id].nombre;
+                h.FlagCode     = nombres[id].flag;
+                foreach (var rv in h.Rivales)
+                {
+                    if (!nombres.ContainsKey(rv.RivalId)) continue;
+                    rv.NombreRival = nombres[rv.RivalId].nombre;
+                    rv.FlagRival   = nombres[rv.RivalId].flag;
+                }
+                h.Rivales = h.Rivales.Where(rv => !string.IsNullOrEmpty(rv.NombreRival)).ToList();
+                resultado.Add(h);
+            }
+            return resultado;
+        }
     }
 }

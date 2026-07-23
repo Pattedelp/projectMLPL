@@ -2009,5 +2009,128 @@ namespace TorneoAmigos.Data
                 UltimosTitulos = titulos.Take(10).ToList()
             };
         }
+
+        // ── RÉCORDS HISTÓRICOS ───────────────────────────────────    
+        public RecordInvicto? GetInvictoMasLargo()
+        {
+            const string sql = @"
+                WITH todos AS (
+                    SELECT eh.equipo_local_id AS eq,
+                           CASE WHEN eh.goles_local > eh.goles_visitante THEN 1 ELSE 0 END AS gano,
+                           COALESCE(NULLIF(REGEXP_REPLACE(eh.temporada_nombre,'[^0-9]','','g'),'')::INT, 0) AS temp,
+                           COALESCE(eh.fecha_numero,0) AS fecha, eh.id AS ord
+                    FROM enfrentamientos_historicos eh WHERE eh.torneo = 'Liga'
+                    UNION ALL
+                    SELECT eh.equipo_visitante_id,
+                           CASE WHEN eh.goles_visitante > eh.goles_local THEN 1 ELSE 0 END,
+                           COALESCE(NULLIF(REGEXP_REPLACE(eh.temporada_nombre,'[^0-9]','','g'),'')::INT, 0),
+                           COALESCE(eh.fecha_numero,0), eh.id
+                    FROM enfrentamientos_historicos eh WHERE eh.torneo = 'Liga'
+                    UNION ALL
+                    SELECT p.equipolocalid,
+                           CASE WHEN p.goleslocal > p.golesvisitante THEN 1 ELSE 0 END,
+                           9999, f.numero, p.id
+                    FROM partidos p JOIN fechas f ON p.fechaid = f.id
+                    WHERE p.jugado = true AND COALESCE(p.tipo_partido,'regular') = 'regular'
+                    UNION ALL
+                    SELECT p.equipovisitanteid,
+                           CASE WHEN p.golesvisitante > p.goleslocal THEN 1 ELSE 0 END,
+                           9999, f.numero, p.id
+                    FROM partidos p JOIN fechas f ON p.fechaid = f.id
+                    WHERE p.jugado = true AND COALESCE(p.tipo_partido,'regular') = 'regular'
+                ),
+                ordenado AS (
+                    SELECT eq, gano,
+                           ROW_NUMBER() OVER (PARTITION BY eq ORDER BY temp, fecha, ord) AS rn
+                    FROM todos
+                ),
+                islas AS (
+                    SELECT eq, gano,
+                           rn - ROW_NUMBER() OVER (PARTITION BY eq, gano ORDER BY rn) AS grp
+                    FROM ordenado
+                )
+                SELECT i.eq, e.nombre, COALESCE(e.pais_code,''), COUNT(*) AS racha
+                FROM islas i JOIN equipos e ON e.id = i.eq
+                WHERE i.gano = 1
+                GROUP BY i.eq, i.grp, e.nombre, e.pais_code
+                ORDER BY racha DESC, e.nombre
+                FETCH FIRST 1 ROW ONLY";
+            try
+            {
+                using var conn = GetConnection();
+                using var cmd  = new NpgsqlCommand(sql, conn);
+                conn.Open();
+                using var r = cmd.ExecuteReader();
+                if (!r.Read()) return null;
+                var nombre = r.GetString(1); var pais = r.GetString(2);
+                return new RecordInvicto {
+                    EquipoId     = r.GetInt32(0),
+                    NombreEquipo = nombre,
+                    FlagCode     = !string.IsNullOrEmpty(pais) ? pais : BanderaMap.GetCode(nombre),
+                    Racha        = Convert.ToInt32(r.GetInt64(3))
+                };
+            }
+            catch { return null; }
+        }
+
+
+        public List<EvolucionPosicion> GetEvolucionPosiciones(int divisionId)
+        {
+            const string sql = @"
+                WITH pf AS (
+                    SELECT f.numero AS fecha, p.equipolocalid AS eq,
+                           CASE WHEN p.goleslocal>p.golesvisitante AND (p.goleslocal-p.golesvisitante)>=2 THEN 3
+                                WHEN p.goleslocal>p.golesvisitante THEN 2
+                                WHEN p.golesvisitante-p.goleslocal=1 THEN 1 ELSE 0 END AS pts,
+                           p.goleslocal-p.golesvisitante AS dif
+                    FROM partidos p JOIN fechas f ON p.fechaid=f.id
+                    WHERE p.divisionid=@D AND p.jugado=true AND COALESCE(p.tipo_partido,'regular')='regular'
+                    UNION ALL
+                    SELECT f.numero, p.equipovisitanteid,
+                           CASE WHEN p.golesvisitante>p.goleslocal AND (p.golesvisitante-p.goleslocal)>=2 THEN 3
+                                WHEN p.golesvisitante>p.goleslocal THEN 2
+                                WHEN p.goleslocal-p.golesvisitante=1 THEN 1 ELSE 0 END,
+                           p.golesvisitante-p.goleslocal
+                    FROM partidos p JOIN fechas f ON p.fechaid=f.id
+                    WHERE p.divisionid=@D AND p.jugado=true AND COALESCE(p.tipo_partido,'regular')='regular'
+                ),
+                fechas_list AS (SELECT DISTINCT fecha FROM pf),
+                equipos_list AS (SELECT DISTINCT eq FROM pf),
+                grid AS (SELECT fl.fecha, el.eq FROM fechas_list fl CROSS JOIN equipos_list el),
+                acum AS (
+                    SELECT g.fecha, g.eq,
+                           COALESCE(SUM(pf.pts) FILTER (WHERE pf.fecha<=g.fecha),0) AS pts,
+                           COALESCE(SUM(pf.dif) FILTER (WHERE pf.fecha<=g.fecha),0) AS dif
+                    FROM grid g LEFT JOIN pf ON pf.eq=g.eq
+                    GROUP BY g.fecha, g.eq
+                )
+                SELECT a.fecha, a.eq, e.nombre, COALESCE(e.pais_code,''), a.pts,
+                       RANK() OVER (PARTITION BY a.fecha ORDER BY a.pts DESC, a.dif DESC) AS pos
+                FROM acum a JOIN equipos e ON e.id=a.eq
+                ORDER BY a.fecha, pos";
+            var lista = new List<EvolucionPosicion>();
+            try
+            {
+                using var conn = GetConnection();
+                using var cmd  = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@D", divisionId);
+                conn.Open();
+                using var r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    var nombre=r.GetString(2); var pais=r.GetString(3);
+                    lista.Add(new EvolucionPosicion {
+                        Fecha=r.GetInt32(0), EquipoId=r.GetInt32(1),
+                        NombreEquipo=nombre,
+                        FlagCode=!string.IsNullOrEmpty(pais)?pais:BanderaMap.GetCode(nombre),
+                        Puntos=Convert.ToInt32(r.GetInt64(4)),
+                        Posicion=Convert.ToInt32(r.GetInt64(5))
+                    });
+                }
+            }
+            catch { return new List<EvolucionPosicion>(); }
+            return lista;
+        }
+
     }
 }

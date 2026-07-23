@@ -106,16 +106,17 @@
                 @* Bandas horizontales alternadas + números de posición *@
                 @for (int p = 1; p <= maxPos; p++)
                 {
-                    var yy = Y(p);
+                    var yy   = Y(p);
+                    var yyS  = yy.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                    var yyT  = (yy + 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
                     if (p % 2 == 1)
                     {
-                        var alto = maxPos > 1 ? (double)plotH / (maxPos - 1) : plotH;
-                        <rect x="@mL" y="@((yy - alto / 2).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
-                              width="@plotW" height="@alto.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                              fill="rgba(255,255,255,0.025)" />
+                        var alto  = maxPos > 1 ? (double)plotH / (maxPos - 1) : plotH;
+                        var altoS = alto.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                        var yyBand = (yy - alto / 2).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                        @:<rect x="@mL" y="@yyBand" width="@plotW" height="@altoS" fill="rgba(255,255,255,0.025)" />
                     }
-                    <text x="@(mL - 10)" y="@((yy + 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
-                          class="g-eje">@p</text>
+                    @:<text x="@(mL - 10)" y="@yyT" class="g-eje">@p</text>
                 }
 
                 @* Etiquetas de fecha en el eje X *@
@@ -124,8 +125,8 @@
                     bool mostrar = fechas.Count <= 10 || i == 0 || i == fechas.Count - 1 || (i + 1) % 2 == 0;
                     if (mostrar)
                     {
-                        <text x="@X(i).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                              y="@(H - 12)" class="g-eje g-eje-x">@fechas[i]</text>
+                        var xS = X(i).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                        @:<text x="@xS" y="@(H - 12)" class="g-eje g-eje-x">@fechas[i]</text>
                     }
                 }
 
@@ -143,21 +144,21 @@
                     }
                     if (pts.Count == 0) { continue; }
 
-                    var ultima = eq.Serie.Last();
-                    var yFin   = Y(ultima.Posicion);
-                    var xFin   = X(fechas.Count - 1);
+                    var ultima  = eq.Serie.Last();
+                    var yFin    = Y(ultima.Posicion);
+                    var xFin    = X(fechas.Count - 1);
+                    var xFinS   = xFin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                    var yFinS   = yFin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                    var xLabelS = (xFin + 10).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                    var yLabelS = (yFin + 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
                     <g class="g-serie" data-eq="@eq.Id">
                         <title>@eq.Nombre — @ultima.Posicion°, @eq.Puntos pts</title>
                         <polyline points="@string.Join(" ", pts)" fill="none"
                                   stroke="@color" stroke-width="2.2"
                                   stroke-linejoin="round" stroke-linecap="round" />
-                        <circle cx="@xFin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                                cy="@yFin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                                r="3.6" fill="@color" />
-                        <text x="@((xFin + 10).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
-                              y="@((yFin + 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
-                              class="g-label" fill="@color">@eq.Nombre</text>
+                        <circle cx="@xFinS" cy="@yFinS" r="3.6" fill="@color" />
+                        @:<text x="@xLabelS" y="@yLabelS" class="g-label" fill="@color">@eq.Nombre</text>
                     </g>
                 }
             </svg>

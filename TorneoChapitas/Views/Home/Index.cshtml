@@ -69,7 +69,7 @@
                             <a asp-controller="Noticias" asp-action="Detalle" asp-route-id="@n.Id"
                                class="carrusel-slide-inner">
                                 <div class="carrusel-img"
-                                     style="@(!string.IsNullOrEmpty(n.ImagenUrl) && n.ImagenUrl != "HAS_IMAGE" ? $"background-image:url(\'{n.ImagenUrl}\')" : "background-color:var(--color-bg3);display:flex;align-items:center;justify-content:center")">
+                                     style="@(!string.IsNullOrEmpty(n.ImagenUrl) && n.ImagenUrl != "HAS_IMAGE" ? $"background-image:url('{n.ImagenUrl}')" : "background-color:var(--color-bg3);display:flex;align-items:center;justify-content:center")">
                                     @if (string.IsNullOrEmpty(n.ImagenUrl) || n.ImagenUrl == "HAS_IMAGE") { <span style="font-size:28px;">📰</span> }
                                 </div>
                                 <div class="carrusel-body">
@@ -112,6 +112,12 @@
     max-width: 420px;
 }
 </style>
+
+<!-- RÉCORDS + GRÁFICO -->
+@if (ViewBag.HomeExtras != null)
+{
+    @await Html.PartialAsync("_HomeExtras", (TorneoAmigos.Models.HomeExtrasViewModel)ViewBag.HomeExtras)
+}
 
 @{
     var encuestas   = ViewBag.Encuestas   as List<Encuesta>          ?? new();
@@ -180,7 +186,6 @@ async function votar(encuestaId, opcionId) {
     const autor = document.getElementById('autor-' + encuestaId)?.value?.trim();
     const msg   = document.getElementById('msg-enc-' + encuestaId);
     if (!autor) { msg.style.display='block'; msg.style.color='var(--color-red)'; msg.textContent='Ingresá tu nombre para votar.'; return; }
-
     const r = await fetch('/Encuestas/Votar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,21 +202,13 @@ async function votar(encuestaId, opcionId) {
 (function() {
     const track = document.getElementById('carruselTrack');
     if (!track) return;
-
     const slides        = Array.from(track.querySelectorAll('.carrusel-slide'));
     const dotsContainer = document.getElementById('carruselDots');
     const totalSlides   = slides.length;
     let current  = 0;
     let autoTimer;
-
-    function getSV() {
-        return window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3;
-    }
-
-    function getMaxSlide() {
-        return Math.max(0, totalSlides - getSV());
-    }
-
+    function getSV() { return window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3; }
+    function getMaxSlide() { return Math.max(0, totalSlides - getSV()); }
     function buildDots() {
         const pages = Math.ceil(totalSlides / getSV());
         dotsContainer.innerHTML = '';
@@ -222,57 +219,34 @@ async function votar(encuestaId, opcionId) {
             dotsContainer.appendChild(d);
         }
     }
-
     function updateDots() {
-        const sv    = getSV();
-        const page  = Math.floor(current / sv);
-        document.querySelectorAll('.carrusel-dot').forEach((d, i) =>
-            d.classList.toggle('active', i === page));
+        const sv   = getSV();
+        const page = Math.floor(current / sv);
+        document.querySelectorAll('.carrusel-dot').forEach((d, i) => d.classList.toggle('active', i === page));
     }
-
     function goTo(idx) {
         const max = getMaxSlide();
-        // Clamp — no ir más allá del último slide
         current = Math.max(0, Math.min(idx, max));
-        // Cada slide ocupa 100/sv % del contenedor visible
-        const sv       = getSV();
-        const pctPerSlide = 100 / sv;
-        track.style.transform = `translateX(-${current * pctPerSlide}%)`;
+        const sv = getSV();
+        track.style.transform = `translateX(-${current * (100 / sv)}%)`;
         updateDots();
     }
-
     function next() { goTo(current + 1); }
     function prev() { goTo(current - 1); }
-
     function resetTimer() {
         clearInterval(autoTimer);
-        autoTimer = setInterval(() => {
-            if (current >= getMaxSlide()) goTo(0); else next();
-        }, 5000);
+        autoTimer = setInterval(() => { if (current >= getMaxSlide()) goTo(0); else next(); }, 5000);
     }
-
-    window.moverCarrusel = function(dir) {
-        if (dir > 0) next(); else prev();
-        resetTimer();
-    };
-
-    // Touch swipe
+    window.moverCarrusel = function(dir) { if (dir > 0) next(); else prev(); resetTimer(); };
     let txStart = 0;
     track.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
     track.addEventListener('touchend', e => {
         const diff = txStart - e.changedTouches[0].clientX;
-        if (Math.abs(diff) > 40) {
-            if (diff > 0) next(); else prev();
-            resetTimer();
-        }
+        if (Math.abs(diff) > 40) { if (diff > 0) next(); else prev(); resetTimer(); }
     });
-
     window.addEventListener('resize', () => { buildDots(); goTo(0); });
-
     buildDots();
     resetTimer();
 })();
-
-
 </script>
 }

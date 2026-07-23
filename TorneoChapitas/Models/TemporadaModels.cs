@@ -462,3 +462,47 @@ namespace TorneoAmigos.Models
         public int FechaNumero { get; set; } = 0; // 0 = sin fecha asignada
     }
 }
+
+// ── RÉCORDS HISTÓRICOS + EVOLUCIÓN ───────────────────────────
+namespace TorneoAmigos.Models
+{
+    public class RecordInvicto
+    {
+        public int EquipoId { get; set; }
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int Racha { get; set; }
+    }
+
+    public class RecordPaternidad
+    {
+        public int DominadorId { get; set; }
+        public string DominadorNombre { get; set; } = "";
+        public string DominadorFlag { get; set; } = "";
+        public int VictimaId { get; set; }
+        public string VictimaNombre { get; set; } = "";
+        public string VictimaFlag { get; set; } = "";
+        public int VictoriasDominador { get; set; }
+        public int VictoriasVictima { get; set; }
+        public int TotalPartidos { get; set; }
+        public int Diferencia => VictoriasDominador - VictoriasVictima;
+    }
+
+    public class EvolucionPosicion
+    {
+        public int Fecha { get; set; }
+        public int EquipoId { get; set; }
+        public string NombreEquipo { get; set; } = "";
+        public string FlagCode { get; set; } = "";
+        public int Posicion { get; set; }
+        public int Puntos { get; set; }
+    }
+
+    public class HomeExtrasViewModel
+    {
+        public RecordInvicto? Invicto { get; set; }
+        public RecordPaternidad? Paternidad { get; set; }
+        public List<EvolucionPosicion> Evolucion { get; set; } = new();
+        public string NombreDivision { get; set; } = "Primera División";
+    }
+}

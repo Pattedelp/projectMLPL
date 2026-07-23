@@ -1,0 +1,234 @@
+@model TorneoAmigos.Models.HomeExtrasViewModel
+@{
+    var inv  = Model.Invicto;
+    var pat  = Model.Paternidad;
+    var evo  = Model.Evolucion;
+
+    // ── Preparación del gráfico ──────────────────────────────
+    var fechas   = evo.Select(e => e.Fecha).Distinct().OrderBy(f => f).ToList();
+    var equipos  = evo.GroupBy(e => e.EquipoId)
+                      .Select(g => new {
+                          Id     = g.Key,
+                          Nombre = g.First().NombreEquipo,
+                          Flag   = g.First().FlagCode,
+                          Puntos = g.OrderBy(x => x.Fecha).Last().Puntos,
+                          Serie  = g.OrderBy(x => x.Fecha).ToList()
+                      })
+                      .OrderBy(e => e.Serie.Last().Posicion)
+                      .ToList();
+
+    bool hayGrafico = fechas.Count >= 2 && equipos.Count >= 2;
+
+    // Geometría del SVG
+    const int W = 860, H = 430;
+    const int mL = 34, mR = 150, mT = 18, mB = 34;
+    int plotW = W - mL - mR;
+    int plotH = H - mT - mB;
+    int maxPos = equipos.Count;
+
+    Func<int, double> X = i => fechas.Count <= 1
+        ? mL
+        : mL + (double)i / (fechas.Count - 1) * plotW;
+    Func<int, double> Y = pos => maxPos <= 1
+        ? mT + plotH / 2.0
+        : mT + (double)(pos - 1) / (maxPos - 1) * plotH;
+
+    var paleta = new[] {
+        "#f0c040", "#3a82c8", "#4caf82", "#e05555", "#b57edc", "#e58f3a",
+        "#4dc9c9", "#d4649b", "#8bc34a", "#9c8cf0", "#c9a227", "#5ea7d8",
+        "#e07a5f", "#66bb6a", "#ab7fd4", "#d99a3a"
+    };
+}
+
+<div class="extras-wrap">
+
+    @* ── RÉCORDS ─────────────────────────────────────── *@
+    @if (inv != null || pat != null)
+    {
+        <div class="extras-header">
+            <span class="extras-title">🏅 Récords históricos</span>
+        </div>
+
+        <div class="records-grid">
+            @if (inv != null)
+            {
+                <a href="/Equipos/Detalle/@inv.EquipoId" class="record-card">
+                    <div class="record-label">🔥 Racha ganadora más larga</div>
+                    <div class="record-main">
+                        @if (!string.IsNullOrEmpty(inv.FlagCode))
+                        {
+                            <img src="https://flagcdn.com/24x18/@(inv.FlagCode).png" alt="" onerror="this.style.display='none'" />
+                        }
+                        <span class="record-nombre">@inv.NombreEquipo</span>
+                    </div>
+                    <div class="record-valor">@inv.Racha <span>victorias al hilo</span></div>
+                </a>
+            }
+
+            @if (pat != null)
+            {
+                <div class="record-card">
+                    <div class="record-label">😈 Mayor paternidad</div>
+                    <div class="record-main record-duelo">
+                        <a href="/Equipos/Detalle/@pat.DominadorId" class="duelo-lado">
+                            @if (!string.IsNullOrEmpty(pat.DominadorFlag))
+                            {
+                                <img src="https://flagcdn.com/24x18/@(pat.DominadorFlag).png" alt="" onerror="this.style.display='none'" />
+                            }
+                            <span class="record-nombre">@pat.DominadorNombre</span>
+                        </a>
+                        <span class="duelo-marcador">@pat.VictoriasDominador&ndash;@pat.VictoriasVictima</span>
+                        <a href="/Equipos/Detalle/@pat.VictimaId" class="duelo-lado duelo-victima">
+                            @if (!string.IsNullOrEmpty(pat.VictimaFlag))
+                            {
+                                <img src="https://flagcdn.com/24x18/@(pat.VictimaFlag).png" alt="" onerror="this.style.display='none'" />
+                            }
+                            <span class="record-nombre">@pat.VictimaNombre</span>
+                        </a>
+                    </div>
+                    <div class="record-valor">+@pat.Diferencia <span>de ventaja en @pat.TotalPartidos cruces</span></div>
+                </div>
+            }
+        </div>
+    }
+
+    @* ── GRÁFICO DE EVOLUCIÓN ────────────────────────── *@
+    @if (hayGrafico)
+    {
+        <div class="extras-header" style="margin-top:26px;">
+            <span class="extras-title">📈 Evolución de posiciones · @Model.NombreDivision</span>
+        </div>
+
+        <div class="grafico-card">
+            <svg viewBox="0 0 @W @H" class="grafico-svg" role="img"
+                 aria-label="Evolución de las posiciones fecha a fecha">
+
+                @* Bandas horizontales alternadas + números de posición *@
+                @for (int p = 1; p <= maxPos; p++)
+                {
+                    var yy = Y(p);
+                    if (p % 2 == 1)
+                    {
+                        var alto = maxPos > 1 ? (double)plotH / (maxPos - 1) : plotH;
+                        <rect x="@mL" y="@((yy - alto / 2).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                              width="@plotW" height="@alto.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                              fill="rgba(255,255,255,0.025)" />
+                    }
+                    <text x="@(mL - 10)" y="@((yy + 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                          class="g-eje">@p</text>
+                }
+
+                @* Etiquetas de fecha en el eje X *@
+                @for (int i = 0; i < fechas.Count; i++)
+                {
+                    bool mostrar = fechas.Count <= 10 || i == 0 || i == fechas.Count - 1 || (i + 1) % 2 == 0;
+                    if (mostrar)
+                    {
+                        <text x="@X(i).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                              y="@(H - 12)" class="g-eje g-eje-x">@fechas[i]</text>
+                    }
+                }
+
+                @* Una línea por equipo *@
+                @for (int k = 0; k < equipos.Count; k++)
+                {
+                    var eq    = equipos[k];
+                    var color = paleta[k % paleta.Length];
+                    var pts   = new List<string>();
+                    foreach (var punto in eq.Serie)
+                    {
+                        int idx = fechas.IndexOf(punto.Fecha);
+                        if (idx < 0) continue;
+                        pts.Add($"{X(idx).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{Y(punto.Posicion).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+                    if (pts.Count == 0) { continue; }
+
+                    var ultima = eq.Serie.Last();
+                    var yFin   = Y(ultima.Posicion);
+                    var xFin   = X(fechas.Count - 1);
+
+                    <g class="g-serie" data-eq="@eq.Id">
+                        <title>@eq.Nombre — @ultima.Posicion°, @eq.Puntos pts</title>
+                        <polyline points="@string.Join(" ", pts)" fill="none"
+                                  stroke="@color" stroke-width="2.2"
+                                  stroke-linejoin="round" stroke-linecap="round" />
+                        <circle cx="@xFin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                cy="@yFin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                r="3.6" fill="@color" />
+                        <text x="@((xFin + 10).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                              y="@((yFin + 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                              class="g-label" fill="@color">@eq.Nombre</text>
+                    </g>
+                }
+            </svg>
+            <div class="grafico-pie">Posición fecha a fecha · pasá el mouse sobre una línea para resaltarla</div>
+        </div>
+    }
+</div>
+
+<style>
+.extras-wrap { margin: 28px 0 8px; }
+
+.extras-header { display:flex; align-items:center; margin-bottom:12px; }
+.extras-title {
+    font-family: var(--font-heading); font-size: 13px; letter-spacing: 2px;
+    color: var(--color-gold); text-transform: uppercase;
+}
+
+/* ── Récords ── */
+.records-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;
+}
+.record-card {
+    background: var(--color-bg2); border: 1px solid var(--color-border);
+    border-radius: 12px; padding: 16px 18px; text-decoration: none;
+    display: flex; flex-direction: column; gap: 8px; transition: border-color .18s;
+}
+a.record-card:hover { border-color: var(--color-gold); }
+.record-label {
+    font-size: 11px; letter-spacing: 1px; color: var(--color-muted); text-transform: uppercase;
+}
+.record-main { display: flex; align-items: center; gap: 8px; }
+.record-main img { width: 24px; height: 18px; border-radius: 2px; flex-shrink: 0; }
+.record-nombre { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.record-valor {
+    font-family: var(--font-heading); font-size: 22px; color: var(--color-gold); line-height: 1.1;
+}
+.record-valor span {
+    font-family: inherit; font-size: 11px; color: var(--color-muted);
+    letter-spacing: 1px; margin-left: 4px;
+}
+.record-duelo { justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.duelo-lado {
+    display: flex; align-items: center; gap: 6px; text-decoration: none; min-width: 0;
+}
+.duelo-lado .record-nombre { font-size: 14px; }
+.duelo-victima { opacity: .6; }
+.duelo-marcador {
+    font-family: var(--font-heading); font-size: 16px; color: var(--color-gold);
+    background: var(--color-bg3); border-radius: 6px; padding: 2px 10px; flex-shrink: 0;
+}
+
+/* ── Gráfico ── */
+.grafico-card {
+    background: var(--color-bg2); border: 1px solid var(--color-border);
+    border-radius: 12px; padding: 14px 10px 6px;
+}
+.grafico-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.g-eje { fill: var(--color-muted); font-size: 10px; text-anchor: end; }
+.g-eje-x { text-anchor: middle; }
+.g-label { font-size: 11px; font-weight: 600; dominant-baseline: middle; }
+.g-serie { transition: opacity .15s; cursor: pointer; }
+.grafico-svg:hover .g-serie { opacity: .28; }
+.grafico-svg .g-serie:hover { opacity: 1; }
+.grafico-svg .g-serie:hover polyline { stroke-width: 3.4; }
+.grafico-pie {
+    text-align: center; font-size: 11px; color: var(--color-muted); padding: 8px 0 4px;
+}
+
+@@media (max-width: 640px) {
+    .g-label { font-size: 13px; }
+    .g-eje { font-size: 12px; }
+    .grafico-pie { display: none; }
+}
+</style>

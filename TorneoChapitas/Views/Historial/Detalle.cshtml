@@ -126,8 +126,8 @@
         PartidosEspeciales(todosPartidos);
     }
 
-    void PartidosEspeciales(List<HistoricoPartido> partidos) {
-        var grupos = partidos.GroupBy(p => p.Torneo).OrderBy(g => g.Key).ToList();
+void PartidosEspeciales(List<HistoricoPartido> partidos) {
+        var grupos = partidos.Where(p => p.Torneo != "Liga").GroupBy(p => p.Torneo).OrderBy(g => g.Key).ToList();
         foreach (var grupo in grupos) {
             <div style="background:var(--color-bg2);border:1px solid rgba(255,200,0,0.3);border-radius:8px;overflow:hidden;margin-bottom:8px;">
                 <div style="background:rgba(255,200,0,0.08);padding:6px 14px;font-size:11px;letter-spacing:1px;color:var(--color-gold);text-transform:uppercase;">

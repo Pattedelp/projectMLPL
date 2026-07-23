@@ -40,8 +40,7 @@ namespace TorneoAmigos.Controllers
             // ── EXTRAS: récords históricos + evolución de posiciones ──
             ViewBag.HomeExtras = new HomeExtrasViewModel
             {
-                Invicto        = _tempRepo.GetInvictoMasLargo(),
-                Paternidad     = _tempRepo.GetMayorPaternidad(minPartidos: 5),
+                Invicto        = _tempRepo.GetInvictoMasLargo(),                
                 Evolucion      = _tempRepo.GetEvolucionPosiciones(1),
                 NombreDivision = vm.PrimeraDivision.Division?.Nombre ?? "Primera División"
             };

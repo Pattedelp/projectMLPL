@@ -1,235 +1,333 @@
 @model TorneoAmigos.Models.HomeExtrasViewModel
 @{
-    var inv  = Model.Invicto;
-    var pat  = Model.Paternidad;
-    var evo  = Model.Evolucion;
+    var inv = Model.Invicto;
+    var pat = Model.Paternidad;
+    var evo = Model.Evolucion;
 
-    // ── Preparación del gráfico ──────────────────────────────
-    var fechas   = evo.Select(e => e.Fecha).Distinct().OrderBy(f => f).ToList();
-    var equipos  = evo.GroupBy(e => e.EquipoId)
-                      .Select(g => new {
-                          Id     = g.Key,
-                          Nombre = g.First().NombreEquipo,
-                          Flag   = g.First().FlagCode,
-                          Puntos = g.OrderBy(x => x.Fecha).Last().Puntos,
-                          Serie  = g.OrderBy(x => x.Fecha).ToList()
-                      })
-                      .OrderBy(e => e.Serie.Last().Posicion)
-                      .ToList();
+    var fechas  = evo.Select(e => e.Fecha).Distinct().OrderBy(f => f).ToList();
+    var equipos = evo.GroupBy(e => e.EquipoId)
+                     .Select(g => new {
+                         Id     = g.Key,
+                         Nombre = g.First().NombreEquipo,
+                         Flag   = g.First().FlagCode,
+                         Puntos = g.OrderBy(x => x.Fecha).Last().Puntos,
+                         Pos    = g.OrderBy(x => x.Fecha).Last().Posicion,
+                         Serie  = g.OrderBy(x => x.Fecha).Select(x => new { x.Fecha, x.Posicion }).ToList()
+                     })
+                     .OrderBy(e => e.Pos)
+                     .ToList();
 
     bool hayGrafico = fechas.Count >= 2 && equipos.Count >= 2;
 
-    // Geometría del SVG
-    const int W = 860, H = 430;
-    const int mL = 34, mR = 150, mT = 18, mB = 34;
-    int plotW = W - mL - mR;
-    int plotH = H - mT - mB;
-    int maxPos = equipos.Count;
-
-    Func<int, double> X = i => fechas.Count <= 1
-        ? mL
-        : mL + (double)i / (fechas.Count - 1) * plotW;
-    Func<int, double> Y = pos => maxPos <= 1
-        ? mT + plotH / 2.0
-        : mT + (double)(pos - 1) / (maxPos - 1) * plotH;
-
     var paleta = new[] {
-        "#f0c040", "#3a82c8", "#4caf82", "#e05555", "#b57edc", "#e58f3a",
-        "#4dc9c9", "#d4649b", "#8bc34a", "#9c8cf0", "#c9a227", "#5ea7d8",
-        "#e07a5f", "#66bb6a", "#ab7fd4", "#d99a3a"
+        "#f0c040","#3a82c8","#4caf82","#e05555","#b57edc","#e58f3a",
+        "#4dc9c9","#d4649b","#8bc34a","#9c8cf0","#c9a227","#5ea7d8",
+        "#e07a5f","#66bb6a","#ab7fd4","#d99a3a"
     };
+
+    // Serializar datos para JS
+    var jsonFechas  = System.Text.Json.JsonSerializer.Serialize(fechas);
+    var jsonEquipos = System.Text.Json.JsonSerializer.Serialize(equipos.Select((e, k) => new {
+        id     = e.Id,
+        nombre = e.Nombre,
+        flag   = e.Flag,
+        color  = paleta[k % paleta.Length],
+        puntos = e.Puntos,
+        pos    = e.Pos,
+        serie  = e.Serie.Select(s => new { s.Fecha, s.Posicion })
+    }));
+    int maxPos = equipos.Count;
 }
 
 <div class="extras-wrap">
 
-    @* ── RÉCORDS ─────────────────────────────────────── *@
-    @if (inv != null || pat != null)
+    @* ── RÉCORDS ── *@
+    @if (inv != null)
     {
         <div class="extras-header">
             <span class="extras-title">🏅 Récords históricos</span>
         </div>
-
+    @if (inv != null)
+    {
         <div class="records-grid">
-            @if (inv != null)
-            {
-                <a href="/Equipos/Detalle/@inv.EquipoId" class="record-card">
-                    <div class="record-label">🔥 Racha ganadora más larga</div>
-                    <div class="record-main">
-                        @if (!string.IsNullOrEmpty(inv.FlagCode))
-                        {
-                            <img src="https://flagcdn.com/24x18/@(inv.FlagCode).png" alt="" onerror="this.style.display='none'" />
-                        }
-                        <span class="record-nombre">@inv.NombreEquipo</span>
-                    </div>
-                    <div class="record-valor">@inv.Racha <span>victorias al hilo</span></div>
-                </a>
-            }
-
-            @if (pat != null)
-            {
-                <div class="record-card">
-                    <div class="record-label">😈 Mayor paternidad</div>
-                    <div class="record-main record-duelo">
-                        <a href="/Equipos/Detalle/@pat.DominadorId" class="duelo-lado">
-                            @if (!string.IsNullOrEmpty(pat.DominadorFlag))
-                            {
-                                <img src="https://flagcdn.com/24x18/@(pat.DominadorFlag).png" alt="" onerror="this.style.display='none'" />
-                            }
-                            <span class="record-nombre">@pat.DominadorNombre</span>
-                        </a>
-                        <span class="duelo-marcador">@pat.VictoriasDominador&ndash;@pat.VictoriasVictima</span>
-                        <a href="/Equipos/Detalle/@pat.VictimaId" class="duelo-lado duelo-victima">
-                            @if (!string.IsNullOrEmpty(pat.VictimaFlag))
-                            {
-                                <img src="https://flagcdn.com/24x18/@(pat.VictimaFlag).png" alt="" onerror="this.style.display='none'" />
-                            }
-                            <span class="record-nombre">@pat.VictimaNombre</span>
-                        </a>
-                    </div>
-                    <div class="record-valor">+@pat.Diferencia <span>de ventaja en @pat.TotalPartidos cruces</span></div>
+            <a href="/Equipos/Detalle/@inv.EquipoId" class="record-card">
+                <div class="record-label">🔥 Racha ganadora más larga</div>
+                <div class="record-main">
+                    @if (!string.IsNullOrEmpty(inv.FlagCode))
+                    { <img src="https://flagcdn.com/24x18/@(inv.FlagCode).png" alt="" onerror="this.style.display='none'" /> }
+                    <span class="record-nombre">@inv.NombreEquipo</span>
                 </div>
-            }
+                <div class="record-valor">@inv.Racha <span>victorias al hilo</span></div>
+            </a>
         </div>
     }
+    }
 
-    @* ── GRÁFICO DE EVOLUCIÓN ────────────────────────── *@
+    @* ── GRÁFICO ── *@
     @if (hayGrafico)
     {
         <div class="extras-header" style="margin-top:26px;">
-            <span class="extras-title">📈 Evolución de posiciones · @Model.NombreDivision</span>
+            <span class="extras-title">📈 Evolución · @Model.NombreDivision</span>
         </div>
 
         <div class="grafico-card">
-            <svg viewBox="0 0 @W @H" class="grafico-svg" role="img"
-                 aria-label="Evolución de las posiciones fecha a fecha">
-
-                @* Bandas horizontales alternadas + números de posición *@
-                @for (int p = 1; p <= maxPos; p++)
-                {
-                    var yy   = Y(p);
-                    var yyS  = yy.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-                    var yyT  = (yy + 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-                    if (p % 2 == 1)
-                    {
-                        var alto  = maxPos > 1 ? (double)plotH / (maxPos - 1) : plotH;
-                        var altoS = alto.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-                        var yyBand = (yy - alto / 2).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-                        @:<rect x="@mL" y="@yyBand" width="@plotW" height="@altoS" fill="rgba(255,255,255,0.025)" />
-                    }
-                    @:<text x="@(mL - 10)" y="@yyT" class="g-eje">@p</text>
-                }
-
-                @* Etiquetas de fecha en el eje X *@
-                @for (int i = 0; i < fechas.Count; i++)
-                {
-                    bool mostrar = fechas.Count <= 10 || i == 0 || i == fechas.Count - 1 || (i + 1) % 2 == 0;
-                    if (mostrar)
-                    {
-                        var xS = X(i).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-                        @:<text x="@xS" y="@(H - 12)" class="g-eje g-eje-x">@fechas[i]</text>
-                    }
-                }
-
-                @* Una línea por equipo *@
+            <!-- Filtros por equipo -->
+            <div class="g-filtros" id="gFiltros">
+                <button class="g-chip g-chip-all active" onclick="filtrarGrafico(null, this)">
+                    Todos
+                </button>
                 @for (int k = 0; k < equipos.Count; k++)
                 {
                     var eq    = equipos[k];
                     var color = paleta[k % paleta.Length];
-                    var pts   = new List<string>();
-                    foreach (var punto in eq.Serie)
-                    {
-                        int idx = fechas.IndexOf(punto.Fecha);
-                        if (idx < 0) continue;
-                        pts.Add($"{X(idx).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{Y(punto.Posicion).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}");
-                    }
-                    if (pts.Count == 0) { continue; }
-
-                    var ultima  = eq.Serie.Last();
-                    var yFin    = Y(ultima.Posicion);
-                    var xFin    = X(fechas.Count - 1);
-                    var xFinS   = xFin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-                    var yFinS   = yFin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-                    var xLabelS = (xFin + 10).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-                    var yLabelS = (yFin + 4).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-
-                    <g class="g-serie" data-eq="@eq.Id">
-                        <title>@eq.Nombre — @ultima.Posicion°, @eq.Puntos pts</title>
-                        <polyline points="@string.Join(" ", pts)" fill="none"
-                                  stroke="@color" stroke-width="2.2"
-                                  stroke-linejoin="round" stroke-linecap="round" />
-                        <circle cx="@xFinS" cy="@yFinS" r="3.6" fill="@color" />
-                        :<text x="@xLabelS" y="@yLabelS" class="g-label" fill="@color">@eq.Nombre</text>
-                    </g>
+                    <button class="g-chip" onclick="filtrarGrafico(@eq.Id, this)"
+                            style="--chip-color:@color"
+                            data-eqid="@eq.Id">
+                        @if (!string.IsNullOrEmpty(eq.Flag))
+                        { <img src="https://flagcdn.com/20x15/@(eq.Flag).png" alt="" onerror="this.style.display='none'" /> }
+                        <span>@eq.Nombre</span>
+                    </button>
                 }
-            </svg>
-            <div class="grafico-pie">Posición fecha a fecha · pasá el mouse sobre una línea para resaltarla</div>
+            </div>
+
+            <!-- Canvas del gráfico -->
+            <div class="g-canvas-wrap">
+                <canvas id="gCanvas"></canvas>
+            </div>
+
+            <!-- Leyenda posición actual -->
+            <div class="g-leyenda" id="gLeyenda"></div>
         </div>
     }
 </div>
 
+@if (hayGrafico)
+{
+    <script>
+    (function() {
+        const FECHAS  = @Html.Raw(jsonFechas);
+        const EQUIPOS = @Html.Raw(jsonEquipos);
+        const MAX_POS = @maxPos;
+
+        const canvas  = document.getElementById('gCanvas');
+        const ctx     = canvas.getContext('2d');
+        let activoId  = null; // null = todos
+
+        // ── Filtro ──────────────────────────────────────────
+        window.filtrarGrafico = function(eqId, btn) {
+            activoId = eqId;
+            document.querySelectorAll('.g-chip').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            dibujar();
+            actualizarLeyenda();
+        };
+
+        // ── Resize ──────────────────────────────────────────
+        function resize() {
+            const wrap = canvas.parentElement;
+            const dpr  = window.devicePixelRatio || 1;
+            const w    = wrap.clientWidth;
+            const h    = Math.max(260, Math.min(420, w * 0.72));
+            canvas.width  = w * dpr;
+            canvas.height = h * dpr;
+            canvas.style.width  = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            dibujar();
+        }
+
+        // ── Layout del plot ──────────────────────────────────
+        function layout() {
+            const W = canvas.clientWidth;
+            const H = canvas.clientHeight;
+            const mL = 28, mR = 14, mT = 14, mB = 28;
+            return { W, H, mL, mR, mT, mB,
+                     plotW: W - mL - mR,
+                     plotH: H - mT - mB };
+        }
+
+        function xOf(fechaIdx, l) {
+            if (FECHAS.length <= 1) return l.mL;
+            return l.mL + (fechaIdx / (FECHAS.length - 1)) * l.plotW;
+        }
+        function yOf(pos, l) {
+            if (MAX_POS <= 1) return l.mT + l.plotH / 2;
+            return l.mT + ((pos - 1) / (MAX_POS - 1)) * l.plotH;
+        }
+
+        // ── Dibujo ──────────────────────────────────────────
+        function dibujar() {
+            const l = layout();
+            ctx.clearRect(0, 0, l.W, l.H);
+
+            // Fondo bandas
+            for (let p = 1; p <= MAX_POS; p++) {
+                if (p % 2 === 1) {
+                    const yTop = yOf(p === 1 ? 1 : p - 0.5, l);
+                    const yBot = yOf(p === MAX_POS ? MAX_POS : p + 0.5, l);
+                    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                    ctx.fillRect(l.mL, Math.min(yTop, l.mT), l.plotW, Math.abs(yBot - yTop) || l.plotH / MAX_POS);
+                }
+            }
+
+            // Eje Y — números de posición
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.font = '10px system-ui';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let p = 1; p <= MAX_POS; p++) {
+                ctx.fillText(p, l.mL - 4, yOf(p, l));
+            }
+
+            // Eje X — fechas
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.font = '10px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            const step = Math.max(1, Math.ceil(FECHAS.length / 8));
+            FECHAS.forEach((f, i) => {
+                if (i % step === 0 || i === FECHAS.length - 1)
+                    ctx.fillText('F' + f, xOf(i, l), l.mT + l.plotH + 4);
+            });
+
+            // Líneas
+            const eqsDibujar = activoId
+                ? EQUIPOS.filter(e => e.id === activoId)
+                : EQUIPOS;
+
+            EQUIPOS.forEach(eq => {
+                const activo = !activoId || eq.id === activoId;
+                ctx.globalAlpha = activo ? 1 : 0.08;
+                ctx.strokeStyle = eq.color;
+                ctx.lineWidth   = activo ? (activoId ? 3 : 2) : 1;
+                ctx.lineJoin    = 'round';
+                ctx.lineCap     = 'round';
+
+                ctx.beginPath();
+                let first = true;
+                eq.serie.forEach(s => {
+                    const fi  = FECHAS.indexOf(s.Fecha);
+                    if (fi < 0) return;
+                    const px = xOf(fi, l);
+                    const py = yOf(s.Posicion, l);
+                    if (first) { ctx.moveTo(px, py); first = false; }
+                    else ctx.lineTo(px, py);
+                });
+                ctx.stroke();
+
+                // Punto final
+                if (eq.serie.length > 0) {
+                    const last = eq.serie[eq.serie.length - 1];
+                    const fi   = FECHAS.indexOf(last.Fecha);
+                    if (fi >= 0) {
+                        const px = xOf(fi, l);
+                        const py = yOf(last.Posicion, l);
+                        ctx.beginPath();
+                        ctx.arc(px, py, activo ? 4 : 2, 0, Math.PI * 2);
+                        ctx.fillStyle = eq.color;
+                        ctx.fill();
+                    }
+                }
+            });
+
+            ctx.globalAlpha = 1;
+        }
+
+        // ── Leyenda dinámica ────────────────────────────────
+        function actualizarLeyenda() {
+            const ley  = document.getElementById('gLeyenda');
+            const lista = activoId ? EQUIPOS.filter(e => e.id === activoId) : EQUIPOS;
+            ley.innerHTML = lista.map(eq => `
+                <div class="g-ley-item">
+                    <span class="g-ley-dot" style="background:${eq.color}"></span>
+                    ${eq.flag ? `<img src="https://flagcdn.com/20x15/${eq.flag}.png" onerror="this.style.display='none'" />` : ''}
+                    <span class="g-ley-nombre">${eq.nombre}</span>
+                    <span class="g-ley-pos">${eq.pos}°</span>
+                    <span class="g-ley-pts">${eq.puntos} pts</span>
+                </div>
+            `).join('');
+        }
+
+        // ── Touch: tap en canvas resalta equipo ─────────────
+        canvas.addEventListener('click', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mx   = e.clientX - rect.left;
+            const my   = e.clientY - rect.top;
+            const l    = layout();
+            let closest = null, minDist = 30;
+
+            EQUIPOS.forEach(eq => {
+                eq.serie.forEach(s => {
+                    const fi = FECHAS.indexOf(s.Fecha);
+                    if (fi < 0) return;
+                    const px = xOf(fi, l), py = yOf(s.Posicion, l);
+                    const d  = Math.hypot(mx - px, my - py);
+                    if (d < minDist) { minDist = d; closest = eq; }
+                });
+            });
+
+            if (closest) {
+                const btn = document.querySelector(`.g-chip[data-eqid="${closest.id}"]`);
+                if (btn) filtrarGrafico(closest.id === activoId ? null : closest.id, btn.id === activoId ? document.querySelector('.g-chip-all') : btn);
+            }
+        });
+
+        // ── Init ────────────────────────────────────────────
+        window.addEventListener('resize', resize);
+        resize();
+        actualizarLeyenda();
+    })();
+    </script>
+}
+
 <style>
 .extras-wrap { margin: 28px 0 8px; }
-
 .extras-header { display:flex; align-items:center; margin-bottom:12px; }
-.extras-title {
-    font-family: var(--font-heading); font-size: 13px; letter-spacing: 2px;
-    color: var(--color-gold); text-transform: uppercase;
-}
+.extras-title { font-family:var(--font-heading); font-size:13px; letter-spacing:2px; color:var(--color-gold); text-transform:uppercase; }
 
-/* ── Récords ── */
-.records-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;
-}
-.record-card {
-    background: var(--color-bg2); border: 1px solid var(--color-border);
-    border-radius: 12px; padding: 16px 18px; text-decoration: none;
-    display: flex; flex-direction: column; gap: 8px; transition: border-color .18s;
-}
-a.record-card:hover { border-color: var(--color-gold); }
-.record-label {
-    font-size: 11px; letter-spacing: 1px; color: var(--color-muted); text-transform: uppercase;
-}
-.record-main { display: flex; align-items: center; gap: 8px; }
-.record-main img { width: 24px; height: 18px; border-radius: 2px; flex-shrink: 0; }
-.record-nombre { font-size: 15px; font-weight: 600; color: var(--color-text); }
-.record-valor {
-    font-family: var(--font-heading); font-size: 22px; color: var(--color-gold); line-height: 1.1;
-}
-.record-valor span {
-    font-family: inherit; font-size: 11px; color: var(--color-muted);
-    letter-spacing: 1px; margin-left: 4px;
-}
-.record-duelo { justify-content: space-between; flex-wrap: wrap; gap: 6px; }
-.duelo-lado {
-    display: flex; align-items: center; gap: 6px; text-decoration: none; min-width: 0;
-}
-.duelo-lado .record-nombre { font-size: 14px; }
-.duelo-victima { opacity: .6; }
-.duelo-marcador {
-    font-family: var(--font-heading); font-size: 16px; color: var(--color-gold);
-    background: var(--color-bg3); border-radius: 6px; padding: 2px 10px; flex-shrink: 0;
-}
+/* Récords */
+.records-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+.record-card { background:var(--color-bg2); border:1px solid var(--color-border); border-radius:12px; padding:16px 18px; text-decoration:none; display:flex; flex-direction:column; gap:8px; transition:border-color .18s; }
+a.record-card:hover { border-color:var(--color-gold); }
+.record-label { font-size:11px; letter-spacing:1px; color:var(--color-muted); text-transform:uppercase; }
+.record-main { display:flex; align-items:center; gap:8px; }
+.record-main img { width:24px; height:18px; border-radius:2px; flex-shrink:0; }
+.record-nombre { font-size:15px; font-weight:600; color:var(--color-text); }
+.record-valor { font-family:var(--font-heading); font-size:22px; color:var(--color-gold); line-height:1.1; }
+.record-valor span { font-size:11px; color:var(--color-muted); letter-spacing:1px; margin-left:4px; }
+.record-duelo { justify-content:space-between; flex-wrap:wrap; gap:6px; }
+.duelo-lado { display:flex; align-items:center; gap:6px; text-decoration:none; min-width:0; }
+.duelo-lado .record-nombre { font-size:14px; }
+.duelo-victima { opacity:.6; }
+.duelo-marcador { font-family:var(--font-heading); font-size:16px; color:var(--color-gold); background:var(--color-bg3); border-radius:6px; padding:2px 10px; flex-shrink:0; }
 
-/* ── Gráfico ── */
-.grafico-card {
-    background: var(--color-bg2); border: 1px solid var(--color-border);
-    border-radius: 12px; padding: 14px 10px 6px;
-}
-.grafico-svg { width: 100%; height: auto; display: block; overflow: visible; }
-.g-eje { fill: var(--color-muted); font-size: 10px; text-anchor: end; }
-.g-eje-x { text-anchor: middle; }
-.g-label { font-size: 11px; font-weight: 600; dominant-baseline: middle; }
-.g-serie { transition: opacity .15s; cursor: pointer; }
-.grafico-svg:hover .g-serie { opacity: .28; }
-.grafico-svg .g-serie:hover { opacity: 1; }
-.grafico-svg .g-serie:hover polyline { stroke-width: 3.4; }
-.grafico-pie {
-    text-align: center; font-size: 11px; color: var(--color-muted); padding: 8px 0 4px;
-}
+/* Gráfico */
+.grafico-card { background:var(--color-bg2); border:1px solid var(--color-border); border-radius:12px; padding:14px 12px 12px; }
 
-@@media (max-width: 640px) {
-    .g-label { font-size: 13px; }
-    .g-eje { font-size: 12px; }
-    .grafico-pie { display: none; }
+/* Filtros chips */
+.g-filtros { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.g-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    background:var(--color-bg3); border:1.5px solid var(--color-border);
+    border-radius:20px; padding:5px 10px; cursor:pointer;
+    font-size:12px; color:var(--color-muted); transition:all .15s;
+    white-space:nowrap;
 }
+.g-chip img { width:18px; height:13px; border-radius:1px; flex-shrink:0; }
+.g-chip:hover { border-color:var(--chip-color, var(--color-gold)); color:var(--color-text); }
+.g-chip.active { border-color:var(--chip-color, var(--color-gold)); color:var(--color-text); background:rgba(255,255,255,0.06); }
+.g-chip-all { --chip-color: var(--color-gold); }
+
+/* Canvas */
+.g-canvas-wrap { width:100%; }
+#gCanvas { display:block; width:100%; border-radius:6px; }
+
+/* Leyenda */
+.g-leyenda { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:12px; }
+.g-ley-item { display:flex; align-items:center; gap:5px; font-size:12px; }
+.g-ley-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.g-ley-item img { width:18px; height:13px; border-radius:1px; }
+.g-ley-nombre { color:var(--color-text); font-weight:500; }
+.g-ley-pos { color:var(--color-gold); font-weight:700; font-family:var(--font-heading); }
+.g-ley-pts { color:var(--color-muted); font-size:11px; }
 </style>

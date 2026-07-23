@@ -1550,13 +1550,13 @@ namespace TorneoAmigos.Data
                     SELECT eh.equipo_local_id AS loc, eh.equipo_visitante_id AS vis,
                            CASE WHEN eh.goles_local > eh.goles_visitante THEN eh.equipo_local_id
                                 ELSE eh.equipo_visitante_id END AS ganador
-                    FROM enfrentamientos_historicos eh WHERE eh.torneo = 'Liga'
+                    FROM enfrentamientos_historicos eh
                     UNION ALL
                     SELECT p.equipolocalid, p.equipovisitanteid,
                            CASE WHEN p.goleslocal > p.golesvisitante THEN p.equipolocalid
                                 ELSE p.equipovisitanteid END
                     FROM partidos p
-                    WHERE p.jugado = true AND COALESCE(p.tipo_partido,'regular') = 'regular'
+                    WHERE p.jugado = true
                 ),
                 duelos AS (
                     SELECT LEAST(loc,vis) AS e1, GREATEST(loc,vis) AS e2,

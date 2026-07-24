@@ -282,8 +282,16 @@ if ('serviceWorker' in navigator) {
 // ── PUSH NOTIFICATIONS ───────────────────────────────────────
 (function() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    if (Notification.permission !== 'default') return;
-    setTimeout(async function() {
+    if (Notification.permission === 'granted') return;
+
+    function urlBase64ToUint8Array(b) {
+        const pad = '='.repeat((4 - b.length % 4) % 4);
+        const base64 = (b + pad).replace(/-/g,'+').replace(/_/g,'/');
+        const raw = window.atob(base64);
+        return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+    }
+
+    async function suscribir() {
         try {
             const r = await fetch('/api/push/vapid-public-key');
             const d = await r.json();
@@ -298,17 +306,36 @@ if ('serviceWorker' in navigator) {
             const j = sub.toJSON();
             await fetch('/api/push/suscribir', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth })
             });
+            const btn = document.getElementById('btn-activar-push');
+            if (btn) btn.remove();
+            console.log('[Push] Suscripto OK');
         } catch(e) { console.log('[Push] Error:', e.message); }
-    }, 5000);
-    function urlBase64ToUint8Array(b) {
-        const pad = '='.repeat((4 - b.length % 4) % 4);
-        const base64 = (b + pad).replace(/-/g,'+').replace(/_/g,'/');
-        const raw = window.atob(base64);
-        return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
     }
+
+    // iOS requiere gesto explícito del usuario — mostrar botón flotante
+    const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    window.addEventListener('load', function() {
+        if (Notification.permission !== 'default') return;
+
+        if (esIOS) {
+            // Botón flotante dorado
+            const btn = document.createElement('button');
+            btn.id = 'btn-activar-push';
+            btn.innerHTML = '🔔 Activar notificaciones';
+            btn.style.cssText = 'position:fixed;bottom:80px;right:16px;z-index:8000;background:#f0c040;color:#0a1628;border:none;border-radius:24px;padding:10px 18px;font-family:Oswald,sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;box-shadow:0 4px 16px rgba(240,192,64,.5);';
+            btn.onclick = suscribir;
+            document.body.appendChild(btn);
+            // Auto-ocultar a los 20 segundos
+            setTimeout(() => { if (btn.parentNode) btn.remove(); }, 20000);
+        } else {
+            // Android / desktop: pedir automáticamente
+            setTimeout(suscribir, 5000);
+        }
+    });
 })();
 </script>
 </body>

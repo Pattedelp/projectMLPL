@@ -13,6 +13,7 @@
         {"pl","🇵🇱"},{"se","🇸🇪"},{"sa","🇸🇦"},{"ma","🇲🇦"},{"jp","🇯🇵"},{"gb-eng","🏴󠁧󠁢󠁥󠁮󠁧󠁿"}
     };
 }
+
 <div style="max-width:760px;margin:0 auto;">
     <a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin:24px 0 20px;">
         ← Volver a noticias
@@ -22,15 +23,12 @@
         @(Model.Tipo == "automatica" ? "⚡ Generada automáticamente" : "✍️ Redacción")
     </span>
 
-    <!-- Título + botón compartir -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
         <h1 style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-text);letter-spacing:1px;line-height:1.3;flex:1;">
             @Model.Titulo
         </h1>
         <button id="btn-compartir"
                 style="flex-shrink:0;margin-top:4px;background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:8px 14px;color:var(--color-muted);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:border-color .15s;"
-                onmouseenter="this.style.borderColor='var(--color-gold)'"
-                onmouseleave="this.style.borderColor='var(--color-border)'"
                 onclick="compartirNoticia()">
             📤 <span id="btn-compartir-texto">Compartir</span>
         </button>
@@ -61,9 +59,8 @@
         </div>
     }
 
-    <div style="font-size:16px;line-height:1.9;color:var(--color-text);white-space:pre-line;margin-bottom:40px;">
-        @Model.Contenido
-    </div>
+    <!-- Contenido con formato enriquecido -->
+    <div id="noticia-contenido" style="font-size:16px;line-height:1.9;color:var(--color-text);margin-bottom:40px;"></div>
 
     <!-- COMENTARIOS -->
     <div style="border-top:1px solid var(--color-border);padding-top:28px;">
@@ -120,31 +117,34 @@
                         <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:4px;">Tu país</label>
                         <select name="paisFlag" class="form-control">
                             <option value="">-- Sin bandera --</option>
-                            <option value="nl">🇳🇱 Países Bajos</option>
-                            <option value="dk">🇩🇰 Dinamarca</option>
-                            <option value="cr">🇨🇷 Costa Rica</option>
-                            <option value="it">🇮🇹 Italia</option>
-                            <option value="us">🇺🇲 USA</option>
-                            <option value="ir">🇮🇷 Irán</option>
-                            <option value="gb-wls">🏴󠁧󠁢󠁷󠁬󠁳󠁿 Gales</option>
-                            <option value="be">🇧🇪 Bélgica</option>
-                            <option value="ua">🇺🇦 Ucrania</option>
-                            <option value="de">🇩🇪 Alemania</option>
-                            <option value="kr">🇰🇷 Corea</option>
-                            <option value="ec">🇪🇨 Ecuador</option>
-                            <option value="br">🇧🇷 Brasil</option>
-                            <option value="es">🇪🇸 España</option>
-                            <option value="vn">🇻🇳 Vietnam</option>
-                            <option value="co">🇨🇴 Colombia</option>
                             <option value="ar">🇦🇷 Argentina</option>
                             <option value="uy">🇺🇾 Uruguay</option>
-                            <option value="ph">🇵🇭 Filipinas</option>
+                            <option value="br">🇧🇷 Brasil</option>
+                            <option value="co">🇨🇴 Colombia</option>
+                            <option value="es">🇪🇸 España</option>
+                            <option value="de">🇩🇪 Alemania</option>
+                            <option value="it">🇮🇹 Italia</option>
+                            <option value="fr">🇫🇷 Francia</option>
+                            <option value="gb-eng">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</option>
+                            <option value="gb-wls">🏴󠁧󠁢󠁷󠁬󠁳󠁿 Gales</option>
+                            <option value="nl">🇳🇱 Países Bajos</option>
+                            <option value="be">🇧🇪 Bélgica</option>
+                            <option value="pt">🇵🇹 Portugal</option>
+                            <option value="us">🇺🇲 USA</option>
+                            <option value="mx">🇲🇽 México</option>
+                            <option value="jp">🇯🇵 Japón</option>
+                            <option value="kr">🇰🇷 Corea</option>
+                            <option value="ma">🇲🇦 Marruecos</option>
+                            <option value="sa">🇸🇦 Arabia Saudita</option>
+                            <option value="ua">🇺🇦 Ucrania</option>
                             <option value="pl">🇵🇱 Polonia</option>
                             <option value="se">🇸🇪 Suecia</option>
-                            <option value="sa">🇸🇦 Arabia Saudita</option>
-                            <option value="ma">🇲🇦 Marruecos</option>
-                            <option value="jp">🇯🇵 Japón</option>
-                            <option value="gb-eng">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</option>
+                            <option value="dk">🇩🇰 Dinamarca</option>
+                            <option value="ph">🇵🇭 Filipinas</option>
+                            <option value="vn">🇻🇳 Vietnam</option>
+                            <option value="ec">🇪🇨 Ecuador</option>
+                            <option value="cr">🇨🇷 Costa Rica</option>
+                            <option value="ir">🇮🇷 Irán</option>
                         </select>
                     </div>
                 </div>
@@ -165,54 +165,88 @@
 // ── Imagen ────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", function () {
     const img = document.getElementById("noticia-img");
-    if (!img) return;
-    const loader  = document.getElementById("img-loader");
-    const wrapper = document.getElementById("img-wrapper");
-    function mostrarImagen() {
-        if (loader)  loader.style.display = "none";
-        img.style.display = "block";
-        if (wrapper) wrapper.style.minHeight = "auto";
+    if (img) {
+        const loader  = document.getElementById("img-loader");
+        const wrapper = document.getElementById("img-wrapper");
+        function mostrarImagen() {
+            if (loader)  loader.style.display = "none";
+            img.style.display = "block";
+            if (wrapper) wrapper.style.minHeight = "auto";
+        }
+        function mostrarError() {
+            if (loader) loader.innerHTML = '<p style="font-size:12px;color:var(--color-muted);">No se pudo cargar la imagen.</p>';
+            img.style.display = "none";
+        }
+        img.addEventListener("load",  mostrarImagen);
+        img.addEventListener("error", mostrarError);
+        if (img.complete && img.naturalWidth > 0) mostrarImagen();
+        setTimeout(function() { if (!img.complete || img.naturalWidth === 0) mostrarError(); }, 15000);
     }
-    function mostrarError() {
-        if (loader) loader.innerHTML = '<p style="font-size:12px;color:var(--color-muted);">No se pudo cargar la imagen.</p>';
-        img.style.display = "none";
-    }
-    img.addEventListener("load",  mostrarImagen);
-    img.addEventListener("error", mostrarError);
-    if (img.complete && img.naturalWidth > 0) mostrarImagen();
-    setTimeout(function() {
-        if (!img.complete || img.naturalWidth === 0) mostrarError();
-    }, 15000);
+
+    // ── Formato enriquecido ───────────────────────────────────
+    const contenido = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Contenido ?? ""));
+    const el = document.getElementById('noticia-contenido');
+    if (el) el.innerHTML = formatearTexto(contenido);
 });
+
+function formatearTexto(texto) {
+    // Escapar HTML primero para seguridad
+    const esc = texto
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Procesar línea por línea
+    const lineas = esc.split('\n');
+    const html = lineas.map(linea => {
+        // # Título grande
+        if (/^#{1}\s+/.test(linea)) {
+            const t = linea.replace(/^#+\s+/, '');
+            return `<h2 style="font-family:var(--font-heading);font-size:22px;color:var(--color-gold);margin:24px 0 8px;letter-spacing:1px;">${aplicarInline(t)}</h2>`;
+        }
+        // ## Título mediano
+        if (/^#{2}\s+/.test(linea)) {
+            const t = linea.replace(/^#+\s+/, '');
+            return `<h3 style="font-family:var(--font-heading);font-size:17px;color:var(--color-text);margin:20px 0 6px;">${aplicarInline(t)}</h3>`;
+        }
+        // Línea vacía → separador
+        if (linea.trim() === '') return '<div style="height:10px"></div>';
+        // Párrafo normal
+        return `<p style="margin:0 0 4px;">${aplicarInline(linea)}</p>`;
+    }).join('');
+
+    return html;
+}
+
+function aplicarInline(t) {
+    return t
+        // **negrita**
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        // *itálica* (solo si no es **)
+        .replace(/\*([^*]+?)\*/g, '<em>$1</em>')
+        // __subrayado__
+        .replace(/__(.+?)__/g, '<u>$1</u>')
+        // ~~tachado~~
+        .replace(/~~(.+?)~~/g, '<s>$1</s>');
+}
 
 // ── Compartir ─────────────────────────────────────────────────
 async function compartirNoticia() {
     const titulo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Titulo));
     const url    = window.location.href;
-    const texto  = "📰 " + titulo + "\n" + url;
     const btn    = document.getElementById('btn-compartir-texto');
-
-    // Web Share API (PWA, móviles modernos)
     if (navigator.share) {
-        try {
-            await navigator.share({ title: titulo, text: "📰 " + titulo, url: url });
-        } catch(e) {
-            // El usuario canceló — no hacer nada
-        }
+        try { await navigator.share({ title: titulo, text: "📰 " + titulo, url }); } catch(e) {}
         return;
     }
-
-    // Fallback: copiar al portapapeles
     try {
-        await navigator.clipboard.writeText(texto);
+        await navigator.clipboard.writeText("📰 " + titulo + "\n" + url);
         btn.textContent = '¡Copiado!';
         setTimeout(() => btn.textContent = 'Compartir', 2000);
     } catch(e) {
-        // Fallback sin clipboard API (HTTP o navegadores muy viejos)
         const ta = document.createElement('textarea');
-        ta.value = texto;
-        ta.style.position = 'fixed';
-        ta.style.opacity  = '0';
+        ta.value = "📰 " + titulo + "\n" + url;
+        ta.style.cssText = 'position:fixed;opacity:0';
         document.body.appendChild(ta);
         ta.select();
         document.execCommand('copy');

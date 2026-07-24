@@ -225,10 +225,26 @@ namespace TorneoAmigos.Data
         {
             if (string.IsNullOrEmpty(code)) return "🏴";
             if (code == "retired") return "✝️";
+ 
+            // Códigos de subdivisión (gb-eng, gb-wls, gb-sct) no tienen emoji regional
+            // standard — usamos tag-character sequences que sí se ven bien en WhatsApp/Telegram
+            return code.ToLower() switch
+            {
+                "gb-eng" => "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+                "gb-wls" => "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+                "gb-sct" => "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+                _ => ConvertirCodigoAEmoji(code)
+            };
+        }
+ 
+        private static string ConvertirCodigoAEmoji(string code)
+        {
+            if (code.Length != 2) return "🏳️";
             try {
                 return string.Concat(code.ToUpper().Select(c => char.ConvertFromUtf32(c + 0x1F1A5)));
             } catch { return "🏴"; }
         }
+ 
 
         // ── HEAD TO HEAD ─────────────────────────
         public HeadToHeadViewModel? GetHeadToHead(int equipoAId, int equipoBId)

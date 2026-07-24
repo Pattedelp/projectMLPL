@@ -5,35 +5,31 @@
     ViewBag.ActivePage = "noticias";
     var comentarios = ViewBag.Comentarios as List<Comentario> ?? new List<Comentario>();
     var esAdmin = User.IsInRole("Admin");
-
     var banderas = new Dictionary<string,string> {
         {"nl","🇳🇱"},{"dk","🇩🇰"},{"cr","🇨🇷"},{"it","🇮🇹"},{"us","🇺🇲"},
-        {"ir","🇮🇷"},{"gb-wls","🏴"},{"be","🇧🇪"},{"ua","🇺🇦"},{"de","🇩🇪"},
+        {"ir","🇮🇷"},{"gb-wls","🏴󠁧󠁢󠁷󠁬󠁳󠁿"},{"be","🇧🇪"},{"ua","🇺🇦"},{"de","🇩🇪"},
         {"kr","🇰🇷"},{"ec","🇪🇨"},{"br","🇧🇷"},{"es","🇪🇸"},{"vn","🇻🇳"},
         {"co","🇨🇴"},{"ar","🇦🇷"},{"uy","🇺🇾"},{"ph","🇵🇭"},
-        {"pl","🇵🇱"},{"se","🇸🇪"},{"sa","🇸🇦"},{"ma","🇲🇦"},{"jp","🇯🇵"},{"gb-eng","🏴"}
+        {"pl","🇵🇱"},{"se","🇸🇪"},{"sa","🇸🇦"},{"ma","🇲🇦"},{"jp","🇯🇵"},{"gb-eng","🏴󠁧󠁢󠁥󠁮󠁧󠁿"}
     };
 }
-
 <div style="max-width:760px;margin:0 auto;">
     <a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin:24px 0 20px;">
         ← Volver a noticias
     </a>
-
     <span class="noticia-badge @(Model.Tipo == "automatica" ? "badge-auto" : "badge-manual")"
           style="margin-bottom:16px;display:inline-block;">
         @(Model.Tipo == "automatica" ? "⚡ Generada automáticamente" : "✍️ Redacción")
     </span>
-
     <h1 style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-text);letter-spacing:1px;margin-bottom:12px;line-height:1.3;">
         @Model.Titulo
     </h1>
-
     <div style="font-size:13px;color:var(--color-muted);margin-bottom:24px;">
         📅 @Model.CreatedAt.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-AR"))
         · ✍️ @Model.Autor
     </div>
 
+    @* ── IMAGEN: siempre via endpoint /Noticias/Imagen/{id} para evitar Base64 enorme en el src ── *@
     @if (!string.IsNullOrEmpty(Model.ImagenUrl))
     {
         <div id="img-wrapper" style="margin-bottom:28px;border-radius:12px;overflow:hidden;background:var(--color-bg2);border:1px solid var(--color-border);min-height:160px;display:flex;align-items:center;justify-content:center;">
@@ -41,9 +37,20 @@
                 <div style="font-size:28px;margin-bottom:8px;">⚽</div>
                 <p style="font-size:12px;">Cargando imagen...</p>
             </div>
-            <img id="noticia-img" src="@Model.ImagenUrl" alt="@Model.Titulo"
-                 style="display:none;width:100%;max-height:420px;object-fit:cover;"
-                 onload="imagenCargada()" onerror="imagenError()" />
+            @if (Model.ImagenUrl.StartsWith("data:"))
+            {
+                @* Base64: usar endpoint que lo sirve como archivo binario, evita límites del navegador *@
+                <img id="noticia-img" src="/Noticias/Imagen/@Model.Id" alt="@Model.Titulo"
+                     style="display:none;width:100%;max-height:420px;object-fit:cover;"
+                     onload="imagenCargada()" onerror="imagenError()" />
+            }
+            else
+            {
+                @* URL externa (Cloudinary, etc): usar directo *@
+                <img id="noticia-img" src="@Model.ImagenUrl" alt="@Model.Titulo"
+                     style="display:none;width:100%;max-height:420px;object-fit:cover;"
+                     onload="imagenCargada()" onerror="imagenError()" />
+            }
         </div>
     }
 
@@ -56,7 +63,6 @@
         <h3 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:20px;">
             💬 Comentarios (@comentarios.Count)
         </h3>
-
         @if (!comentarios.Any())
         {
             <p style="color:var(--color-muted);font-size:14px;margin-bottom:24px;">
@@ -93,7 +99,6 @@
                 }
             </div>
         }
-
         <!-- Formulario de comentario -->
         <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;">
             <h4 style="font-family:var(--font-heading);font-size:13px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;margin-bottom:16px;">
@@ -116,7 +121,7 @@
                             <option value="it">🇮🇹 Italia</option>
                             <option value="us">🇺🇲 USA</option>
                             <option value="ir">🇮🇷 Irán</option>
-                            <option value="gb-wls">🏴 Gales</option>
+                            <option value="gb-wls">🏴󠁧󠁢󠁷󠁬󠁳󠁿 Gales</option>
                             <option value="be">🇧🇪 Bélgica</option>
                             <option value="ua">🇺🇦 Ucrania</option>
                             <option value="de">🇩🇪 Alemania</option>
@@ -134,7 +139,7 @@
                             <option value="sa">🇸🇦 Arabia Saudita</option>
                             <option value="ma">🇲🇦 Marruecos</option>
                             <option value="jp">🇯🇵 Japón</option>
-                            <option value="gb-eng">🏴 Inglaterra</option>
+                            <option value="gb-eng">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra</option>
                         </select>
                     </div>
                 </div>
@@ -150,7 +155,6 @@
         </div>
     </div>
 </div>
-
 @section Scripts {
 <script>
 function imagenCargada() {

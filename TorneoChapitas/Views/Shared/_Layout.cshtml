@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <link rel="manifest" href="/manifest.json">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewBag.Title - Torneo Chapitas</title>
@@ -277,5 +278,20 @@ document.querySelectorAll('.nav-dropdown').forEach(function(dropdown) {
 </script>
 
 @await RenderSectionAsync("Scripts", required: false)
+<script>
+
+if ('serviceWorker' in navigator) {
+
+    window.addEventListener('load', () => {
+
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log("Service Worker registrado"))
+            .catch(err => console.error(err));
+
+    });
+
+}
+
+</script>
 </body>
 </html>

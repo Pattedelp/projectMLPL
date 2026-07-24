@@ -49,7 +49,7 @@
                 @* URL externa (Cloudinary, etc): usar directo *@
                 <img id="noticia-img" src="@Model.ImagenUrl" alt="@Model.Titulo"
                      style="display:none;width:100%;max-height:420px;object-fit:cover;"
-                     onload="imagenCargada()" onerror="imagenError()" />
+                     onerror="imagenError()" />
             }
         </div>
     }
@@ -157,18 +157,41 @@
 </div>
 @section Scripts {
 <script>
-function imagenCargada() {
-    document.getElementById('img-loader').style.display = 'none';
-    const img = document.getElementById('noticia-img');
-    img.style.display = 'block';
-    document.getElementById('img-wrapper').style.minHeight = 'auto';
-}
-function imagenError() {
-    document.getElementById('img-loader').innerHTML = '<p style="font-size:12px;color:var(--color-muted);">No se pudo cargar la imagen.</p>';
-}
-setTimeout(() => {
-    const img = document.getElementById('noticia-img');
-    if (img && img.style.display === 'none') imagenError();
-}, 45000);
+document.addEventListener("DOMContentLoaded", function () {
+
+    const img = document.getElementById("noticia-img");
+
+    if (!img)
+        return;
+
+    const loader = document.getElementById("img-loader");
+    const wrapper = document.getElementById("img-wrapper");
+
+    function mostrarImagen() {
+        loader.style.display = "none";
+        img.style.display = "block";
+        wrapper.style.minHeight = "auto";
+    }
+
+    function mostrarError() {
+        loader.innerHTML =
+            '<p style="font-size:12px;color:var(--color-muted);">No se pudo cargar la imagen.</p>';
+    }
+
+    img.addEventListener("load", mostrarImagen);
+    img.addEventListener("error", mostrarError);
+
+    // ⭐ Si Chrome la obtuvo desde caché, el load puede ya haber ocurrido.
+    if (img.complete && img.naturalWidth > 0) {
+        mostrarImagen();
+    }
+
+    setTimeout(function () {
+        if (!img.complete || img.naturalWidth === 0) {
+            mostrarError();
+        }
+    }, 15000);
+
+});
 </script>
 }

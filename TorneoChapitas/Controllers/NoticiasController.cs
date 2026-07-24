@@ -15,13 +15,16 @@ namespace TorneoAmigos.Controllers
         private readonly ComentariosRepository _comentarios;
         private readonly IConfiguration        _config;
 
+        private readonly PushService _push;
+
         public NoticiasController(NoticiasRepository repo, TorneoRepository torneo,
-            ComentariosRepository comentarios, IConfiguration config)
+            ComentariosRepository comentarios, IConfiguration config, PushService push)
         {
             _repo        = repo;
             _torneo      = torneo;
             _comentarios = comentarios;
             _config      = config;
+            _push        = push;
         }
 
         // ── PÚBLICO ─────────────────────────────────────
@@ -193,7 +196,7 @@ namespace TorneoAmigos.Controllers
             }
 
             var autor = User.Identity?.Name ?? "Redactor";
-            _repo.CrearNoticia(vm.Titulo, vm.Contenido, imagenUrl, "manual", autor);
+            _repo.CrearNoticia(vm.Titulo, vm.Contenido, imagenUrl, "manual", autor, _push);
             TempData["Mensaje"] = "¡Noticia publicada!";
             return RedirectToAction("Redaccion");
         }
@@ -220,7 +223,7 @@ namespace TorneoAmigos.Controllers
             var imagenUrl = await _repo.GenerarImagenUrlIA(contexto, stabilityKey);
 
             var autor = User.Identity?.Name ?? "Redactor";
-            var id    = _repo.CrearNoticia(titulo, contenido, imagenUrl, "automatica", autor);
+            var id = _repo.CrearNoticia(titulo, contenido, imagenUrl, "automatica", autor, _push);
 
             return Json(new { ok = true, id, titulo, contenido, imagenUrl });
         }

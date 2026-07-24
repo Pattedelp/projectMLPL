@@ -30,8 +30,7 @@ namespace TorneoAmigos.Controllers
                 TotalGoles           = _repo.GetTotalGoles(),
                 UltimasNoticias      = _noticias.GetNoticias(soloPublicadas: true).Take(6).ToList()
             };
-            ViewBag.Encuestas   = new List<Encuesta>(); // temporalmente deshabilitado para test
-            //ViewBag.Encuestas   = _encuestas.GetEncuestasActivas();
+            ViewBag.Encuestas      = new List<Encuesta>(); // temporalmente deshabilitado
             ViewBag.PrimeraCActiva = _tempRepo.PrimeraCActiva();
             if (_tempRepo.PrimeraCActiva())
                 vm.PrimeraC = BuildVM(3);
@@ -40,9 +39,12 @@ namespace TorneoAmigos.Controllers
             // ── EXTRAS: récords históricos + evolución de posiciones ──
             ViewBag.HomeExtras = new HomeExtrasViewModel
             {
-                Invicto        = _tempRepo.GetInvictoMasLargo(),                
-                Evolucion      = _tempRepo.GetEvolucionPosiciones(1),
-                NombreDivision = vm.PrimeraDivision.Division?.Nombre ?? "Primera División"
+                Invicto            = _tempRepo.GetInvictoMasLargo(),
+                Evolucion          = _tempRepo.GetEvolucionPosiciones(1),
+                NombreDivision     = vm.PrimeraDivision.Division?.Nombre ?? "Primera División",
+                RachaInvictaActual = _tempRepo.GetRachaInvictaActual(),
+                CampeonInvicto     = _tempRepo.GetCampeonInvictoHistorico(),
+                MayorGoleador      = _tempRepo.GetMayorGoleadorTemporada()
             };
 
             return View(vm);
@@ -50,10 +52,10 @@ namespace TorneoAmigos.Controllers
 
         private DivisionViewModel BuildVM(int id) => new()
         {
-            Division         = _repo.GetDivisionById(id),
-            TablaPosiciones  = _repo.GetTablaPosiciones(id),
-            Fixture          = _repo.GetFixture(id),
-            Equipos          = _repo.GetEquiposByDivision(id)
+            Division        = _repo.GetDivisionById(id),
+            TablaPosiciones = _repo.GetTablaPosiciones(id),
+            Fixture         = _repo.GetFixture(id),
+            Equipos         = _repo.GetEquiposByDivision(id)
         };
     }
 }

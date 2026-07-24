@@ -500,12 +500,45 @@ namespace TorneoAmigos.Models
     }
 
     public class HomeExtrasViewModel
-    {
-        public RecordInvicto? Invicto { get; set; }
-        public RecordPaternidad? Paternidad { get; set; }
-        public List<EvolucionPosicion> Evolucion { get; set; } = new();
-        public string NombreDivision { get; set; } = "Primera División";
-    }
+{
+    public RecordInvicto? Invicto { get; set; }
+    public RecordPaternidad? Paternidad { get; set; }
+    public List<EvolucionPosicion> Evolucion { get; set; } = new();
+    public string NombreDivision { get; set; } = "Primera División";
+    // Récords nuevos
+    public RecordRachaInvicta?   RachaInvictaActual { get; set; }
+    public RecordCampeonInvicto? CampeonInvicto     { get; set; }
+    public RecordGoleador?       MayorGoleador      { get; set; }
+}
+
+public class RecordRachaInvicta
+{
+    public int    EquipoId     { get; set; }
+    public string NombreEquipo { get; set; } = "";
+    public string FlagCode     { get; set; } = "";
+    public int    Racha        { get; set; }
+}
+
+public class RecordCampeonInvicto
+{
+    public int    EquipoId        { get; set; }
+    public string NombreEquipo    { get; set; } = "";
+    public string FlagCode        { get; set; } = "";
+    public string TemporadaNombre { get; set; } = "";
+    public int    Partidos        { get; set; }
+    public int    Victorias       { get; set; }
+}
+
+public class RecordGoleador
+{
+    public int    EquipoId         { get; set; }
+    public string NombreEquipo     { get; set; } = "";
+    public string FlagCode         { get; set; } = "";
+    public string TemporadaNombre  { get; set; } = "";
+    public int    Goles            { get; set; }
+    public int    GolesMaxPosibles { get; set; }
+}
+
 }
 
 // ── HISTORIALES COMPLETOS ─────────────────────────────────────

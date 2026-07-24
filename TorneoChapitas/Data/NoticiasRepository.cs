@@ -57,7 +57,8 @@ namespace TorneoAmigos.Data
             return result == DBNull.Value ? null : result as string;
         }
 
-        public int CrearNoticia(string titulo, string contenido, string? imagenUrl, string tipo, string autor)
+        public int CrearNoticia(string titulo, string contenido, string? imagenUrl,
+            string tipo, string autor, PushService? push = null)
         {
             using var conn = GetConnection();
             using var cmd  = new NpgsqlCommand(@"
@@ -69,9 +70,30 @@ namespace TorneoAmigos.Data
             cmd.Parameters.AddWithValue("@Ti", tipo);
             cmd.Parameters.AddWithValue("@A",  autor);
             conn.Open();
-            return Convert.ToInt32(cmd.ExecuteScalar());
-        }
+            var id = Convert.ToInt32(cmd.ExecuteScalar());
 
+            // Disparar notificación push en background (no bloquea la respuesta)
+            if (push != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await push.EnviarATodosAsync(
+                            titulo: "📰 Nueva noticia",
+                            cuerpo: titulo,
+                            url:    $"/Noticias/Detalle/{id}"
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Push] Error en background: {ex.Message}");
+                    }
+                });
+            }
+
+            return id;
+        }
         public bool EliminarNoticia(int id)
         {
             using var conn = GetConnection();

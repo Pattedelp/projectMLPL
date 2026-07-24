@@ -27,23 +27,36 @@ else
     }
 }
 
+// Leer VAPID keys desde variables de entorno de Railway
+var vapidPublic  = Environment.GetEnvironmentVariable("VAPID_PUBLIC_KEY");
+var vapidPrivate = Environment.GetEnvironmentVariable("VAPID_PRIVATE_KEY");
+if (!string.IsNullOrEmpty(vapidPublic))  builder.Configuration["VAPID_PUBLIC_KEY"]  = vapidPublic;
+if (!string.IsNullOrEmpty(vapidPrivate)) builder.Configuration["VAPID_PRIVATE_KEY"] = vapidPrivate;
+
+// Leer STABILITY_API_KEY desde variable de entorno de Railway
+var stabilityKey = Environment.GetEnvironmentVariable("STABILITY_API_KEY");
+if (!string.IsNullOrEmpty(stabilityKey))
+    builder.Configuration["STABILITY_API_KEY"] = stabilityKey;
+
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<TorneoAmigos.Filters.PrimeraCFilter>();
 });
+
 builder.Services.AddScoped<TorneoRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.TemporadaRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.NoticiasRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.ComentariosRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.PrediccionesRepository>();
 builder.Services.AddScoped<TorneoAmigos.Data.EncuestasRepository>();
+builder.Services.AddScoped<TorneoAmigos.Data.PushService>();  // ← nuevo
+
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options => {
-    options.IdleTimeout = TimeSpan.FromHours(2);
-    options.Cookie.HttpOnly = true;
+    options.IdleTimeout        = TimeSpan.FromHours(2);
+    options.Cookie.HttpOnly    = true;
     options.Cookie.IsEssential = true;
 });
-builder.Services.AddScoped<TemporadaRepository>();  // ← nuevo
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie("RedactorCookie", options =>
@@ -62,11 +75,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorization();
-
-// Leer STABILITY_API_KEY desde variable de entorno de Railway
-var stabilityKey = Environment.GetEnvironmentVariable("STABILITY_API_KEY");
-if (!string.IsNullOrEmpty(stabilityKey))
-    builder.Configuration["STABILITY_API_KEY"] = stabilityKey;
 
 var app = builder.Build();
 

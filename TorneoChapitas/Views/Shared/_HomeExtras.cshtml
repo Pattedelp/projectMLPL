@@ -1,8 +1,10 @@
 @model TorneoAmigos.Models.HomeExtrasViewModel
 @{
-    var inv = Model.Invicto;
-    var pat = Model.Paternidad;
-    var evo = Model.Evolucion;
+    var inv   = Model.Invicto;
+    var evo   = Model.Evolucion;
+    var racha = Model.RachaInvictaActual;
+    var camp  = Model.CampeonInvicto;
+    var gol   = Model.MayorGoleador;
 
     var fechas  = evo.Select(e => e.Fecha).Distinct().OrderBy(f => f).ToList();
     var equipos = evo.GroupBy(e => e.EquipoId)
@@ -25,7 +27,6 @@
         "#e07a5f","#66bb6a","#ab7fd4","#d99a3a"
     };
 
-    // Serializar datos para JS
     var jsonFechas  = System.Text.Json.JsonSerializer.Serialize(fechas);
     var jsonEquipos = System.Text.Json.JsonSerializer.Serialize(equipos.Select((e, k) => new {
         id     = e.Id,
@@ -37,30 +38,82 @@
         serie  = e.Serie.Select(s => new { s.Fecha, s.Posicion })
     }));
     int maxPos = equipos.Count;
+
+    bool hayRecords = inv != null || racha != null || camp != null || gol != null;
 }
 
 <div class="extras-wrap">
 
     @* ── RÉCORDS ── *@
-    @if (inv != null)
+    @if (hayRecords)
     {
         <div class="extras-header">
             <span class="extras-title">🏅 Récords históricos</span>
         </div>
-    @if (inv != null)
-    {
         <div class="records-grid">
-            <a href="/Equipos/Detalle/@inv.EquipoId" class="record-card">
-                <div class="record-label">🔥 Racha ganadora más larga</div>
-                <div class="record-main">
-                    @if (!string.IsNullOrEmpty(inv.FlagCode))
-                    { <img src="https://flagcdn.com/24x18/@(inv.FlagCode).png" alt="" onerror="this.style.display='none'" /> }
-                    <span class="record-nombre">@inv.NombreEquipo</span>
-                </div>
-                <div class="record-valor">@inv.Racha <span>victorias al hilo</span></div>
-            </a>
+
+            @* Racha invicta ACTUAL *@
+            @if (racha != null)
+            {
+                <a href="/Equipos/Detalle/@racha.EquipoId" class="record-card">
+                    <div class="record-label">🔥 Invicto actual</div>
+                    <div class="record-main">
+                        @if (!string.IsNullOrEmpty(racha.FlagCode))
+                        { <img src="https://flagcdn.com/24x18/@(racha.FlagCode).png" alt="" onerror="this.style.display='none'" /> }
+                        <span class="record-nombre">@racha.NombreEquipo</span>
+                    </div>
+                    <div class="record-valor">@racha.Racha <span>partidos sin perder</span></div>
+                </a>
+            }
+
+            @* Racha goleadora más larga (histórica) *@
+            @if (inv != null)
+            {
+                <a href="/Equipos/Detalle/@inv.EquipoId" class="record-card">
+                    <div class="record-label">⚡ Racha ganadora más larga</div>
+                    <div class="record-main">
+                        @if (!string.IsNullOrEmpty(inv.FlagCode))
+                        { <img src="https://flagcdn.com/24x18/@(inv.FlagCode).png" alt="" onerror="this.style.display='none'" /> }
+                        <span class="record-nombre">@inv.NombreEquipo</span>
+                    </div>
+                    <div class="record-valor">@inv.Racha <span>victorias al hilo</span></div>
+                </a>
+            }
+
+            @* Campeón invicto *@
+            @if (camp != null)
+            {
+                <a href="/Equipos/Detalle/@camp.EquipoId" class="record-card">
+                    <div class="record-label">🛡️ Campeón invicto</div>
+                    <div class="record-main">
+                        @if (!string.IsNullOrEmpty(camp.FlagCode))
+                        { <img src="https://flagcdn.com/24x18/@(camp.FlagCode).png" alt="" onerror="this.style.display='none'" /> }
+                        <span class="record-nombre">@camp.NombreEquipo</span>
+                    </div>
+                    <div class="record-valor" style="font-size:14px;">
+                        @camp.TemporadaNombre
+                        <span>· @camp.Partidos partidos sin derrota</span>
+                    </div>
+                </a>
+            }
+
+            @* Mayor goleador en una temporada *@
+            @if (gol != null)
+            {
+                <a href="/Equipos/Detalle/@gol.EquipoId" class="record-card">
+                    <div class="record-label">⚽ Mayor cantidad de goles en un torneo</div>
+                    <div class="record-main">
+                        @if (!string.IsNullOrEmpty(gol.FlagCode))
+                        { <img src="https://flagcdn.com/24x18/@(gol.FlagCode).png" alt="" onerror="this.style.display='none'" /> }
+                        <span class="record-nombre">@gol.NombreEquipo</span>
+                    </div>
+                    <div class="record-valor">
+                        @gol.Goles <span>goles · @gol.TemporadaNombre</span>
+                    </div>
+                </a>
+            }
+
         </div>
-    }
     }
 
     @* ── GRÁFICO ── *@
@@ -69,33 +122,22 @@
         <div class="extras-header" style="margin-top:26px;">
             <span class="extras-title">📈 Evolución · @Model.NombreDivision</span>
         </div>
-
         <div class="grafico-card">
-            <!-- Filtros por equipo -->
             <div class="g-filtros" id="gFiltros">
-                <button class="g-chip g-chip-all active" onclick="filtrarGrafico(null, this)">
-                    Todos
-                </button>
+                <button class="g-chip g-chip-all active" onclick="filtrarGrafico(null, this)">Todos</button>
                 @for (int k = 0; k < equipos.Count; k++)
                 {
                     var eq    = equipos[k];
                     var color = paleta[k % paleta.Length];
                     <button class="g-chip" onclick="filtrarGrafico(@eq.Id, this)"
-                            style="--chip-color:@color"
-                            data-eqid="@eq.Id">
+                            style="--chip-color:@color" data-eqid="@eq.Id">
                         @if (!string.IsNullOrEmpty(eq.Flag))
                         { <img src="https://flagcdn.com/20x15/@(eq.Flag).png" alt="" onerror="this.style.display='none'" /> }
                         <span>@eq.Nombre</span>
                     </button>
                 }
             </div>
-
-            <!-- Canvas del gráfico -->
-            <div class="g-canvas-wrap">
-                <canvas id="gCanvas"></canvas>
-            </div>
-
-            <!-- Leyenda posición actual -->
+            <div class="g-canvas-wrap"><canvas id="gCanvas"></canvas></div>
             <div class="g-leyenda" id="gLeyenda"></div>
         </div>
     }
@@ -108,226 +150,191 @@
         const FECHAS  = @Html.Raw(jsonFechas);
         const EQUIPOS = @Html.Raw(jsonEquipos);
         const MAX_POS = @maxPos;
-
         const canvas  = document.getElementById('gCanvas');
         const ctx     = canvas.getContext('2d');
-        let activoId  = null; // null = todos
+        let activoId  = null;
 
-        // ── Filtro ──────────────────────────────────────────
         window.filtrarGrafico = function(eqId, btn) {
             activoId = eqId;
             document.querySelectorAll('.g-chip').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
-            dibujar();
-            actualizarLeyenda();
+            dibujar(); actualizarLeyenda();
         };
 
-        // ── Resize ──────────────────────────────────────────
         function resize() {
             const wrap = canvas.parentElement;
             const dpr  = window.devicePixelRatio || 1;
             const w    = wrap.clientWidth;
             const h    = Math.max(260, Math.min(420, w * 0.72));
-            canvas.width  = w * dpr;
-            canvas.height = h * dpr;
-            canvas.style.width  = w + 'px';
-            canvas.style.height = h + 'px';
+            canvas.width  = w * dpr; canvas.height = h * dpr;
+            canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             dibujar();
         }
 
-        // ── Layout del plot ──────────────────────────────────
         function layout() {
-            const W = canvas.clientWidth;
-            const H = canvas.clientHeight;
-            const mL = 28, mR = 14, mT = 14, mB = 28;
-            return { W, H, mL, mR, mT, mB,
-                     plotW: W - mL - mR,
-                     plotH: H - mT - mB };
+            const W = canvas.clientWidth, H = canvas.clientHeight;
+            const mL=28,mR=14,mT=14,mB=28;
+            return { W,H,mL,mR,mT,mB, plotW:W-mL-mR, plotH:H-mT-mB };
         }
+        function xOf(i,l) { return FECHAS.length<=1?l.mL:l.mL+(i/(FECHAS.length-1))*l.plotW; }
+        function yOf(pos,l){ return MAX_POS<=1?l.mT+l.plotH/2:l.mT+((pos-1)/(MAX_POS-1))*l.plotH; }
 
-        function xOf(fechaIdx, l) {
-            if (FECHAS.length <= 1) return l.mL;
-            return l.mL + (fechaIdx / (FECHAS.length - 1)) * l.plotW;
-        }
-        function yOf(pos, l) {
-            if (MAX_POS <= 1) return l.mT + l.plotH / 2;
-            return l.mT + ((pos - 1) / (MAX_POS - 1)) * l.plotH;
-        }
-
-        // ── Dibujo ──────────────────────────────────────────
         function dibujar() {
             const l = layout();
-            ctx.clearRect(0, 0, l.W, l.H);
-
-            // Fondo bandas
-            for (let p = 1; p <= MAX_POS; p++) {
-                if (p % 2 === 1) {
-                    const yTop = yOf(p === 1 ? 1 : p - 0.5, l);
-                    const yBot = yOf(p === MAX_POS ? MAX_POS : p + 0.5, l);
-                    ctx.fillStyle = 'rgba(255,255,255,0.03)';
-                    ctx.fillRect(l.mL, Math.min(yTop, l.mT), l.plotW, Math.abs(yBot - yTop) || l.plotH / MAX_POS);
+            ctx.clearRect(0,0,l.W,l.H);
+            for (let p=1;p<=MAX_POS;p++) {
+                if (p%2===1) {
+                    const alto=MAX_POS>1?l.plotH/(MAX_POS-1):l.plotH;
+                    ctx.fillStyle='rgba(255,255,255,0.03)';
+                    ctx.fillRect(l.mL,Math.min(yOf(p,l)-alto/2,l.mT),l.plotW,alto);
                 }
+                ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font='10px system-ui';
+                ctx.textAlign='right'; ctx.textBaseline='middle';
+                ctx.fillText(p, l.mL-4, yOf(p,l));
             }
-
-            // Eje Y — números de posición
-            ctx.fillStyle = 'rgba(255,255,255,0.35)';
-            ctx.font = '10px system-ui';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            for (let p = 1; p <= MAX_POS; p++) {
-                ctx.fillText(p, l.mL - 4, yOf(p, l));
-            }
-
-            // Eje X — fechas
-            ctx.fillStyle = 'rgba(255,255,255,0.35)';
-            ctx.font = '10px system-ui';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            const step = Math.max(1, Math.ceil(FECHAS.length / 8));
-            FECHAS.forEach((f, i) => {
-                if (i % step === 0 || i === FECHAS.length - 1)
-                    ctx.fillText('F' + f, xOf(i, l), l.mT + l.plotH + 4);
-            });
-
-            // Líneas
-            const eqsDibujar = activoId
-                ? EQUIPOS.filter(e => e.id === activoId)
-                : EQUIPOS;
-
+            ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font='10px system-ui';
+            ctx.textAlign='center'; ctx.textBaseline='top';
+            const step=Math.max(1,Math.ceil(FECHAS.length/8));
+            FECHAS.forEach((f,i)=>{ if(i%step===0||i===FECHAS.length-1) ctx.fillText('F'+f,xOf(i,l),l.mT+l.plotH+4); });
             EQUIPOS.forEach(eq => {
-                const activo = !activoId || eq.id === activoId;
-                ctx.globalAlpha = activo ? 1 : 0.08;
-                ctx.strokeStyle = eq.color;
-                ctx.lineWidth   = activo ? (activoId ? 3 : 2) : 1;
-                ctx.lineJoin    = 'round';
-                ctx.lineCap     = 'round';
-
-                ctx.beginPath();
-                let first = true;
-                eq.serie.forEach(s => {
-                    const fi  = FECHAS.indexOf(s.Fecha);
-                    if (fi < 0) return;
-                    const px = xOf(fi, l);
-                    const py = yOf(s.Posicion, l);
-                    if (first) { ctx.moveTo(px, py); first = false; }
-                    else ctx.lineTo(px, py);
-                });
-                ctx.stroke();
-
-                // Punto final
-                if (eq.serie.length > 0) {
-                    const last = eq.serie[eq.serie.length - 1];
-                    const fi   = FECHAS.indexOf(last.Fecha);
-                    if (fi >= 0) {
-                        const px = xOf(fi, l);
-                        const py = yOf(last.Posicion, l);
-                        ctx.beginPath();
-                        ctx.arc(px, py, activo ? 4 : 2, 0, Math.PI * 2);
-                        ctx.fillStyle = eq.color;
-                        ctx.fill();
-                    }
+                const activo = !activoId||eq.id===activoId;
+                ctx.globalAlpha=activo?1:0.08;
+                ctx.strokeStyle=eq.color; ctx.lineWidth=activo?(activoId?3:2):1;
+                ctx.lineJoin='round'; ctx.lineCap='round';
+                ctx.beginPath(); let first=true;
+                eq.serie.forEach(s=>{ const fi=FECHAS.indexOf(s.Fecha); if(fi<0)return;
+                    const px=xOf(fi,l),py=yOf(s.Posicion,l);
+                    if(first){ctx.moveTo(px,py);first=false;}else ctx.lineTo(px,py);
+                }); ctx.stroke();
+                if(eq.serie.length>0){
+                    const last=eq.serie[eq.serie.length-1];
+                    const fi=FECHAS.indexOf(last.Fecha);
+                    if(fi>=0){const px=xOf(fi,l),py=yOf(last.Posicion,l);
+                        ctx.beginPath();ctx.arc(px,py,activo?4:2,0,Math.PI*2);
+                        ctx.fillStyle=eq.color;ctx.fill();}
                 }
             });
-
-            ctx.globalAlpha = 1;
+            ctx.globalAlpha=1;
         }
 
-        // ── Leyenda dinámica ────────────────────────────────
         function actualizarLeyenda() {
-            const ley  = document.getElementById('gLeyenda');
-            const lista = activoId ? EQUIPOS.filter(e => e.id === activoId) : EQUIPOS;
-            ley.innerHTML = lista.map(eq => `
+            const ley=document.getElementById('gLeyenda');
+            const lista=activoId?EQUIPOS.filter(e=>e.id===activoId):EQUIPOS;
+            ley.innerHTML=lista.map(eq=>`
                 <div class="g-ley-item">
                     <span class="g-ley-dot" style="background:${eq.color}"></span>
-                    ${eq.flag ? `<img src="https://flagcdn.com/20x15/${eq.flag}.png" onerror="this.style.display='none'" />` : ''}
+                    ${eq.flag?`<img src="https://flagcdn.com/20x15/${eq.flag}.png" onerror="this.style.display='none'" />`:''}
                     <span class="g-ley-nombre">${eq.nombre}</span>
                     <span class="g-ley-pos">${eq.pos}°</span>
                     <span class="g-ley-pts">${eq.puntos} pts</span>
-                </div>
-            `).join('');
+                </div>`).join('');
         }
 
-        // ── Touch: tap en canvas resalta equipo ─────────────
         canvas.addEventListener('click', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            const mx   = e.clientX - rect.left;
-            const my   = e.clientY - rect.top;
-            const l    = layout();
-            let closest = null, minDist = 30;
-
-            EQUIPOS.forEach(eq => {
-                eq.serie.forEach(s => {
-                    const fi = FECHAS.indexOf(s.Fecha);
-                    if (fi < 0) return;
-                    const px = xOf(fi, l), py = yOf(s.Posicion, l);
-                    const d  = Math.hypot(mx - px, my - py);
-                    if (d < minDist) { minDist = d; closest = eq; }
-                });
-            });
-
-            if (closest) {
-                const btn = document.querySelector(`.g-chip[data-eqid="${closest.id}"]`);
-                if (btn) filtrarGrafico(closest.id === activoId ? null : closest.id, btn.id === activoId ? document.querySelector('.g-chip-all') : btn);
+            const rect=canvas.getBoundingClientRect();
+            const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+            const l=layout(); let closest=null,minDist=30;
+            EQUIPOS.forEach(eq=>{eq.serie.forEach(s=>{
+                const fi=FECHAS.indexOf(s.Fecha); if(fi<0)return;
+                const d=Math.hypot(mx-xOf(fi,l),my-yOf(s.Posicion,l));
+                if(d<minDist){minDist=d;closest=eq;}
+            });});
+            if(closest){
+                const newId=closest.id===activoId?null:closest.id;
+                const btn=newId?document.querySelector(`.g-chip[data-eqid="${newId}"]`):document.querySelector('.g-chip-all');
+                if(btn) filtrarGrafico(newId,btn);
             }
         });
 
-        // ── Init ────────────────────────────────────────────
         window.addEventListener('resize', resize);
-        resize();
-        actualizarLeyenda();
+        resize(); actualizarLeyenda();
     })();
     </script>
 }
 
+@* ── PUSH NOTIFICATIONS: pedir permiso ── *@
+<script>
+(function() {
+    // Solo en HTTPS y si el browser soporta Service Worker + PushManager
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    // No molestar si ya dio permiso o lo rechazó
+    if (Notification.permission !== 'default') return;
+
+    // Esperar 5 segundos antes de pedir (no interrumpir la carga)
+    setTimeout(async function() {
+        try {
+            // Obtener la VAPID public key del servidor
+            const r = await fetch('/api/push/vapid-public-key');
+            const d = await r.json();
+            if (!d.ok || !d.key) return; // VAPID no configurado
+
+            // Pedir permiso al usuario
+            const permiso = await Notification.requestPermission();
+            if (permiso !== 'granted') return;
+
+            // Registrar la suscripción
+            const reg  = await navigator.serviceWorker.ready;
+            const sub  = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(d.key)
+            });
+
+            const j = sub.toJSON();
+            await fetch('/api/push/suscribir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    endpoint: j.endpoint,
+                    p256dh:   j.keys.p256dh,
+                    auth:     j.keys.auth
+                })
+            });
+            console.log('[Push] Suscripto correctamente.');
+        } catch(e) {
+            console.log('[Push] No se pudo suscribir:', e.message);
+        }
+    }, 5000);
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64  = (base64String + padding).replace(/-/g,'+').replace(/_/g,'/');
+        const raw     = window.atob(base64);
+        return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+    }
+})();
+</script>
+
 <style>
-.extras-wrap { margin: 28px 0 8px; }
-.extras-header { display:flex; align-items:center; margin-bottom:12px; }
-.extras-title { font-family:var(--font-heading); font-size:13px; letter-spacing:2px; color:var(--color-gold); text-transform:uppercase; }
+.extras-wrap { margin:28px 0 8px; }
+.extras-header { display:flex;align-items:center;margin-bottom:12px; }
+.extras-title { font-family:var(--font-heading);font-size:13px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase; }
 
-/* Récords */
-.records-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
-.record-card { background:var(--color-bg2); border:1px solid var(--color-border); border-radius:12px; padding:16px 18px; text-decoration:none; display:flex; flex-direction:column; gap:8px; transition:border-color .18s; }
+.records-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px; }
+.record-card { background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:16px 18px;text-decoration:none;display:flex;flex-direction:column;gap:8px;transition:border-color .18s; }
 a.record-card:hover { border-color:var(--color-gold); }
-.record-label { font-size:11px; letter-spacing:1px; color:var(--color-muted); text-transform:uppercase; }
-.record-main { display:flex; align-items:center; gap:8px; }
-.record-main img { width:24px; height:18px; border-radius:2px; flex-shrink:0; }
-.record-nombre { font-size:15px; font-weight:600; color:var(--color-text); }
-.record-valor { font-family:var(--font-heading); font-size:22px; color:var(--color-gold); line-height:1.1; }
-.record-valor span { font-size:11px; color:var(--color-muted); letter-spacing:1px; margin-left:4px; }
-.record-duelo { justify-content:space-between; flex-wrap:wrap; gap:6px; }
-.duelo-lado { display:flex; align-items:center; gap:6px; text-decoration:none; min-width:0; }
-.duelo-lado .record-nombre { font-size:14px; }
-.duelo-victima { opacity:.6; }
-.duelo-marcador { font-family:var(--font-heading); font-size:16px; color:var(--color-gold); background:var(--color-bg3); border-radius:6px; padding:2px 10px; flex-shrink:0; }
+.record-label { font-size:11px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase; }
+.record-main { display:flex;align-items:center;gap:8px; }
+.record-main img { width:24px;height:18px;border-radius:2px;flex-shrink:0; }
+.record-nombre { font-size:15px;font-weight:600;color:var(--color-text); }
+.record-valor { font-family:var(--font-heading);font-size:22px;color:var(--color-gold);line-height:1.1; }
+.record-valor span { font-size:11px;color:var(--color-muted);letter-spacing:1px;margin-left:4px; }
 
-/* Gráfico */
-.grafico-card { background:var(--color-bg2); border:1px solid var(--color-border); border-radius:12px; padding:14px 12px 12px; }
-
-/* Filtros chips */
-.g-filtros { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
-.g-chip {
-    display:inline-flex; align-items:center; gap:5px;
-    background:var(--color-bg3); border:1.5px solid var(--color-border);
-    border-radius:20px; padding:5px 10px; cursor:pointer;
-    font-size:12px; color:var(--color-muted); transition:all .15s;
-    white-space:nowrap;
-}
-.g-chip img { width:18px; height:13px; border-radius:1px; flex-shrink:0; }
-.g-chip:hover { border-color:var(--chip-color, var(--color-gold)); color:var(--color-text); }
-.g-chip.active { border-color:var(--chip-color, var(--color-gold)); color:var(--color-text); background:rgba(255,255,255,0.06); }
-.g-chip-all { --chip-color: var(--color-gold); }
-
-/* Canvas */
+.grafico-card { background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:14px 12px 12px; }
+.g-filtros { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px; }
+.g-chip { display:inline-flex;align-items:center;gap:5px;background:var(--color-bg3);border:1.5px solid var(--color-border);border-radius:20px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--color-muted);transition:all .15s;white-space:nowrap; }
+.g-chip img { width:18px;height:13px;border-radius:1px;flex-shrink:0; }
+.g-chip:hover { border-color:var(--chip-color,var(--color-gold));color:var(--color-text); }
+.g-chip.active { border-color:var(--chip-color,var(--color-gold));color:var(--color-text);background:rgba(255,255,255,0.06); }
+.g-chip-all { --chip-color:var(--color-gold); }
 .g-canvas-wrap { width:100%; }
-#gCanvas { display:block; width:100%; border-radius:6px; }
-
-/* Leyenda */
-.g-leyenda { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:12px; }
-.g-ley-item { display:flex; align-items:center; gap:5px; font-size:12px; }
-.g-ley-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-.g-ley-item img { width:18px; height:13px; border-radius:1px; }
-.g-ley-nombre { color:var(--color-text); font-weight:500; }
-.g-ley-pos { color:var(--color-gold); font-weight:700; font-family:var(--font-heading); }
-.g-ley-pts { color:var(--color-muted); font-size:11px; }
+#gCanvas { display:block;width:100%;border-radius:6px; }
+.g-leyenda { display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px; }
+.g-ley-item { display:flex;align-items:center;gap:5px;font-size:12px; }
+.g-ley-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+.g-ley-item img { width:18px;height:13px;border-radius:1px; }
+.g-ley-nombre { color:var(--color-text);font-weight:500; }
+.g-ley-pos { color:var(--color-gold);font-weight:700;font-family:var(--font-heading); }
+.g-ley-pts { color:var(--color-muted);font-size:11px; }
 </style>

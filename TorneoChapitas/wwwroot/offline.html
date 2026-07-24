@@ -1,14 +1,30 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <title>Sin conexión</title>
-  </head>
-  <body style="font-family: Arial; text-align: center; padding: 60px">
-    <h2>⚽ Torneo Chapitas AAC</h2>
-
-    <p>No hay conexión a Internet.</p>
-
-    <p>Intentá nuevamente cuando vuelva la conexión.</p>
-  </body>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#f0c040"/>
+<title>Torneo Chapitas</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0d1117;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;font-family:'Oswald',Arial,sans-serif;}
+img{width:96px;height:96px;border-radius:50%;object-fit:cover;animation:pulse 1.4s ease-in-out infinite;}
+p{font-size:15px;letter-spacing:3px;text-transform:uppercase;color:#f0c040;opacity:.85;}
+small{font-size:12px;color:#666;letter-spacing:1px;margin-top:-12px;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.07);opacity:.82}}
+</style>
+</head>
+<body>
+<img src="/img/aac-logo.png" alt="AAC"/>
+<p>Cargando<span id="d"></span></p>
+<small id="msg"></small>
+<script>
+var d=document.getElementById('d'),i=0,dots=['','.','..','.​..'];
+setInterval(function(){d.textContent=dots[i=(i+1)%4];},400);
+// Si tarda más de 6 segundos, mostrar aviso
+setTimeout(function(){
+  document.getElementById('msg').textContent='El servidor está iniciando, aguardá…';
+},6000);
+</script>
+</body>
 </html>

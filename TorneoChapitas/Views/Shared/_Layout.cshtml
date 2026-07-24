@@ -4,6 +4,11 @@
     <link rel="manifest" href="/manifest.json">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f0c040" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Chapitas" />
+    <link rel="apple-touch-icon" href="/img/aac-logo.png" />
     <title>@ViewBag.Title - Torneo Chapitas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -18,9 +23,85 @@
     <link rel="stylesheet" href="~/css/torneo.css" />
     <style>
         .zona-descenso-c { border-left: 3px solid #7c3aed; background: rgba(124,58,237,0.06); }
+
+        /* ── SPLASH SCREEN ─────────────────────────────────────── */
+        #splash {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: #0d1117;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+        #splash.oculto {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        #splash img {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            object-fit: cover;
+            animation: splashPulse 1.4s ease-in-out infinite;
+        }
+        #splash p {
+            font-family: 'Oswald', sans-serif;
+            font-size: 15px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #f0c040;
+            margin: 0;
+            opacity: 0.85;
+        }
+        #splash-dots::after {
+            content: '';
+            animation: splashDots 1.2s steps(4, end) infinite;
+        }
+        @@keyframes splashPulse {
+            0%, 100% { transform: scale(1);    opacity: 1;    }
+            50%       { transform: scale(1.07); opacity: 0.82; }
+        }
+        @@keyframes splashDots {
+            0%   { content: '';    }
+            25%  { content: '.';  }
+            50%  { content: '..'; }
+            75%  { content: '...'; }
+        }
     </style>
 </head>
 <body>
+
+<!-- ── SPLASH SCREEN: solo visible al abrir como PWA ── -->
+<div id="splash">
+    <img src="/img/aac-logo.png" alt="AAC Chapitas" />
+    <p>Cargando aplicativo<span id="splash-dots"></span></p>
+</div>
+
+<script>
+// Mostrar el splash solo cuando la app se abre como PWA instalada
+// (display-mode: standalone). En el navegador normal no se muestra.
+(function() {
+    var esPWA = window.matchMedia('(display-mode: standalone)').matches
+             || window.navigator.standalone === true;
+    var splash = document.getElementById('splash');
+    if (!esPWA) {
+        // En navegador: ocultar inmediatamente sin animación
+        splash.style.display = 'none';
+        return;
+    }
+    // En PWA: mostrar 1.4 segundos y luego fade out
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            splash.classList.add('oculto');
+        }, 1400);
+    });
+})();
+</script>
 
 <header class="topbar">
     <div class="topbar-inner">
@@ -28,11 +109,9 @@
             <span class="logo-icon">🏆</span>
             <span class="logo-text">Torneo Chapitas <em>AAC</em></span>
         </a>
-
         <nav class="main-nav">
             <a asp-controller="Home" asp-action="Index"
                class="@(ViewBag.ActivePage=="home"?"active":"")">Inicio</a>
-
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="primera"?"active":"")">1ra División ▾</span>
                 <div class="dropdown-menu">
@@ -41,7 +120,6 @@
                     <a asp-controller="PrimeraDivision" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
-
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="nacb"?"active":"")">1ra Nacional ▾</span>
                 <div class="dropdown-menu">
@@ -50,7 +128,6 @@
                     <a asp-controller="NacionalB" asp-action="Equipos">Equipos</a>
                 </div>
             </div>
-
             @if (ViewBag.PrimeraCActiva == true)
             {
             <div class="nav-dropdown">
@@ -62,7 +139,6 @@
                 </div>
             </div>
             }
-
             <div class="nav-dropdown">
                 <span class="@(ViewBag.ActivePage=="copas"?"active":"")">Copas ▾</span>
                 <div class="dropdown-menu">
@@ -70,10 +146,8 @@
                     <a asp-controller="Copas" asp-action="SupercopaArgentina">Supercopa Argentina</a>
                 </div>
             </div>
-
             <a asp-controller="Noticias" asp-action="Index"
                class="@(ViewBag.ActivePage=="noticias"?"active":"")">Noticias</a>
-
             <div class="nav-dropdown">
                 <span class="@((ViewBag.ActivePage=="historial"||ViewBag.ActivePage=="estadisticas"||ViewBag.ActivePage=="trofeos"||ViewBag.ActivePage=="predicciones"||ViewBag.ActivePage=="legacy"||ViewBag.ActivePage=="ranking"||ViewBag.ActivePage=="practica")?"active":"")">Más ▾</span>
                 <div class="dropdown-menu">
@@ -87,7 +161,6 @@
                 </div>
             </div>
         </nav>
-
         <div class="nav-auth">
             @if (User.IsInRole("Admin"))
             {
@@ -102,7 +175,6 @@
                 <a asp-controller="Auth" asp-action="Login" class="btn-login">🔐 Admin</a>
             }
         </div>
-
         <div class="nav-auth-mobile">
             @if (User.IsInRole("Admin"))
             {
@@ -113,7 +185,6 @@
                 <a asp-controller="Auth" asp-action="Login" class="btn-auth-mobile">🔐</a>
             }
         </div>
-
         <button class="nav-toggle" id="navToggle" aria-label="Menú">
             <span></span><span></span><span></span>
         </button>
@@ -121,7 +192,6 @@
 </header>
 
 <div class="drawer-overlay" id="drawerOverlay"></div>
-
 <nav class="drawer" id="drawer" aria-hidden="true">
     <div class="drawer-header">
         <span class="drawer-logo">🏆 Torneo Chapitas</span>
@@ -129,17 +199,14 @@
     </div>
     <div class="drawer-body">
         <a asp-controller="Home" asp-action="Index" class="drawer-item">🏠 Inicio</a>
-
         <div class="drawer-section-label">🏆 Primera División</div>
         <a asp-controller="PrimeraDivision" asp-action="Posiciones" class="drawer-item drawer-sub">Posiciones</a>
         <a asp-controller="PrimeraDivision" asp-action="Fixture" class="drawer-item drawer-sub">Fixture</a>
         <a asp-controller="PrimeraDivision" asp-action="Equipos" class="drawer-item drawer-sub">Equipos</a>
-
         <div class="drawer-section-label">🥈 Primera Nacional</div>
         <a asp-controller="NacionalB" asp-action="Posiciones" class="drawer-item drawer-sub">Posiciones</a>
         <a asp-controller="NacionalB" asp-action="Fixture" class="drawer-item drawer-sub">Fixture</a>
         <a asp-controller="NacionalB" asp-action="Equipos" class="drawer-item drawer-sub">Equipos</a>
-
         @if (ViewBag.PrimeraCActiva == true)
         {
         <div class="drawer-section-label">🏟️ Primera C Nacional</div>
@@ -147,11 +214,9 @@
         <a asp-controller="PrimeraC" asp-action="Fixture" class="drawer-item drawer-sub">Fixture</a>
         <a asp-controller="PrimeraC" asp-action="Equipos" class="drawer-item drawer-sub">Equipos</a>
         }
-
         <div class="drawer-section-label">🏅 Copas</div>
         <a asp-controller="Copas" asp-action="CopaArgentina" class="drawer-item drawer-sub">Copa Argentina</a>
         <a asp-controller="Copas" asp-action="SupercopaArgentina" class="drawer-item drawer-sub">Supercopa Argentina</a>
-
         <div class="drawer-divider"></div>
         <a asp-controller="Noticias" asp-action="Index" class="drawer-item">📰 Noticias</a>
         <a asp-controller="Historial" asp-action="Index" class="drawer-item">📚 Historial de Temporadas</a>
@@ -161,7 +226,6 @@
         <a asp-controller="Legacy" asp-action="Index" class="drawer-item">📜 Amateurismo</a>
         <a asp-controller="Ranking" asp-action="Index" class="drawer-item">🌍 Ranking AAC</a>
         <a asp-controller="Practica" asp-action="Index" class="drawer-item">🎯 Modo Práctica</a>
-
         <div class="drawer-divider"></div>
         @if (User.IsInRole("Admin"))
         {
@@ -223,7 +287,6 @@ const drawer        = document.getElementById('drawer');
 const drawerOverlay = document.getElementById('drawerOverlay');
 const navToggle     = document.getElementById('navToggle');
 const drawerClose   = document.getElementById('drawerClose');
-
 function openDrawer() {
     drawer.classList.add('open');
     drawerOverlay.classList.add('open');
@@ -236,22 +299,18 @@ function closeDrawer() {
     drawer.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
 }
-
 navToggle.addEventListener('click', function(e) { e.stopPropagation(); openDrawer(); });
 drawerClose.addEventListener('click', closeDrawer);
 drawerOverlay.addEventListener('click', closeDrawer);
-
 let txStart = 0;
 drawer.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
 drawer.addEventListener('touchend',   e => {
     if (e.changedTouches[0].clientX - txStart > 60) closeDrawer();
 }, { passive: true });
-
 document.querySelectorAll('.nav-dropdown').forEach(function(dropdown) {
     var span  = dropdown.querySelector('span');
     var menu  = dropdown.querySelector('.dropdown-menu');
     var timer = null;
-
     function showMenu() {
         clearTimeout(timer);
         document.querySelectorAll('.dropdown-menu').forEach(function(m) {
@@ -265,11 +324,9 @@ document.querySelectorAll('.nav-dropdown').forEach(function(dropdown) {
         menu.style.zIndex   = '99999';
         menu.style.display  = 'block';
     }
-
     function hideMenu() {
         timer = setTimeout(function() { menu.style.display = 'none'; }, 150);
     }
-
     span.addEventListener('mouseenter', showMenu);
     span.addEventListener('mouseleave', hideMenu);
     menu.addEventListener('mouseenter', function() { clearTimeout(timer); });
@@ -278,20 +335,15 @@ document.querySelectorAll('.nav-dropdown').forEach(function(dropdown) {
 </script>
 
 @await RenderSectionAsync("Scripts", required: false)
+
 <script>
-
 if ('serviceWorker' in navigator) {
-
     window.addEventListener('load', () => {
-
         navigator.serviceWorker.register('/service-worker.js')
-            .then(reg => console.log("Service Worker registrado"))
-            .catch(err => console.error(err));
-
+            .then(() => {})
+            .catch(err => console.error('SW error:', err));
     });
-
 }
-
 </script>
 </body>
 </html>

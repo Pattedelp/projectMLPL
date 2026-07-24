@@ -83,23 +83,27 @@
 </div>
 
 <script>
-// Mostrar el splash solo cuando la app se abre como PWA instalada
-// (display-mode: standalone). En el navegador normal no se muestra.
+// Mostrar splash siempre — se oculta solo cuando la página termina de cargar.
+// En navegador desktop se ve menos de 300ms (imperceptible).
+// En PWA mobile se ve el tiempo real de carga.
 (function() {
-    var esPWA = window.matchMedia('(display-mode: standalone)').matches
-             || window.navigator.standalone === true;
     var splash = document.getElementById('splash');
-    if (!esPWA) {
-        // En navegador: ocultar inmediatamente sin animación
-        splash.style.display = 'none';
-        return;
-    }
-    // En PWA: mostrar 1.4 segundos y luego fade out
-    window.addEventListener('load', function() {
+    var minTime = 1200; // ms mínimo que se ve (para que se aprecie el logo)
+    var startTime = Date.now();
+
+    function ocultarSplash() {
+        var elapsed = Date.now() - startTime;
+        var restante = Math.max(0, minTime - elapsed);
         setTimeout(function() {
             splash.classList.add('oculto');
-        }, 1400);
-    });
+        }, restante);
+    }
+
+    if (document.readyState === 'complete') {
+        ocultarSplash();
+    } else {
+        window.addEventListener('load', ocultarSplash);
+    }
 })();
 </script>
 

@@ -253,58 +253,6 @@
     </script>
 }
 
-@* ── PUSH NOTIFICATIONS: pedir permiso ── *@
-<script>
-(function() {
-    // Solo en HTTPS y si el browser soporta Service Worker + PushManager
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-
-    // No molestar si ya dio permiso o lo rechazó
-    if (Notification.permission !== 'default') return;
-
-    // Esperar 5 segundos antes de pedir (no interrumpir la carga)
-    setTimeout(async function() {
-        try {
-            // Obtener la VAPID public key del servidor
-            const r = await fetch('/api/push/vapid-public-key');
-            const d = await r.json();
-            if (!d.ok || !d.key) return; // VAPID no configurado
-
-            // Pedir permiso al usuario
-            const permiso = await Notification.requestPermission();
-            if (permiso !== 'granted') return;
-
-            // Registrar la suscripción
-            const reg  = await navigator.serviceWorker.ready;
-            const sub  = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(d.key)
-            });
-
-            const j = sub.toJSON();
-            await fetch('/api/push/suscribir', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    endpoint: j.endpoint,
-                    p256dh:   j.keys.p256dh,
-                    auth:     j.keys.auth
-                })
-            });
-            console.log('[Push] Suscripto correctamente.');
-        } catch(e) {
-            console.log('[Push] No se pudo suscribir:', e.message);
-        }
-    }, 5000);
-
-    function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64  = (base64String + padding).replace(/-/g,'+').replace(/_/g,'/');
-        const raw     = window.atob(base64);
-        return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-    }
-})();
-</script>
 
 <style>
 .extras-wrap { margin:28px 0 8px; }

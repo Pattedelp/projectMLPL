@@ -1,0 +1,212 @@
+@model string
+@{
+    var contenido = Model ?? "";
+}
+
+<div class="editor-wrap">
+    <!-- Toolbar -->
+    <div class="editor-toolbar">
+        <!-- Formato -->
+        <div class="editor-group">
+            <button type="button" class="editor-btn" onclick="insertar('**','**')" title="Negrita (** texto **)">
+                <strong>B</strong>
+            </button>
+            <button type="button" class="editor-btn" onclick="insertar('*','*')" title="Itálica (* texto *)">
+                <em>I</em>
+            </button>
+            <button type="button" class="editor-btn" onclick="insertar('__','__')" title="Subrayado (__ texto __)">
+                <u>U</u>
+            </button>
+            <button type="button" class="editor-btn" onclick="insertar('~~','~~')" title="Tachado (~~ texto ~~)">
+                <s>S</s>
+            </button>
+        </div>
+        <div class="editor-sep"></div>
+        <!-- Títulos -->
+        <div class="editor-group">
+            <button type="button" class="editor-btn" onclick="insertarLineaInicio('# ')" title="Título grande">
+                H1
+            </button>
+            <button type="button" class="editor-btn" onclick="insertarLineaInicio('## ')" title="Título mediano">
+                H2
+            </button>
+        </div>
+        <div class="editor-sep"></div>
+        <!-- Elementos -->
+        <div class="editor-group">
+            <button type="button" class="editor-btn" onclick="insertarTexto('\n---\n')" title="Línea separadora">
+                ─
+            </button>
+            <button type="button" class="editor-btn" onclick="insertarLineaInicio('• ')" title="Punto de lista">
+                •
+            </button>
+        </div>
+        <div class="editor-sep"></div>
+        <!-- Preview toggle -->
+        <div class="editor-group">
+            <button type="button" class="editor-btn editor-btn-preview" onclick="togglePreview()" id="btn-preview" title="Vista previa">
+                👁 Preview
+            </button>
+        </div>
+    </div>
+
+    <!-- Referencia rápida -->
+    <div class="editor-ref">
+        <span>**negrita**</span>
+        <span>*itálica*</span>
+        <span>__subrayado__</span>
+        <span>~~tachado~~</span>
+        <span># Título</span>
+    </div>
+
+    <!-- Textarea -->
+    <textarea id="editor-textarea" name="Contenido" class="form-control editor-textarea"
+              rows="12" placeholder="Escribí la noticia acá...&#10;&#10;Usá la barra de herramientas o los atajos: **negrita**, *itálica*, # Título...">@contenido</textarea>
+
+    <!-- Preview -->
+    <div id="editor-preview" class="editor-preview" style="display:none;"></div>
+</div>
+
+<style>
+.editor-wrap { border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+.editor-toolbar {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    background: var(--color-bg3); padding: 8px 10px;
+    border-bottom: 1px solid var(--color-border);
+}
+.editor-group { display: flex; gap: 2px; }
+.editor-sep { width: 1px; height: 24px; background: var(--color-border); margin: 0 4px; }
+.editor-btn {
+    background: transparent; border: 1px solid transparent;
+    color: var(--color-text); border-radius: 5px;
+    padding: 4px 10px; font-size: 13px; cursor: pointer;
+    font-family: var(--font-body); transition: all .15s;
+    min-width: 32px; text-align: center;
+}
+.editor-btn:hover { background: var(--color-bg2); border-color: var(--color-border); }
+.editor-btn:active { background: var(--color-border); }
+.editor-btn-preview { color: var(--color-gold); font-size: 12px; padding: 4px 12px; }
+.editor-btn-preview.activo { background: var(--color-bg2); border-color: var(--color-gold); }
+.editor-ref {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    background: var(--color-bg3); padding: 5px 12px;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 11px; color: var(--color-muted); font-family: monospace;
+}
+.editor-textarea {
+    border: none !important; border-radius: 0 !important;
+    resize: vertical; min-height: 240px;
+    font-family: 'Source Sans 3', sans-serif; font-size: 15px; line-height: 1.7;
+}
+.editor-textarea:focus { outline: none; box-shadow: none; }
+.editor-preview {
+    padding: 16px 18px; min-height: 200px;
+    font-size: 15px; line-height: 1.9; color: var(--color-text);
+    background: var(--color-bg2);
+    border-top: 1px solid var(--color-border);
+}
+.editor-preview h2 { font-family: var(--font-heading); font-size: 22px; color: var(--color-gold); margin: 20px 0 8px; letter-spacing: 1px; }
+.editor-preview h3 { font-family: var(--font-heading); font-size: 17px; color: var(--color-text); margin: 16px 0 6px; }
+.editor-preview p  { margin: 0 0 6px; }
+.editor-preview hr { border: none; border-top: 1px solid var(--color-border); margin: 16px 0; }
+</style>
+
+<script>
+(function() {
+    const ta = document.getElementById('editor-textarea');
+    const preview = document.getElementById('editor-preview');
+    const btnPreview = document.getElementById('btn-preview');
+
+    // ── Insertar marcadores alrededor de la selección ──────────
+    window.insertar = function(antes, despues) {
+        const start = ta.selectionStart;
+        const end   = ta.selectionEnd;
+        const sel   = ta.value.substring(start, end);
+        const nuevo = antes + (sel || 'texto') + despues;
+        ta.setRangeText(nuevo, start, end, 'select');
+        // Seleccionar solo el texto interior
+        ta.selectionStart = start + antes.length;
+        ta.selectionEnd   = start + antes.length + (sel || 'texto').length;
+        ta.focus();
+        actualizarPreview();
+    };
+
+    // ── Insertar al inicio de la línea actual ──────────────────
+    window.insertarLineaInicio = function(prefijo) {
+        const start  = ta.selectionStart;
+        const antes  = ta.value.lastIndexOf('\n', start - 1) + 1;
+        const linea  = ta.value.substring(antes, ta.value.indexOf('\n', start) === -1 ? ta.value.length : ta.value.indexOf('\n', start));
+        // Si ya tiene el prefijo, sacarlo (toggle)
+        if (linea.startsWith(prefijo)) {
+            ta.setRangeText('', antes, antes + prefijo.length, 'end');
+        } else {
+            ta.setRangeText(prefijo, antes, antes, 'end');
+        }
+        ta.focus();
+        actualizarPreview();
+    };
+
+    // ── Insertar texto en la posición del cursor ───────────────
+    window.insertarTexto = function(texto) {
+        const start = ta.selectionStart;
+        ta.setRangeText(texto, start, start, 'end');
+        ta.focus();
+        actualizarPreview();
+    };
+
+    // ── Toggle preview ─────────────────────────────────────────
+    window.togglePreview = function() {
+        const mostrando = preview.style.display !== 'none';
+        if (mostrando) {
+            preview.style.display = 'none';
+            ta.style.display      = 'block';
+            btnPreview.classList.remove('activo');
+            btnPreview.innerHTML  = '👁 Preview';
+        } else {
+            actualizarPreview();
+            ta.style.display      = 'none';
+            preview.style.display = 'block';
+            btnPreview.classList.add('activo');
+            btnPreview.innerHTML  = '✏️ Editar';
+        }
+    };
+
+    // ── Formatear para preview ─────────────────────────────────
+    function formatear(texto) {
+        const esc = texto
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return esc.split('\n').map(linea => {
+            if (/^#\s/.test(linea))  return `<h2>${inl(linea.replace(/^#\s/,''))}</h2>`;
+            if (/^##\s/.test(linea)) return `<h3>${inl(linea.replace(/^##\s/,''))}</h3>`;
+            if (/^---$/.test(linea.trim())) return '<hr>';
+            if (linea.trim() === '') return '<div style="height:8px"></div>';
+            return `<p>${inl(linea)}</p>`;
+        }).join('');
+    }
+
+    function inl(t) {
+        return t
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*([^*]+?)\*/g,  '<em>$1</em>')
+            .replace(/__(.+?)__/g,     '<u>$1</u>')
+            .replace(/~~(.+?)~~/g,     '<s>$1</s>');
+    }
+
+    function actualizarPreview() {
+        preview.innerHTML = formatear(ta.value);
+    }
+
+    // Atajos de teclado
+    ta.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'b') { e.preventDefault(); insertar('**','**'); }
+            if (e.key === 'i') { e.preventDefault(); insertar('*','*'); }
+            if (e.key === 'u') { e.preventDefault(); insertar('__','__'); }
+        }
+    });
+
+    ta.addEventListener('input', function() {
+        if (preview.style.display !== 'none') actualizarPreview();
+    });
+})();
+</script>

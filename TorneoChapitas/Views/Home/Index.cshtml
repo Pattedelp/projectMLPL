@@ -3,7 +3,6 @@
     ViewBag.Title = "Inicio";
     ViewBag.ActivePage = "home";
 }
-
 <!-- HERO -->
 <div class="home-hero">
     <div class="home-hero-content">
@@ -18,7 +17,6 @@
     </div>
     <div class="home-hero-ball"></div>
 </div>
-
 <!-- STATS -->
 <div class="stats-bar">
     <div class="stat-card">
@@ -50,7 +48,6 @@
         </div>
     </div>
 </div>
-
 <!-- CARRUSEL DE NOTICIAS -->
 @if (Model.UltimasNoticias.Any())
 {
@@ -89,7 +86,6 @@
         <div class="carrusel-dots" id="carruselDots"></div>
     </div>
 }
-
 <!-- MINI TABLAS -->
 <div class="home-sections @(ViewBag.PrimeraCActiva == true ? "home-sections-3" : "")">
     @await Html.PartialAsync("_MiniTabla", Model.PrimeraDivision)
@@ -99,29 +95,18 @@
         @await Html.PartialAsync("_MiniTabla", Model.PrimeraC)
     }
 </div>
-
 <style>
-.home-sections-3 {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 24px;
-}
-.home-sections-3 > * {
-    flex: 1 1 300px;
-    max-width: 420px;
-}
+.home-sections-3 { display:flex; flex-wrap:wrap; justify-content:center; gap:24px; }
+.home-sections-3 > * { flex:1 1 300px; max-width:420px; }
 </style>
-
 <!-- RÉCORDS + GRÁFICO -->
 @if (ViewBag.HomeExtras != null)
 {
     @await Html.PartialAsync("_HomeExtras", (TorneoAmigos.Models.HomeExtrasViewModel)ViewBag.HomeExtras)
 }
-
 @{
-    var encuestas   = ViewBag.Encuestas   as List<Encuesta>          ?? new();
-    var banderas    = new Dictionary<string,string> {
+    var encuestas = ViewBag.Encuestas as List<Encuesta> ?? new();
+    var banderas  = new Dictionary<string,string> {
         {"nl","🇳🇱"},{"dk","🇩🇰"},{"cr","🇨🇷"},{"it","🇮🇹"},{"us","🇺🇲"},
         {"ir","🇮🇷"},{"gb-wls","🏴"},{"be","🇧🇪"},{"ua","🇺🇦"},{"de","🇩🇪"},
         {"kr","🇰🇷"},{"ec","🇪🇨"},{"br","🇧🇷"},{"es","🇪🇸"},{"vn","🇻🇳"},
@@ -130,13 +115,10 @@
         {"gb-eng","🏴"},{"pt","🇵🇹"},{"tr","🇹🇷"},{"ng","🇳🇬"}
     };
 }
-
-<!-- ENCUESTAS + RANKING FIFA -->
+<!-- ENCUESTAS -->
 <div style="max-width:960px;margin:32px auto 0;padding:0 16px;">
 <div style="display:grid;grid-template-columns:1fr;gap:24px;" id="enc-ranking-grid">
 <style>#enc-ranking-grid{grid-template-columns:1fr;}@@media(min-width:700px){#enc-ranking-grid{grid-template-columns:1fr 1fr;}}</style>
-
-    <!-- ENCUESTAS -->
     <div>
         @if (encuestas.Any())
         {
@@ -147,9 +129,7 @@
                     <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:18px;" id="enc-@enc.Id">
                         <div style="font-size:13px;font-weight:600;color:var(--color-text);margin-bottom:12px;">@enc.Pregunta</div>
                         @if (enc.MaxVotos > 1)
-                        {
-                            <p style="font-size:11px;color:var(--color-muted);margin-bottom:10px;">Podés elegir hasta @enc.MaxVotos opciones</p>
-                        }
+                        { <p style="font-size:11px;color:var(--color-muted);margin-bottom:10px;">Podés elegir hasta @enc.MaxVotos opciones</p> }
                         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
                             @foreach (var op in enc.Opciones.OrderByDescending(o => o.Votos))
                             {
@@ -179,6 +159,7 @@
         }
     </div>
 </div>
+</div>
 
 @section Scripts {
 <script>
@@ -202,90 +183,81 @@ async function votar(encuestaId, opcionId) {
 (function() {
     const track = document.getElementById('carruselTrack');
     if (!track) return;
-    const slides        = Array.from(track.querySelectorAll('.carrusel-slide'));
+
     const dotsContainer = document.getElementById('carruselDots');
-    const totalSlides   = slides.length;
-    let current  = 0;
+    const totalSlides   = track.querySelectorAll('.carrusel-slide').length;
+    let current   = 0;
     let autoTimer;
-    function getSV() { return window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3; }
+
+    // ── Responsive slides visibles ───────────────────────────
+    function getSV()       { return window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3; }
     function getMaxSlide() { return Math.max(0, totalSlides - getSV()); }
+
+    // ── Dots ─────────────────────────────────────────────────
     function buildDots() {
         const pages = Math.ceil(totalSlides / getSV());
         dotsContainer.innerHTML = '';
         for (let i = 0; i < pages; i++) {
             const d = document.createElement('span');
             d.className = 'carrusel-dot' + (i === 0 ? ' active' : '');
-            d.onclick = () => goTo(i * getSV());
+            d.onclick   = () => goTo(i * getSV());
             dotsContainer.appendChild(d);
         }
     }
     function updateDots() {
-        const sv   = getSV();
-        const page = Math.floor(current / sv);
+        const page = Math.floor(current / getSV());
         document.querySelectorAll('.carrusel-dot').forEach((d, i) => d.classList.toggle('active', i === page));
     }
+
+    // ── Navegación ───────────────────────────────────────────
     function goTo(idx) {
-        const max = getMaxSlide();
-        current = Math.max(0, Math.min(idx, max));
-        const sv = getSV();
-        track.style.transform = `translateX(-${current * (100 / sv)}%)`;
+        current = Math.max(0, Math.min(idx, getMaxSlide()));
+        track.style.transform = `translateX(-${current * (100 / getSV())}%)`;
         updateDots();
     }
     function next() { goTo(current + 1); }
     function prev() { goTo(current - 1); }
+
     function resetTimer() {
         clearInterval(autoTimer);
         autoTimer = setInterval(() => { if (current >= getMaxSlide()) goTo(0); else next(); }, 5000);
     }
-    window.moverCarrusel = function(dir) { if (dir > 0) next(); else prev(); resetTimer(); };
-    let txStart = 0;
-    track.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
-    track.addEventListener('touchend', e => {
-        const diff = txStart - e.changedTouches[0].clientX;
-        if (Math.abs(diff) > 40) { if (diff > 0) next(); else prev(); resetTimer(); }
-    });
-    window.addEventListener('resize', () => { buildDots(); goTo(0); });
-    buildDots();
-    resetTimer();
-})();
 
-(function() {
-    const track = document.getElementById('carruselTrack');
-    if (!track) return;
+    window.moverCarrusel = function(dir) { dir > 0 ? next() : prev(); resetTimer(); };
 
-    let txStart = 0, tyStart = 0, dragging = false;
+    // ── Touch swipe (un solo bloque, unificado) ───────────────
+    let txStart = 0, tyStart = 0, isSwiping = false;
 
     track.addEventListener('touchstart', function(e) {
         txStart  = e.touches[0].clientX;
         tyStart  = e.touches[0].clientY;
-        dragging = false;
+        isSwiping = false;
     }, { passive: true });
 
     track.addEventListener('touchmove', function(e) {
         const dx = Math.abs(e.touches[0].clientX - txStart);
         const dy = Math.abs(e.touches[0].clientY - tyStart);
-        // Si el movimiento es más horizontal que vertical, es swipe del carrusel
-        // Prevenir el scroll de la página solo en ese caso
         if (dx > dy && dx > 8) {
-            dragging = true;
-            e.preventDefault();
+            isSwiping = true;
+            e.preventDefault(); // bloquea scroll de página solo si es swipe horizontal
         }
     }, { passive: false });
 
     track.addEventListener('touchend', function(e) {
-        if (!dragging) return;
+        if (!isSwiping) return;
         const dx = e.changedTouches[0].clientX - txStart;
         const dy = Math.abs(e.changedTouches[0].clientY - tyStart);
-        // Solo contar como swipe si fue principalmente horizontal
         if (Math.abs(dx) > 40 && dy < Math.abs(dx) * 0.6) {
-            if (dx < 0) {
-                window.moverCarrusel(1);  // swipe izquierda → siguiente
-            } else {
-                window.moverCarrusel(-1); // swipe derecha → anterior
-            }
+            dx < 0 ? next() : prev();
+            resetTimer();
         }
-        dragging = false;
+        isSwiping = false;
     }, { passive: true });
+
+    // ── Init ─────────────────────────────────────────────────
+    window.addEventListener('resize', () => { buildDots(); goTo(0); });
+    buildDots();
+    resetTimer();
 })();
 </script>
 }

@@ -37,11 +37,11 @@
             margin: 0; opacity: 0.85;
         }
         #splash-dots::after { content: ''; animation: splashDots 1.2s steps(4,end) infinite; }
-        @keyframes splashPulse {
+        @@keyframes splashPulse {
             0%,100% { transform:scale(1);    opacity:1;    }
             50%     { transform:scale(1.07); opacity:0.82; }
         }
-        @keyframes splashDots {
+        @@keyframes splashDots {
             0%  { content:'';    } 25% { content:'.';  }
             50% { content:'..'; } 75% { content:'...'; }
         }

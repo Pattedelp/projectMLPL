@@ -21,15 +21,26 @@
           style="margin-bottom:16px;display:inline-block;">
         @(Model.Tipo == "automatica" ? "⚡ Generada automáticamente" : "✍️ Redacción")
     </span>
-    <h1 style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-text);letter-spacing:1px;margin-bottom:12px;line-height:1.3;">
-        @Model.Titulo
-    </h1>
+
+    <!-- Título + botón compartir -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
+        <h1 style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--color-text);letter-spacing:1px;line-height:1.3;flex:1;">
+            @Model.Titulo
+        </h1>
+        <button id="btn-compartir"
+                style="flex-shrink:0;margin-top:4px;background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;padding:8px 14px;color:var(--color-muted);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:border-color .15s;"
+                onmouseenter="this.style.borderColor='var(--color-gold)'"
+                onmouseleave="this.style.borderColor='var(--color-border)'"
+                onclick="compartirNoticia()">
+            📤 <span id="btn-compartir-texto">Compartir</span>
+        </button>
+    </div>
+
     <div style="font-size:13px;color:var(--color-muted);margin-bottom:24px;">
         📅 @Model.CreatedAt.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-AR"))
         · ✍️ @Model.Autor
     </div>
 
-    @* ── IMAGEN: siempre via endpoint /Noticias/Imagen/{id} para evitar Base64 enorme en el src ── *@
     @if (!string.IsNullOrEmpty(Model.ImagenUrl))
     {
         <div id="img-wrapper" style="margin-bottom:28px;border-radius:12px;overflow:hidden;background:var(--color-bg2);border:1px solid var(--color-border);min-height:160px;display:flex;align-items:center;justify-content:center;">
@@ -39,17 +50,13 @@
             </div>
             @if (Model.ImagenUrl.StartsWith("data:"))
             {
-                @* Base64: usar endpoint que lo sirve como archivo binario, evita límites del navegador *@
                 <img id="noticia-img" src="/Noticias/Imagen/@Model.Id" alt="@Model.Titulo"
-                     style="display:none;width:100%;max-height:420px;object-fit:cover;"
-                     onload="imagenCargada()" onerror="imagenError()" />
+                     style="display:none;width:100%;max-height:420px;object-fit:cover;" />
             }
             else
             {
-                @* URL externa (Cloudinary, etc): usar directo *@
                 <img id="noticia-img" src="@Model.ImagenUrl" alt="@Model.Titulo"
-                     style="display:none;width:100%;max-height:420px;object-fit:cover;"
-                     onerror="imagenError()" />
+                     style="display:none;width:100%;max-height:420px;object-fit:cover;" />
             }
         </div>
     }
@@ -58,28 +65,28 @@
         @Model.Contenido
     </div>
 
-    <!-- ── COMENTARIOS ── -->
+    <!-- COMENTARIOS -->
     <div style="border-top:1px solid var(--color-border);padding-top:28px;">
         <h3 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:20px;">
             💬 Comentarios (@comentarios.Count)
         </h3>
         @if (!comentarios.Any())
         {
-            <p style="color:var(--color-muted);font-size:14px;margin-bottom:24px;">
-                Sé el primero en comentar.
-            </p>
+            <p style="color:var(--color-muted);font-size:14px;margin-bottom:24px;">Sé el primero en comentar.</p>
         }
         else
         {
             <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:28px;">
                 @foreach (var c in comentarios)
                 {
-                    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:10px;padding:14px 18px;position:relative;">
+                    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:10px;padding:14px 18px;">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                             @if (!string.IsNullOrEmpty(c.PaisFlag) && banderas.ContainsKey(c.PaisFlag))
                             {
-                                <img src="https://flagcdn.com/20x15/@(c.PaisFlag).png"
-                                     class="flag-img" alt="" onerror="this.style.display='none'" />
+                                var flagSrc = (c.PaisFlag == "gb-eng" || c.PaisFlag == "gb-wls" || c.PaisFlag == "gb-sct")
+                                    ? "https://flagcdn.com/20x15/gb.png"
+                                    : $"https://flagcdn.com/20x15/{c.PaisFlag}.png";
+                                <img src="@flagSrc" class="flag-img" alt="" onerror="this.style.display='none'" />
                             }
                             <strong style="font-size:14px;color:var(--color-text);">@c.Autor</strong>
                             <span style="font-size:11px;color:var(--color-muted);margin-left:auto;">
@@ -99,7 +106,6 @@
                 }
             </div>
         }
-        <!-- Formulario de comentario -->
         <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:12px;padding:20px;">
             <h4 style="font-family:var(--font-heading);font-size:13px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;margin-bottom:16px;">
                 Dejá tu comentario
@@ -108,8 +114,7 @@
                 <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
                     <div style="flex:1;min-width:150px;">
                         <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:4px;">Tu nombre</label>
-                        <input type="text" name="autor" required maxlength="50"
-                               class="form-control" placeholder="Ej: Nahuel" />
+                        <input type="text" name="autor" required maxlength="50" class="form-control" placeholder="Ej: Nahuel" />
                     </div>
                     <div style="width:160px;">
                         <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:4px;">Tu país</label>
@@ -145,8 +150,7 @@
                 </div>
                 <div style="margin-bottom:12px;">
                     <label style="font-size:11px;color:var(--color-muted);letter-spacing:1px;display:block;margin-bottom:4px;">Comentario</label>
-                    <textarea name="contenido" required maxlength="500" rows="3"
-                              class="form-control" placeholder="Máx. 500 caracteres..."></textarea>
+                    <textarea name="contenido" required maxlength="500" rows="3" class="form-control" placeholder="Máx. 500 caracteres..."></textarea>
                 </div>
                 <button type="submit" class="btn-primary" style="font-size:13px;padding:10px 20px;">
                     Publicar comentario
@@ -155,43 +159,67 @@
         </div>
     </div>
 </div>
+
 @section Scripts {
 <script>
+// ── Imagen ────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", function () {
-
     const img = document.getElementById("noticia-img");
-
-    if (!img)
-        return;
-
-    const loader = document.getElementById("img-loader");
+    if (!img) return;
+    const loader  = document.getElementById("img-loader");
     const wrapper = document.getElementById("img-wrapper");
-
     function mostrarImagen() {
-        loader.style.display = "none";
+        if (loader)  loader.style.display = "none";
         img.style.display = "block";
-        wrapper.style.minHeight = "auto";
+        if (wrapper) wrapper.style.minHeight = "auto";
     }
-
     function mostrarError() {
-        loader.innerHTML =
-            '<p style="font-size:12px;color:var(--color-muted);">No se pudo cargar la imagen.</p>';
+        if (loader) loader.innerHTML = '<p style="font-size:12px;color:var(--color-muted);">No se pudo cargar la imagen.</p>';
+        img.style.display = "none";
     }
-
-    img.addEventListener("load", mostrarImagen);
+    img.addEventListener("load",  mostrarImagen);
     img.addEventListener("error", mostrarError);
+    if (img.complete && img.naturalWidth > 0) mostrarImagen();
+    setTimeout(function() {
+        if (!img.complete || img.naturalWidth === 0) mostrarError();
+    }, 15000);
+});
 
-    // ⭐ Si Chrome la obtuvo desde caché, el load puede ya haber ocurrido.
-    if (img.complete && img.naturalWidth > 0) {
-        mostrarImagen();
+// ── Compartir ─────────────────────────────────────────────────
+async function compartirNoticia() {
+    const titulo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Titulo));
+    const url    = window.location.href;
+    const texto  = "📰 " + titulo + "\n" + url;
+    const btn    = document.getElementById('btn-compartir-texto');
+
+    // Web Share API (PWA, móviles modernos)
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: titulo, text: "📰 " + titulo, url: url });
+        } catch(e) {
+            // El usuario canceló — no hacer nada
+        }
+        return;
     }
 
-    setTimeout(function () {
-        if (!img.complete || img.naturalWidth === 0) {
-            mostrarError();
-        }
-    }, 15000);
-
-});
+    // Fallback: copiar al portapapeles
+    try {
+        await navigator.clipboard.writeText(texto);
+        btn.textContent = '¡Copiado!';
+        setTimeout(() => btn.textContent = 'Compartir', 2000);
+    } catch(e) {
+        // Fallback sin clipboard API (HTTP o navegadores muy viejos)
+        const ta = document.createElement('textarea');
+        ta.value = texto;
+        ta.style.position = 'fixed';
+        ta.style.opacity  = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.textContent = '¡Copiado!';
+        setTimeout(() => btn.textContent = 'Compartir', 2000);
+    }
+}
 </script>
 }

@@ -228,10 +228,17 @@ function closeDrawer() {
 navToggle.addEventListener('click', function(e) { e.stopPropagation(); openDrawer(); });
 drawerClose.addEventListener('click', closeDrawer);
 drawerOverlay.addEventListener('click', closeDrawer);
-let txStart = 0;
-drawer.addEventListener('touchstart', e => { txStart = e.touches[0].clientX; }, { passive: true });
-drawer.addEventListener('touchend',   e => {
-    if (e.changedTouches[0].clientX - txStart > 60) closeDrawer();
+let txStart = 0, tyStart = 0;
+drawer.addEventListener('touchstart', e => {
+    txStart = e.touches[0].clientX;
+    tyStart = e.touches[0].clientY;
+}, { passive: true });
+drawer.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - txStart;
+    const dy = Math.abs(e.changedTouches[0].clientY - tyStart);
+    // Solo cerrar si el movimiento es mayormente horizontal (swipe derecha)
+    // y no es un scroll vertical (dy < dx significa que fue más horizontal)
+    if (dx > 60 && dy < dx * 0.6) closeDrawer();
 }, { passive: true });
 document.querySelectorAll('.nav-dropdown').forEach(function(dropdown) {
     var span  = dropdown.querySelector('span');

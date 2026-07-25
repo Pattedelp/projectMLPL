@@ -30,7 +30,7 @@ namespace TorneoAmigos.Controllers
                 TotalGoles           = _repo.GetTotalGoles(),
                 UltimasNoticias      = _noticias.GetNoticias(soloPublicadas: true).Take(6).ToList()
             };
-            ViewBag.Encuestas      = new List<Encuesta>(); // temporalmente deshabilitado
+            ViewBag.Encuestas = _encuestas.GetEncuestasActivas();
             ViewBag.PrimeraCActiva = _tempRepo.PrimeraCActiva();
             if (_tempRepo.PrimeraCActiva())
                 vm.PrimeraC = BuildVM(3);

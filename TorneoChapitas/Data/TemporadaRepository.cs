@@ -1951,64 +1951,61 @@ namespace TorneoAmigos.Data
             return titulos;
         }
 
-        public PalmaresViewModel GetPalmares()
+public PalmaresViewModel GetPalmares()
+{
+    var titulos = new List<TorneoAmigos.Models.Titulo>();
+    var sql = @"
+        SELECT p.id,
+               COALESCE(p.equipo_id, 0),
+               COALESCE(p.nombre_equipo, e.nombre, 'Desconocido'),
+               p.tipo_titulo, p.nombre_titulo,
+               p.temporada_id, p.temporada_nombre,
+               COALESCE(e.pais_code, '')
+        FROM palmares p
+        LEFT JOIN equipos e ON p.equipo_id = e.id
+        ORDER BY p.created_at DESC";
+    using var conn = GetConnection();
+    using var cmd  = new NpgsqlCommand(sql, conn);
+    conn.Open();
+    using var r = cmd.ExecuteReader();
+    while (r.Read())
+    {
+        var nombre   = r.GetString(2);
+        var paisCode = r.GetString(7);
+        titulos.Add(new TorneoAmigos.Models.Titulo
         {
-            var titulos = new List<TorneoAmigos.Models.Titulo>();
-            // nombre_equipo puede venir directo de la tabla (histórico) o de JOIN con equipos
-            var sql = @"
-                SELECT p.id,
-                       COALESCE(p.equipo_id, 0),
-                       COALESCE(p.nombre_equipo, e.nombre, 'Desconocido'),
-                       p.tipo_titulo, p.nombre_titulo,
-                       p.temporada_id, p.temporada_nombre
-                FROM palmares p
-                LEFT JOIN equipos e ON p.equipo_id = e.id
-                ORDER BY p.created_at DESC";
-
-            using var conn = GetConnection();
-            using var cmd  = new NpgsqlCommand(sql, conn);
-            conn.Open();
-            using var r = cmd.ExecuteReader();
-            while (r.Read())
-            {
-                var nombre = r.GetString(2);
-                titulos.Add(new TorneoAmigos.Models.Titulo
-                {
-                    Id              = r.GetInt32(0),
-                    EquipoId        = r.GetInt32(1),
-                    NombreEquipo    = nombre,
-                    FlagCode        = BanderaMap.GetCode(nombre),
-                    TipoTitulo      = r.GetString(3),
-                    NombreTitulo    = r.GetString(4),
-                    TemporadaId     = r.IsDBNull(5) ? null : r.GetInt32(5),
-                    TemporadaNombre = r.GetString(6)
-                });
-            }
-
-            // Agrupar por nombre (los históricos tienen equipo_id = 0)
-            var equipos = titulos
-                .GroupBy(t => t.NombreEquipo.Trim().ToLower())
-                .Select(g => new TorneoAmigos.Models.PalmaresEquipo
-                {
-                    EquipoId        = g.First().EquipoId,
-                    NombreEquipo    = g.First().NombreEquipo,
-                    FlagCode        = g.First().FlagCode,
-                    TotalTitulos    = g.Count(),
-                    CampeonatosLiga = g.Count(t => t.TipoTitulo == "campeon_torneo"),
-                    CopaArgentina   = g.Count(t => t.TipoTitulo == "campeon_copa"),
-                    Supercopa       = g.Count(t => t.TipoTitulo == "campeon_supercopa"),
-                    Titulos         = g.ToList()
-                })
-                .OrderByDescending(e => e.TotalTitulos)
-                .ThenByDescending(e => e.CampeonatosLiga)
-                .ToList();
-
-            return new TorneoAmigos.Models.PalmaresViewModel
-            {
-                Equipos        = equipos,
-                UltimosTitulos = titulos.Take(10).ToList()
-            };
-        }
+            Id              = r.GetInt32(0),
+            EquipoId        = r.GetInt32(1),
+            NombreEquipo    = nombre,
+            FlagCode        = !string.IsNullOrEmpty(paisCode) ? paisCode : BanderaMap.GetCode(nombre),
+            TipoTitulo      = r.GetString(3),
+            NombreTitulo    = r.GetString(4),
+            TemporadaId     = r.IsDBNull(5) ? null : r.GetInt32(5),
+            TemporadaNombre = r.GetString(6)
+        });
+    }
+    var equipos = titulos
+        .GroupBy(t => t.NombreEquipo.Trim().ToLower())
+        .Select(g => new TorneoAmigos.Models.PalmaresEquipo
+        {
+            EquipoId        = g.First().EquipoId,
+            NombreEquipo    = g.First().NombreEquipo,
+            FlagCode        = g.First().FlagCode,
+            TotalTitulos    = g.Count(),
+            CampeonatosLiga = g.Count(t => t.TipoTitulo == "campeon_torneo"),
+            CopaArgentina   = g.Count(t => t.TipoTitulo == "campeon_copa"),
+            Supercopa       = g.Count(t => t.TipoTitulo == "campeon_supercopa"),
+            Titulos         = g.ToList()
+        })
+        .OrderByDescending(e => e.TotalTitulos)
+        .ThenByDescending(e => e.CampeonatosLiga)
+        .ToList();
+    return new TorneoAmigos.Models.PalmaresViewModel
+    {
+        Equipos        = equipos,
+        UltimosTitulos = titulos.Take(10).ToList()
+    };
+}
 
         // ── RÉCORDS HISTÓRICOS ───────────────────────────────────    
         // ── RÉCORDS ─────────────────────────────────────

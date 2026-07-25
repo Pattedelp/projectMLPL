@@ -2,21 +2,6 @@
 @{
     ViewBag.Title = "Noticias";
     ViewBag.ActivePage = "noticias";
-
-    // Limpia marcadores de formato para el preview
-    string LimpiarPreview(string texto, int max) {
-        if (string.IsNullOrEmpty(texto)) return "";
-        var limpio = texto
-            .Replace("**", "").Replace("__", "").Replace("~~", "")
-            .Replace("*", "").Replace("# ", "").Replace("## ", "")
-            .Replace("---", "")
-            .Replace("\n", " ").Replace("\r", "");
-        // Cortar en la última palabra completa
-        if (limpio.Length <= max) return limpio;
-        var cortado = limpio[..max];
-        var ultimoEspacio = cortado.LastIndexOf(' ');
-        return (ultimoEspacio > 0 ? cortado[..ultimoEspacio] : cortado) + "…";
-    }
 }
 <div class="page-hero">
     <div class="page-hero-icon">📰</div>
@@ -52,7 +37,6 @@ else
 else
 {
     var primera = Model.Noticias.First();
-
     <!-- Noticia destacada -->
     <a asp-action="Detalle" asp-route-id="@primera.Id" class="noticia-destacada">
         @if (!string.IsNullOrEmpty(primera.ImagenUrl))
@@ -66,42 +50,39 @@ else
                 @(primera.Tipo == "automatica" ? "⚡ Automática" : "✍️ Redacción")
             </span>
             <h2 class="noticia-titulo-grande">@primera.Titulo</h2>
-            <p class="noticia-preview">@LimpiarPreview(primera.Contenido, 280)</p>
+            <p class="noticia-preview">
+                @(primera.Contenido.Length > 200 ? primera.Contenido[..200] + "..." : primera.Contenido)
+            </p>
             <span class="noticia-fecha">
                 @primera.CreatedAt.ToString("dd/MM/yyyy") · @primera.Autor
             </span>
         </div>
     </a>
-
     @if (Model.Noticias.Count > 1)
     {
-        <div class="noticias-grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;margin-top:24px;">
+        <div class="noticias-grid">
             @foreach (var n in Model.Noticias.Skip(1))
             {
                 <a asp-action="Detalle" asp-route-id="@n.Id" class="noticia-card">
                     @if (!string.IsNullOrEmpty(n.ImagenUrl))
                     {
                         <div class="noticia-card-img"
-                             style="height:200px;background-image:url('@n.ImagenUrl');background-size:cover;background-position:center;">
+                             style="background-image:url('@n.ImagenUrl');background-size:cover;background-position:center;">
                         </div>
                     }
                     else
                     {
-                        <div class="noticia-card-img noticia-card-img-placeholder" style="height:120px;">📰</div>
+                        <div class="noticia-card-img noticia-card-img-placeholder">📰</div>
                     }
-                    <div class="noticia-card-body" style="padding:18px;">
+                    <div class="noticia-card-body">
                         <span class="noticia-badge @(n.Tipo == "automatica" ? "badge-auto" : "badge-manual")">
-                            @(n.Tipo == "automatica" ? "⚡ Auto" : "✍️ Redacción")
+                            @(n.Tipo == "automatica" ? "⚡" : "✍️")
                         </span>
-                        <h3 class="noticia-card-titulo" style="font-size:16px;margin:8px 0 10px;-webkit-line-clamp:3;">
-                            @n.Titulo
-                        </h3>
-                        <p class="noticia-card-preview" style="font-size:13px;line-height:1.6;color:var(--color-muted);margin-bottom:10px;">
-                            @LimpiarPreview(n.Contenido, 160)
+                        <h3 class="noticia-card-titulo">@n.Titulo</h3>
+                        <p class="noticia-card-preview">
+                            @(n.Contenido.Length > 100 ? n.Contenido[..100] + "..." : n.Contenido)
                         </p>
-                        <span class="noticia-fecha" style="font-size:12px;">
-                            @n.CreatedAt.ToString("dd/MM/yyyy") · @n.Autor
-                        </span>
+                        <span class="noticia-fecha">@n.CreatedAt.ToString("dd/MM/yyyy")</span>
                     </div>
                 </a>
             }

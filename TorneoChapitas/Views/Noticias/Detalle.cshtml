@@ -49,15 +49,29 @@
             @if (Model.ImagenUrl.StartsWith("data:"))
             {
                 <img id="noticia-img" src="/Noticias/Imagen/@Model.Id" alt="@Model.Titulo"
-                     style="display:none;width:100%;max-height:420px;object-fit:cover;" />
+                     style="display:none;width:100%;max-height:500px;object-fit:contain;cursor:zoom-in;"
+                     onclick="abrirLightbox(this.src)" />
             }
             else
             {
                 <img id="noticia-img" src="@Model.ImagenUrl" alt="@Model.Titulo"
-                     style="display:none;width:100%;max-height:420px;object-fit:cover;" />
+                     style="display:none;width:100%;max-height:500px;object-fit:contain;cursor:zoom-in;"
+                     onclick="abrirLightbox(this.src)" />
             }
         </div>
     }
+
+    <!-- Lightbox -->
+    <div id="lightbox" onclick="cerrarLightbox()"
+         style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);
+                align-items:center;justify-content:center;cursor:zoom-out;">
+        <img id="lightbox-img" src="" alt=""
+             style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px;
+                    box-shadow:0 0 60px rgba(0,0,0,.8);" />
+        <button onclick="cerrarLightbox()" 
+                style="position:fixed;top:16px;right:20px;background:none;border:none;
+                       color:#fff;font-size:28px;cursor:pointer;opacity:.8;line-height:1;">✕</button>
+    </div>
 
     <!-- Contenido con formato enriquecido -->
     <div id="noticia-contenido" style="font-size:16px;line-height:1.9;color:var(--color-text);margin-bottom:40px;"></div>
@@ -230,7 +244,20 @@ function aplicarInline(t) {
         .replace(/~~(.+?)~~/g, '<s>$1</s>');
 }
 
-// ── Compartir ─────────────────────────────────────────────────
+// ── Lightbox ──────────────────────────────────────────────────
+function abrirLightbox(src) {
+    const lb = document.getElementById('lightbox');
+    document.getElementById('lightbox-img').src = src;
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function cerrarLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') cerrarLightbox();
+});
 async function compartirNoticia() {
     const titulo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Titulo));
     const url    = window.location.href;

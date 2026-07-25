@@ -1281,22 +1281,21 @@ namespace TorneoAmigos.Data
 
 if (esFP0 || esFP1)
 {
-    // Los slots de FP2 que esperan al ganador de FP1 tienen local asignado
-    // pero visitante vacío → buscar equipo_visitante_id IS NULL
+    // El ganador del partido de FP1 en posicion_bracket = N
+    // va al partido de FP2 con posicion_bracket = N (relación 1:1 por posición)
     using var cmdAdv = new NpgsqlCommand(@"
         UPDATE copa_partidos
         SET equipo_visitante_id = @G
-        WHERE id = (
-            SELECT id FROM copa_partidos
-            WHERE ronda_id = @SR AND copa_id = @C
-              AND equipo_visitante_id IS NULL
-            ORDER BY posicion_bracket FETCH FIRST 1 ROW ONLY
-        )", conn, tx);
-                            cmdAdv.Parameters.AddWithValue("@G",  ganadorId);
-                            cmdAdv.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
-                            cmdAdv.Parameters.AddWithValue("@C",  copaId);
-                            cmdAdv.ExecuteNonQuery();
-                        }
+        WHERE ronda_id = @SR
+          AND copa_id  = @C
+          AND posicion_bracket = @POS
+          AND equipo_visitante_id IS NULL", conn, tx);
+    cmdAdv.Parameters.AddWithValue("@G",   ganadorId);
+    cmdAdv.Parameters.AddWithValue("@SR",  siguienteRondaId.Value);
+    cmdAdv.Parameters.AddWithValue("@C",   copaId);
+    cmdAdv.Parameters.AddWithValue("@POS", posicion);
+    cmdAdv.ExecuteNonQuery();
+}
                         else
                         {
                             // Contar partidos en ronda actual y siguiente para determinar la relación

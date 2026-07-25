@@ -185,6 +185,7 @@ namespace TorneoAmigos.Controllers
                 ActualizarCampeon(cierre.CampeonSupercopaId, "campeon_supercopa",  "Campeón Supercopa Argentina");
                 ActualizarCampeon(cierre.CampeonPrimeraId,   "campeon_torneo",     "Campeón Primera División");
                 ActualizarCampeon(cierre.CampeonBId,         "campeon_primera_b",  "Campeón Primera Nacional");
+                ActualizarCampeon(cierre.CampeonCId, "campeon_primera_c", "Campeón Primera C Nacional");
             }
 
             return Json(new { ok });

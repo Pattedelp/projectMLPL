@@ -541,14 +541,16 @@ namespace TorneoAmigos.Controllers
             return Json(equipos);
         }
 
-        [HttpGet]
-        public IActionResult GetEquiposTodos()
-        {
-            var todos = _repo.GetEquiposByDivision(1)
-                .Concat(_repo.GetEquiposByDivision(2))
-                .Select(e => new { id = e.Id, nombre = e.Nombre, flagCode = e.FlagCode });
-            return Json(todos);
-        }
+     [HttpGet]
+public IActionResult GetEquiposTodos()
+{
+    var todos = _repo.GetEquiposByDivision(1)
+        .Concat(_repo.GetEquiposByDivision(2))
+        .Concat(_repo.GetEquiposByDivision(3))
+        .OrderBy(e => e.Nombre)
+        .Select(e => new { id = e.Id, nombre = e.Nombre, flagCode = e.FlagCode });
+    return Json(todos);
+}
     }
 
     public class NuevoJugadorDto

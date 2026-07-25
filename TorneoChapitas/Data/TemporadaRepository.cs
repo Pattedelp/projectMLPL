@@ -1279,18 +1279,19 @@ namespace TorneoAmigos.Data
                         bool esFP0 = nombreRonda?.Contains("Fase Previa 0") == true;
                         bool esFP1 = nombreRonda?.Contains("Fase Previa 1") == true;
 
-                        if (esFP0 || esFP1)
-                        {
-                            // Buscar primer partido en siguiente ronda donde local_id IS NULL
-                            using var cmdAdv = new NpgsqlCommand(@"
-                                UPDATE copa_partidos
-                                SET equipo_local_id = @G
-                                WHERE id = (
-                                    SELECT id FROM copa_partidos
-                                    WHERE ronda_id = @SR AND copa_id = @C
-                                      AND equipo_local_id IS NULL
-                                    ORDER BY posicion_bracket FETCH FIRST 1 ROW ONLY
-                                )", conn, tx);
+if (esFP0 || esFP1)
+{
+    // Los slots de FP2 que esperan al ganador de FP1 tienen local asignado
+    // pero visitante vacío → buscar equipo_visitante_id IS NULL
+    using var cmdAdv = new NpgsqlCommand(@"
+        UPDATE copa_partidos
+        SET equipo_visitante_id = @G
+        WHERE id = (
+            SELECT id FROM copa_partidos
+            WHERE ronda_id = @SR AND copa_id = @C
+              AND equipo_visitante_id IS NULL
+            ORDER BY posicion_bracket FETCH FIRST 1 ROW ONLY
+        )", conn, tx);
                             cmdAdv.Parameters.AddWithValue("@G",  ganadorId);
                             cmdAdv.Parameters.AddWithValue("@SR", siguienteRondaId.Value);
                             cmdAdv.Parameters.AddWithValue("@C",  copaId);

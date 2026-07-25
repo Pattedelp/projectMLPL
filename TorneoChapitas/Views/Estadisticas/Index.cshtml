@@ -3,7 +3,6 @@
     ViewBag.Title = "Estadísticas";
     ViewBag.ActivePage = "estadisticas";
 }
-
 <div class="page-hero">
     <div class="page-hero-icon">
         <img src="~/img/aac-logo.png" alt="AAC"
@@ -14,14 +13,12 @@
         <p>Historial de campeones y ranking histórico · Torneo Chapitas AAC</p>
     </div>
 </div>
-
 <!-- TABS -->
 <div style="display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;">
     <button onclick="showTab('palmares')"    id="tab-palmares"    class="tab-btn active">🏆 Palmarés</button>
     <button onclick="showTab('alltime')"     id="tab-alltime"     class="tab-btn">📊 Tabla Histórica</button>
     <button onclick="showTab('historiales')" id="tab-historiales" class="tab-btn">⚔️ Historiales Completos</button>
 </div>
-
 <!-- ============ PALMARÉS ============ -->
 <div id="section-palmares">
 @if (!Model.Palmares.Equipos.Any())
@@ -34,11 +31,25 @@
 }
 else
 {
-    <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
-        🏆 Tabla de Títulos
-    </h2>
+    <!-- Toggle filtro -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border);">
+        <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin:0;">
+            🏆 Tabla de Títulos
+        </h2>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--color-muted);">
+            <div class="toggle-slider-wrap" id="toggle-solo-principales">
+                <input type="checkbox" id="chk-solo-principales" onchange="filtrarPalmares(this.checked)"
+                       style="display:none;" />
+                <div class="ts-track" id="ts-track">
+                    <div class="ts-thumb"></div>
+                </div>
+            </div>
+            Solo Liga · Copa Argentina · Supercopa
+        </label>
+    </div>
+
     <div class="tabla-wrapper" style="margin-bottom:40px;">
-        <table class="tabla-posiciones">
+        <table class="tabla-posiciones" id="tabla-palmares">
             <thead>
                 <tr>
                     <th>#</th><th>Jugador</th>
@@ -46,31 +57,41 @@ else
                     <th title="Campeonatos de Liga">🏆 Liga</th>
                     <th title="Copa Argentina">🥇 Copa Arg.</th>
                     <th title="Supercopa">⭐ Supercopa</th>
-                    <th title="Otros títulos">🎖 Otros</th>
+                    <th id="th-otros" title="Otros títulos">🎖 Otros</th>
                     <th></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tbody-palmares">
                 @{ int pos = 1; }
                 @foreach (var e in Model.Palmares.Equipos)
                 {
                     var otros = e.TotalTitulos - e.CampeonatosLiga - e.CopaArgentina - e.Supercopa;
-                    <tr style="cursor:pointer;" onclick="toggleDetalle('@e.NombreEquipo.ToLower().Replace(" ","_")')">
-                        <td class="col-pos">@pos</td>
+                    var esPrincipal = e.CampeonatosLiga > 0 || e.CopaArgentina > 0 || e.Supercopa > 0;
+                    var totalPrincipal = e.CampeonatosLiga + e.CopaArgentina + e.Supercopa;
+                    <tr class="palmares-row @(esPrincipal ? "tiene-principal" : "solo-otros")"
+                        style="cursor:pointer;"
+                        data-liga="@e.CampeonatosLiga"
+                        data-copa="@e.CopaArgentina"
+                        data-supercopa="@e.Supercopa"
+                        data-total-principal="@totalPrincipal"
+                        onclick="toggleDetalle('@e.NombreEquipo.ToLower().Replace(" ","_")')">
+                        <td class="col-pos palmares-pos">@pos</td>
                         <td class="col-equipo">
                             @if (e.FlagCode == "retired") { <span style="font-size:14px;margin-right:6px;color:var(--color-muted);" title="Jugador retirado">✝</span> }
                             else if (!string.IsNullOrEmpty(e.FlagCode)) { <img src="https://flagcdn.com/20x15/@(e.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
                             <strong>@e.NombreEquipo</strong>
                             @if (e.FlagCode == "retired") { <span style="font-size:11px;color:var(--color-muted);margin-left:6px;">retirado</span> }
                         </td>
-                        <td class="col-pts">@e.TotalTitulos</td>
+                        <td class="col-pts palmares-total">@e.TotalTitulos</td>
                         <td class="col-num">@(e.CampeonatosLiga > 0 ? e.CampeonatosLiga.ToString() : "-")</td>
                         <td class="col-num">@(e.CopaArgentina  > 0 ? e.CopaArgentina.ToString()  : "-")</td>
                         <td class="col-num">@(e.Supercopa      > 0 ? e.Supercopa.ToString()      : "-")</td>
-                        <td class="col-num">@(otros > 0 ? otros.ToString() : "-")</td>
+                        <td class="col-num col-otros">@(otros > 0 ? otros.ToString() : "-")</td>
                         <td style="color:var(--color-muted);font-size:12px;">ver ▾</td>
                     </tr>
-                    <tr id="detalle-@e.NombreEquipo.ToLower().Replace(" ","_")" style="display:none;">
+                    <tr id="detalle-@e.NombreEquipo.ToLower().Replace(" ","_")"
+                        class="palmares-detalle @(esPrincipal ? "tiene-principal" : "solo-otros")"
+                        style="display:none;">
                         <td colspan="8" style="padding:0;background:var(--color-bg3);">
                             <div style="padding:16px 24px;">
                                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
@@ -134,7 +155,6 @@ else
     }
 }
 </div>
-
 <!-- ============ RANKING ALL-TIME ============ -->
 <div id="section-alltime" style="display:none;">
     <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
@@ -193,7 +213,6 @@ else
         </div>
     }
 </div>
-
 <!-- ============ HISTORIALES COMPLETOS ============ -->
 <div id="section-historiales" style="display:none;">
     <h2 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--color-gold);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
@@ -202,58 +221,36 @@ else
     <p style="font-size:12px;color:var(--color-muted);margin-bottom:20px;">
         Historial de cada jugador contra todos sus rivales. Incluye liga, copas y partidos de la temporada en curso.
     </p>
-
     @if (!Model.Historiales.Any())
     {
         <p style="color:var(--color-muted);font-size:13px;">No hay datos todavía.</p>
     }
     else
     {
-<div style="margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-
-    <label style="font-size:13px;color:var(--color-muted);">
-        Ver historial de:
-    </label>
-
-    <div class="historial-selector">
-
-        <div class="historial-selector-selected" onclick="toggleSelector()">
-            <span id="historial-selected-text">-- Elegí un jugador --</span>
-            <span>▾</span>
-        </div>
-
-        <div id="historial-options" class="historial-selector-options">
-
-            @foreach (var h in Model.Historiales.OrderBy(x => x.NombreEquipo))
-            {
-                <div class="historial-option"
-                     data-id="@h.EquipoId"
-                     data-nombre="@h.NombreEquipo"
-                     onclick="seleccionarHistorial('@h.EquipoId','@h.NombreEquipo')">
-
-                    @if (h.FlagCode == "retired")
-                    {
-                        <span style="font-size:14px;color:var(--color-muted);margin-right:6px;">✝</span>
-                    }
-                    else if (!string.IsNullOrEmpty(h.FlagCode))
-                    {
-                        <img src="https://flagcdn.com/20x15/@(h.FlagCode).png"
-                             class="flag-img"
-                             alt=""
-                             onerror="this.style.display='none'" />
-                    }
-
-                    <span>@h.NombreEquipo</span>
-
+        <div style="margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label style="font-size:13px;color:var(--color-muted);">Ver historial de:</label>
+            <div class="historial-selector">
+                <div class="historial-selector-selected" onclick="toggleSelector()">
+                    <span id="historial-selected-text">-- Elegí un jugador --</span>
+                    <span>▾</span>
                 </div>
-            }
-
+                <div id="historial-options" class="historial-selector-options">
+                    @foreach (var h in Model.Historiales.OrderBy(x => x.NombreEquipo))
+                    {
+                        <div class="historial-option"
+                             data-id="@h.EquipoId"
+                             data-nombre="@h.NombreEquipo"
+                             onclick="seleccionarHistorial('@h.EquipoId','@h.NombreEquipo')">
+                            @if (h.FlagCode == "retired")
+                            { <span style="font-size:14px;color:var(--color-muted);margin-right:6px;">✝</span> }
+                            else if (!string.IsNullOrEmpty(h.FlagCode))
+                            { <img src="https://flagcdn.com/20x15/@(h.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
+                            <span>@h.NombreEquipo</span>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
-
-    </div>
-
-</div>
-
         @foreach (var h in Model.Historiales)
         {
             <div id="historial-@h.EquipoId" class="historial-panel" style="display:none;">
@@ -306,7 +303,6 @@ else
         }
     }
 </div>
-
 @section Scripts {
 <script>
 function toggleDetalle(id) {
@@ -327,105 +323,109 @@ function mostrarHistorial(eqId) {
         if (panel) panel.style.display = 'block';
     }
 }
+
+// ── Toggle filtro palmarés ────────────────────────────────────
+function filtrarPalmares(soloprincipales) {
+    // Animar el toggle
+    const track = document.getElementById('ts-track');
+    if (track) track.classList.toggle('on', soloprincipales);
+
+    // Ocultar columna "Otros" si filtramos
+    document.querySelectorAll('.col-otros, #th-otros').forEach(el => {
+        el.style.display = soloprincipales ? 'none' : '';
+    });
+
+    // Mostrar/ocultar filas y recalcular posiciones
+    const rows = document.querySelectorAll('.palmares-row');
+    let posVisible = 1;
+    rows.forEach(row => {
+        const esPrincipal = row.classList.contains('tiene-principal');
+        const mostrar = !soloprincipales || esPrincipal;
+        row.style.display = mostrar ? '' : 'none';
+
+        // Fila de detalle expandido — ocultar si su equipo se oculta
+        const id = row.querySelector('[id]')
+            ? null
+            : null;
+        const nombre = row.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+        if (nombre) {
+            const detalle = document.getElementById('detalle-' + nombre);
+            if (detalle && !mostrar) detalle.style.display = 'none';
+        }
+
+        if (mostrar) {
+            // Actualizar número de posición
+            const posCell = row.querySelector('.palmares-pos');
+            if (posCell) posCell.textContent = posVisible++;
+
+            // Si filtramos, mostrar total solo de principales
+            const totalCell = row.querySelector('.palmares-total');
+            if (totalCell) {
+                if (soloprincipales) {
+                    const t = parseInt(row.dataset.totalPrincipal || 0);
+                    totalCell.textContent = t > 0 ? t : '-';
+                } else {
+                    // Restaurar total original
+                    const liga  = parseInt(row.dataset.liga || 0);
+                    const copa  = parseInt(row.dataset.copa || 0);
+                    const sc    = parseInt(row.dataset.supercopa || 0);
+                    const otros = parseInt(row.querySelector('.col-otros')?.textContent) || 0;
+                    totalCell.textContent = liga + copa + sc + otros;
+                }
+            }
+        }
+    });
+}
+
 (function() {
     const params = new URLSearchParams(window.location.search);
     const eqId   = params.get('equipo');
     if (eqId) {
         showTab('historiales');
         const opcion = document.querySelector(".historial-option[data-id='" + eqId + "']");
-
-if (opcion) {
-    document.getElementById("historial-selected-text").innerText =
-        opcion.dataset.nombre;
-}
-
-mostrarHistorial(eqId);
+        if (opcion) document.getElementById("historial-selected-text").innerText = opcion.dataset.nombre;
+        mostrarHistorial(eqId);
     }
 })();
 
 function toggleSelector() {
-
     const lista = document.getElementById("historial-options");
-
-    lista.style.display =
-        lista.style.display === "block"
-            ? "none"
-            : "block";
+    lista.style.display = lista.style.display === "block" ? "none" : "block";
 }
-
 function seleccionarHistorial(id, nombre) {
-
     document.getElementById("historial-selected-text").innerText = nombre;
-
     document.getElementById("historial-options").style.display = "none";
-
     mostrarHistorial(id);
 }
-
-document.addEventListener("click", function(e){
-
+document.addEventListener("click", function(e) {
     const selector = document.querySelector(".historial-selector");
-
-    if(selector && !selector.contains(e.target)){
-        document.getElementById("historial-options").style.display="none";
-    }
-
+    if (selector && !selector.contains(e.target))
+        document.getElementById("historial-options").style.display = "none";
 });
 </script>
 <style>
 .tab-btn { padding:10px 18px;border-radius:8px;background:var(--color-bg2);border:1px solid var(--color-border);color:var(--color-muted);font-size:13px;font-weight:500;cursor:pointer; }
 .tab-btn.active { background:var(--color-gold);color:var(--color-bg);border-color:var(--color-gold); }
 
-.historial-selector{
-    position:relative;
-    width:260px;
-    font-size:13px;
+/* Toggle switch */
+.ts-track {
+    width:36px; height:20px; background:var(--color-border);
+    border-radius:20px; position:relative; transition:background .2s; cursor:pointer;
+    flex-shrink:0;
 }
+.ts-track.on { background:var(--color-gold); }
+.ts-thumb {
+    position:absolute; width:14px; height:14px; background:#fff;
+    border-radius:50%; top:3px; left:3px; transition:transform .2s;
+}
+.ts-track.on .ts-thumb { transform:translateX(16px); }
 
-.historial-selector-selected{
-    background:var(--color-bg2);
-    border:1px solid var(--color-border);
-    border-radius:8px;
-    padding:10px 14px;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    color:var(--color-text);
-    transition:.15s;
-}
-
-.historial-selector-selected:hover{
-    border-color:var(--color-gold);
-}
-
-.historial-selector-options{
-    display:none;
-    position:absolute;
-    left:0;
-    right:0;
-    top:105%;
-    background:var(--color-bg2);
-    border:1px solid var(--color-border);
-    border-radius:8px;
-    overflow:hidden;
-    max-height:320px;
-    overflow-y:auto;
-    z-index:999;
-    box-shadow:0 10px 25px rgba(0,0,0,.35);
-}
-
-.historial-option{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:10px 14px;
-    cursor:pointer;
-    transition:.15s;
-}
-
-.historial-option:hover{
-    background:var(--color-bg3);
-}
+/* Historial selector */
+.historial-selector { position:relative; width:260px; font-size:13px; }
+.historial-selector-selected { background:var(--color-bg2); border:1px solid var(--color-border); border-radius:8px; padding:10px 14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; color:var(--color-text); transition:.15s; }
+.historial-selector-selected:hover { border-color:var(--color-gold); }
+.historial-selector-options { display:none; position:absolute; left:0; right:0; top:105%; background:var(--color-bg2); border:1px solid var(--color-border); border-radius:8px; overflow:hidden; max-height:320px; overflow-y:auto; z-index:999; box-shadow:0 10px 25px rgba(0,0,0,.35); }
+.historial-option { display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; transition:.15s; }
+.historial-option:hover { background:var(--color-bg3); }
 </style>
 }

@@ -22,37 +22,37 @@ namespace TorneoAmigos.Controllers
             return View(vm);
         }
 
-        public IActionResult Detalle(int id)
-        {
-            ViewBag.ActivePage = "historial";
-            var resultados = _repo.GetResultadosTemporada(id);
-            var temporadas = _repo.GetTodasLasTemporadas();
-            var temporada  = temporadas.FirstOrDefault(t => t.Id == id);
-            if (temporada == null) return NotFound();
+ public IActionResult Detalle(int id)
+{
+    ViewBag.ActivePage = "historial";
+    var resultados = _repo.GetResultadosTemporada(id);
+    var temporadas = _repo.GetTodasLasTemporadas();
+    var temporada  = temporadas.FirstOrDefault(t => t.Id == id);
+    if (temporada == null) return NotFound();
 
-            var vm = new TemporadaDetalleViewModel
-            {
-                Temporada           = temporada,
-                ResultadosPrimera   = resultados.Where(r => r.DivisionId == 1).ToList(),
-                ResultadosNacionalB = resultados.Where(r => r.DivisionId == 2).ToList()
-            };
+    var vm = new TemporadaDetalleViewModel
+    {
+        Temporada           = temporada,
+        ResultadosPrimera   = resultados.Where(r => r.DivisionId == 1).ToList(),
+        ResultadosNacionalB = resultados.Where(r => r.DivisionId == 2).ToList()
+    };
 
-            ViewBag.PartidosPrimera    = _repo.GetPartidosHistorico(temporada.Nombre, 1);
-            ViewBag.PartidosNacional   = _repo.GetPartidosHistorico(temporada.Nombre, 2);
-            ViewBag.PartidosPrimeraC   = _repo.GetPartidosHistorico(temporada.Nombre, 3);
-            ViewBag.PartidosEspeciales = _repo.GetPartidosHistorico(temporada.Nombre, 0)
-                .Where(p => p.Torneo != "Copa Argentina" && p.Torneo != "Supercopa Argentina")
-                .ToList();
+    ViewBag.PartidosPrimera  = _repo.GetPartidosHistorico(temporada.Nombre, 1);
+    ViewBag.PartidosNacional = _repo.GetPartidosHistorico(temporada.Nombre, 2);
+    ViewBag.PartidosPrimeraC = _repo.GetPartidosHistorico(temporada.Nombre, 3);
 
-                var partidos0 = _repo.GetPartidosHistorico(temporada.Nombre, 0);
-ViewBag.PartidosCopa      = partidos0.Where(p => p.Torneo == "Copa Argentina").ToList();
-ViewBag.PartidosSupercopa = partidos0.Where(p => p.Torneo == "Supercopa Argentina").ToList();
+    var partidos0 = _repo.GetPartidosHistorico(temporada.Nombre, 0);
+    ViewBag.PartidosCopa      = partidos0.Where(p => p.Torneo.StartsWith("Copa Argentina")).ToList();
+    ViewBag.PartidosSupercopa = partidos0.Where(p => p.Torneo.StartsWith("Supercopa Argentina")).ToList();
+    ViewBag.PartidosEspeciales = partidos0
+        .Where(p => !p.Torneo.StartsWith("Copa Argentina") && !p.Torneo.StartsWith("Supercopa Argentina"))
+        .ToList();
 
-var palmares = _repo.GetPalmares();
-var titulosTemp = palmares.Equipos.SelectMany(e => e.Titulos)
-    .Where(t => t.TemporadaNombre == temporada.Nombre).ToList();
-ViewBag.TitulosTemporada = titulosTemp;
-            return View(vm);
-        }
+    var palmares = _repo.GetPalmares();
+    ViewBag.TitulosTemporada = palmares.Equipos.SelectMany(e => e.Titulos)
+        .Where(t => t.TemporadaNombre == temporada.Nombre).ToList();
+
+    return View(vm);
+}
     }
 }

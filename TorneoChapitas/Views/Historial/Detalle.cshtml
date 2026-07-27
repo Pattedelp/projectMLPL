@@ -274,7 +274,7 @@
                     <div style="overflow-x:auto;padding-bottom:16px;">
                         <div style="display:flex;gap:0;align-items:flex-start;min-width:max-content;">
                             @foreach (var ronda in rondasCopa) {
-                                bool esFinal = ronda.Key.Contains("Final") && !ronda.Key.Contains("Semi") && !ronda.Key.Contains("Cuarto");
+                                bool esFinal = ronda.Key == "Final";
                                 <div style="min-width:200px;flex-shrink:0;">
                                     <div style="background:var(--color-bg3);border-bottom:1px solid var(--color-border);padding:8px 12px;margin-right:16px;">
                                         <span style="font-family:var(--font-heading);font-size:10px;letter-spacing:2px;color:@(esFinal?"var(--color-gold)":"var(--color-muted)");text-transform:uppercase;">@(esFinal?"⭐ ":"")@ronda.Key</span>
@@ -338,7 +338,7 @@
                     <div style="overflow-x:auto;padding-bottom:16px;">
                         <div style="display:flex;gap:0;align-items:flex-start;min-width:max-content;">
                             @foreach (var ronda in rondasSupercopa) {
-                                bool esFinal = ronda.Key.Contains("Final") && !ronda.Key.Contains("Semi");
+                                bool esFinal = ronda.Key == "Final";
                                 <div style="min-width:200px;flex-shrink:0;">
                                     <div style="background:var(--color-bg3);border-bottom:1px solid var(--color-border);padding:8px 12px;margin-right:16px;">
                                         <span style="font-family:var(--font-heading);font-size:10px;letter-spacing:2px;color:@(esFinal?"var(--color-gold)":"var(--color-muted)");text-transform:uppercase;">@(esFinal?"⭐ ":"")@ronda.Key</span>

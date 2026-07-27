@@ -1,4 +1,5 @@
 @model TemporadaDetalleViewModel
+@using TorneoAmigos.Models
 @{
     ViewBag.Title = Model.Temporada.Nombre;
     var partidosPrimera    = ViewBag.PartidosPrimera    as List<HistoricoPartido> ?? new();
@@ -16,11 +17,9 @@
     var campCopa      = titulosTemp.FirstOrDefault(t => t.TipoTitulo == "campeon_copa");
     var campSupercopa = titulosTemp.FirstOrDefault(t => t.TipoTitulo == "campeon_supercopa");
 
-    // Detectar si los datos tienen rondas (formato nuevo) o son genéricos (formato viejo)
     bool copaConRondas      = partidosCopa.Any(p => p.Torneo.Contains(" - "));
     bool supercopaConRondas = partidosSupercopa.Any(p => p.Torneo.Contains(" - "));
 
-    // Orden de rondas para el bracket
     int OrdenRonda(string nombre) {
         if (nombre.Contains("Fase Previa 0")) return 0;
         if (nombre.Contains("Fase Previa 1")) return 1;
@@ -32,32 +31,39 @@
         return 10;
     }
 
-    List<(int Fecha, List<HistoricoPartido> Partidos)> AgruparPorFecha(List<HistoricoPartido> partidos, int equiposPorFecha) {
+    List<(int Fecha, List<HistoricoPartido> Partidos)> AgruparPorFecha(List<HistoricoPartido> partidos, int ppf) {
         var result = new List<(int, List<HistoricoPartido>)>();
         if (!partidos.Any()) return result;
-        bool tieneFechas = partidos.Any(p => p.FechaNumero > 0);
-        if (tieneFechas) {
+        if (partidos.Any(p => p.FechaNumero > 0)) {
             foreach (var g in partidos.GroupBy(p => p.FechaNumero).OrderBy(g => g.Key))
                 result.Add((g.Key, g.ToList()));
         } else {
-            int fechaNum = 1;
-            for (int i = 0; i < partidos.Count; i += equiposPorFecha)
-                result.Add((fechaNum++, partidos.Skip(i).Take(equiposPorFecha).ToList()));
+            int fn = 1;
+            for (int i = 0; i < partidos.Count; i += ppf)
+                result.Add((fn++, partidos.Skip(i).Take(ppf).ToList()));
         }
         return result;
     }
 
-    int eqPrimera  = Model.ResultadosPrimera.Count;
-    int eqNacional = Model.ResultadosNacionalB.Count;
-    int eqC        = Model.ResultadosPrimeraC.Count;
-    int ppfPrimera  = eqPrimera  > 0 ? eqPrimera  / 2 : 5;
-    int ppfNacional = eqNacional > 0 ? eqNacional / 2 : 5;
-    int ppfC        = eqC        > 0 ? eqC        / 2 : 3;
+    int eqP = Model.ResultadosPrimera.Count;
+    int eqN = Model.ResultadosNacionalB.Count;
+    int eqC = Model.ResultadosPrimeraC.Count;
 
-    var fechasPrimera  = AgruparPorFecha(partidosPrimera.Where(p => p.Torneo == "Liga").ToList(), ppfPrimera);
-    var fechasNacional = AgruparPorFecha(partidosNacional.Where(p => p.Torneo == "Liga").ToList(), ppfNacional);
-    var fechasPrimeraC = AgruparPorFecha(partidosPrimeraC.Where(p => p.Torneo == "Liga").ToList(), ppfC);
+    var fechasPrimera  = AgruparPorFecha(partidosPrimera.Where(p => p.Torneo == "Liga").ToList(),  eqP > 0 ? eqP/2 : 5);
+    var fechasNacional = AgruparPorFecha(partidosNacional.Where(p => p.Torneo == "Liga").ToList(), eqN > 0 ? eqN/2 : 5);
+    var fechasPrimeraC = AgruparPorFecha(partidosPrimeraC.Where(p => p.Torneo == "Liga").ToList(), eqC > 0 ? eqC/2 : 3);
+
+    // Agrupar partidos de copa por ronda
+    var rondasCopa      = copaConRondas
+        ? partidosCopa.GroupBy(p => p.Torneo.Contains(" - ") ? p.Torneo[(p.Torneo.IndexOf(" - ")+3)..] : "Partidos")
+                      .OrderBy(g => OrdenRonda(g.Key)).ToList()
+        : new List<IGrouping<string, HistoricoPartido>>();
+    var rondasSupercopa = supercopaConRondas
+        ? partidosSupercopa.GroupBy(p => p.Torneo.Contains(" - ") ? p.Torneo[(p.Torneo.IndexOf(" - ")+3)..] : "Partidos")
+                           .OrderBy(g => OrdenRonda(g.Key)).ToList()
+        : new List<IGrouping<string, HistoricoPartido>>();
 }
+
 <div class="page-hero">
     <div class="page-hero-icon">📅</div>
     <div class="page-hero-text">
@@ -65,178 +71,20 @@
         <p>@Model.Temporada.FechaInicio?.ToString("MMM yyyy") — @Model.Temporada.FechaFin?.ToString("MMM yyyy")</p>
     </div>
 </div>
-<a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:20px;">
-    ← Volver al historial
-</a>
+<a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:20px;">← Volver al historial</a>
+
 <!-- TABS -->
 <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
     <button onclick="showTab('primera')"  id="tab-primera"  class="tab-btn active">🏆 Primera División</button>
     <button onclick="showTab('nacional')" id="tab-nacional" class="tab-btn">🥈 Primera Nacional</button>
-    @if (tienePrimeraC)   { <button onclick="showTab('primerac')"  id="tab-primerac"  class="tab-btn">🏟️ Primera C</button> }
-    @if (tieneCopas)      { <button onclick="showTab('copas')"     id="tab-copas"     class="tab-btn">🏅 Copas</button> }
+    @if (tienePrimeraC)   { <button onclick="showTab('primerac')"   id="tab-primerac"   class="tab-btn">🏟️ Primera C</button> }
+    @if (tieneCopas)      { <button onclick="showTab('copas')"      id="tab-copas"      class="tab-btn">🏅 Copas</button> }
     @if (tieneEspeciales) { <button onclick="showTab('especiales')" id="tab-especiales" class="tab-btn">⚡ Especiales</button> }
 </div>
 
+<!-- helper: fila de partido -->
 @{
-    void TablaPos(List<TemporadaResultado> resultados) {
-        <div class="tabla-wrapper">
-            <table class="tabla-posiciones">
-                <thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>V</th><th>D</th><th>DG</th><th>PTS</th></tr></thead>
-                <tbody>
-                    @foreach (var r in resultados) {
-                        <tr class="@(r.Campeon ? "zona-campeon" : r.Descendio ? "zona-descenso" : r.Ascendio ? "zona-ascenso" : "")"
-                            style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@r.EquipoId'">
-                            <td class="col-pos">@r.Posicion</td>
-                            <td class="col-equipo">
-                                @if (!string.IsNullOrEmpty(r.FlagCode))
-                                { <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
-                                @r.NombreEquipo
-                                @if (r.Campeon)   { <span style="font-size:11px;margin-left:3px;">🏆</span> }
-                                @if (r.Ascendio)  { <span style="font-size:11px;margin-left:3px;color:var(--color-green);">⬆</span> }
-                                @if (r.Descendio) { <span style="font-size:11px;margin-left:3px;color:var(--color-red);">⬇</span> }
-                            </td>
-                            <td class="col-num">@r.PartidosJugados</td>
-                            <td class="col-num" style="color:var(--color-green);">@r.Ganados</td>
-                            <td class="col-num" style="color:var(--color-red);">@r.Perdidos</td>
-                            <td class="col-num">@(r.GolesFavor - r.GolesContra >= 0 ? "+" : "")@(r.GolesFavor - r.GolesContra)</td>
-                            <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@r.Puntos</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-
-    void FilaPartido(HistoricoPartido p, bool esFinal = false) {
-        bool lg = p.GolesLocal > p.GolesVisitante;
-        <div style="background:@(esFinal?"rgba(240,192,64,0.06)":"var(--color-bg2)");border:1px solid @(esFinal?"var(--color-gold)":"var(--color-border)");border-radius:8px;overflow:hidden;margin-bottom:6px;">
-            <div style="display:flex;align-items:center;padding:10px 14px;gap:8px;font-size:13px;">
-                <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
-                    @if (!string.IsNullOrEmpty(p.FlagLocal))
-                    { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
-                    <span style="font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
-                </div>
-                <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:3px 12px;min-width:58px;text-align:center;color:@(esFinal?"var(--color-gold)":"var(--color-text)");">
-                    @p.GolesLocal - @p.GolesVisitante
-                </div>
-                <div style="flex:1;display:flex;align-items:center;gap:6px;">
-                    @if (!string.IsNullOrEmpty(p.FlagVisitante))
-                    { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
-                    <span style="font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
-                </div>
-            </div>
-            @if (esFinal) {
-                var campeonNombre = lg ? p.NombreLocal : p.NombreVisitante;
-                <div style="background:rgba(240,192,64,0.12);padding:4px 14px;font-size:11px;color:var(--color-gold);letter-spacing:1px;text-align:center;">
-                    🏆 CAMPEÓN: @campeonNombre
-                </div>
-            }
-        </div>
-    }
-
-    void BracketCopa(string prefijo, List<HistoricoPartido> partidos, Titulo? campeon) {
-        // Extraer nombre de ronda del campo torneo (ej: "Copa Argentina - Final" → "Final")
-        var rondas = partidos
-            .GroupBy(p => p.Torneo.Contains(" - ") ? p.Torneo.Substring(p.Torneo.IndexOf(" - ") + 3) : "Partidos")
-            .OrderBy(g => OrdenRonda(g.Key))
-            .ToList();
-
-        if (campeon != null) {
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.3);border-radius:10px;padding:12px 18px;">
-                <span style="font-size:28px;">🏆</span>
-                <div>
-                    <div style="font-size:11px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;">Campeón</div>
-                    <div style="font-size:16px;font-weight:700;color:var(--color-text);">@campeon.NombreEquipo</div>
-                </div>
-            </div>
-        }
-
-        <!-- Bracket horizontal con scroll -->
-        <div style="overflow-x:auto;padding-bottom:16px;">
-            <div style="display:flex;gap:0;align-items:flex-start;min-width:max-content;">
-                @foreach (var ronda in rondas) {
-                    bool esFinal = ronda.Key.Contains("Final") && !ronda.Key.Contains("Semi") && !ronda.Key.Contains("Cuarto");
-                    <div style="min-width:200px;flex-shrink:0;">
-                        <!-- Header de ronda -->
-                        <div style="background:var(--color-bg3);border-bottom:1px solid var(--color-border);padding:8px 12px;margin-right:16px;">
-                            <span style="font-family:var(--font-heading);font-size:10px;letter-spacing:2px;color:@(esFinal?"var(--color-gold)":"var(--color-muted)");text-transform:uppercase;">
-                                @(esFinal ? "⭐ " : "")@ronda.Key
-                            </span>
-                        </div>
-                        <!-- Partidos de la ronda -->
-                        <div style="padding:10px 16px 10px 0;display:flex;flex-direction:column;gap:8px;">
-                            @foreach (var p in ronda) {
-                                bool lg = p.GolesLocal > p.GolesVisitante;
-                                <div style="background:@(esFinal?"rgba(240,192,64,0.06)":"var(--color-bg2)");border:1px solid @(esFinal?"var(--color-gold)":"var(--color-border)");border-radius:8px;overflow:hidden;width:184px;">
-                                    <!-- Equipo local -->
-                                    <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--color-border);@(lg?"background:rgba(240,192,64,0.08);":"")">
-                                        @if (!string.IsNullOrEmpty(p.FlagLocal))
-                                        { <img src="https://flagcdn.com/14x10/@(p.FlagLocal).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
-                                        <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
-                                        <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesLocal</span>
-                                    </div>
-                                    <!-- Equipo visitante -->
-                                    <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;@(!lg?"background:rgba(240,192,64,0.08);":"")">
-                                        @if (!string.IsNullOrEmpty(p.FlagVisitante))
-                                        { <img src="https://flagcdn.com/14x10/@(p.FlagVisitante).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
-                                        <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
-                                        <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(!lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesVisitante</span>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-
-    void ListaCopa(string titulo, string icono, List<HistoricoPartido> partidos, Titulo? campeon) {
-        <div style="margin-bottom:28px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
-                <span style="font-size:22px;">@icono</span>
-                <div>
-                    <h3 style="font-family:var(--font-heading);font-size:14px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin:0;">@titulo</h3>
-                    @if (campeon != null)
-                    { <div style="font-size:12px;color:var(--color-muted);margin-top:2px;">Campeón: <strong style="color:var(--color-text);">@campeon.NombreEquipo</strong></div> }
-                </div>
-            </div>
-            <p style="font-size:12px;color:var(--color-muted);margin-bottom:12px;font-style:italic;">
-                📋 Datos sin información de ronda — se muestran todos los partidos jugados.
-            </p>
-            @foreach (var p in partidos) { @{ FilaPartido(p); } }
-        </div>
-    }
-
-    void ResultadosFechas(List<(int Fecha, List<HistoricoPartido> Partidos)> fechas, List<HistoricoPartido> todosPartidos) {
-        if (!fechas.Any()) {
-            <p style="color:var(--color-muted);font-size:13px;">No hay resultados registrados.</p>
-            return;
-        }
-        foreach (var (numFecha, partidos) in fechas) {
-            <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
-                <div style="background:var(--color-bg3);padding:6px 14px;font-size:11px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;">Fecha @numFecha</div>
-                @foreach (var p in partidos) {
-                    bool lg = p.GolesLocal > p.GolesVisitante;
-                    <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
-                        <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
-                            <span style="font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
-                            @if (!string.IsNullOrEmpty(p.FlagLocal))
-                            { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
-                        </div>
-                        <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">
-                            @p.GolesLocal - @p.GolesVisitante
-                        </div>
-                        <div style="flex:1;display:flex;align-items:center;gap:6px;">
-                            @if (!string.IsNullOrEmpty(p.FlagVisitante))
-                            { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
-                            <span style="font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-    }
+    // Fila de partido inline como partial
 }
 
 <!-- PRIMERA DIVISIÓN -->
@@ -244,11 +92,52 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="det-grid">
         <div>
             <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Posiciones Finales</h3>
-            @{ TablaPos(Model.ResultadosPrimera); }
+            <div class="tabla-wrapper">
+                <table class="tabla-posiciones">
+                    <thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>V</th><th>D</th><th>DG</th><th>PTS</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in Model.ResultadosPrimera) {
+                            <tr class="@(r.Campeon?"zona-campeon":r.Descendio?"zona-descenso":r.Ascendio?"zona-ascenso":"")" style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@r.EquipoId'">
+                                <td class="col-pos">@r.Posicion</td>
+                                <td class="col-equipo">
+                                    @if (!string.IsNullOrEmpty(r.FlagCode)) { <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
+                                    @r.NombreEquipo
+                                    @if (r.Campeon)   { <span style="font-size:11px;">🏆</span> }
+                                    @if (r.Ascendio)  { <span style="font-size:11px;color:var(--color-green);">⬆</span> }
+                                    @if (r.Descendio) { <span style="font-size:11px;color:var(--color-red);">⬇</span> }
+                                </td>
+                                <td class="col-num">@r.PartidosJugados</td>
+                                <td class="col-num" style="color:var(--color-green);">@r.Ganados</td>
+                                <td class="col-num" style="color:var(--color-red);">@r.Perdidos</td>
+                                <td class="col-num">@(r.GolesFavor-r.GolesContra>=0?"+":"")@(r.GolesFavor-r.GolesContra)</td>
+                                <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@r.Puntos</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
         <div>
             <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
-            @{ ResultadosFechas(fechasPrimera, partidosPrimera); }
+            @foreach (var (nf, parts) in fechasPrimera) {
+                <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+                    <div style="background:var(--color-bg3);padding:6px 14px;font-size:11px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;">Fecha @nf</div>
+                    @foreach (var p in parts) {
+                        bool lg = p.GolesLocal > p.GolesVisitante;
+                        <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
+                            <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                                <span style="font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
+                                @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                            </div>
+                            <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">@p.GolesLocal - @p.GolesVisitante</div>
+                            <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                                @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                <span style="font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -258,11 +147,52 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="det-grid">
         <div>
             <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Posiciones Finales</h3>
-            @{ TablaPos(Model.ResultadosNacionalB); }
+            <div class="tabla-wrapper">
+                <table class="tabla-posiciones">
+                    <thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>V</th><th>D</th><th>DG</th><th>PTS</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in Model.ResultadosNacionalB) {
+                            <tr class="@(r.Campeon?"zona-campeon":r.Descendio?"zona-descenso":r.Ascendio?"zona-ascenso":"")" style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@r.EquipoId'">
+                                <td class="col-pos">@r.Posicion</td>
+                                <td class="col-equipo">
+                                    @if (!string.IsNullOrEmpty(r.FlagCode)) { <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
+                                    @r.NombreEquipo
+                                    @if (r.Campeon)   { <span style="font-size:11px;">🏆</span> }
+                                    @if (r.Ascendio)  { <span style="font-size:11px;color:var(--color-green);">⬆</span> }
+                                    @if (r.Descendio) { <span style="font-size:11px;color:var(--color-red);">⬇</span> }
+                                </td>
+                                <td class="col-num">@r.PartidosJugados</td>
+                                <td class="col-num" style="color:var(--color-green);">@r.Ganados</td>
+                                <td class="col-num" style="color:var(--color-red);">@r.Perdidos</td>
+                                <td class="col-num">@(r.GolesFavor-r.GolesContra>=0?"+":"")@(r.GolesFavor-r.GolesContra)</td>
+                                <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@r.Puntos</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
         <div>
             <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
-            @{ ResultadosFechas(fechasNacional, partidosNacional); }
+            @foreach (var (nf, parts) in fechasNacional) {
+                <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+                    <div style="background:var(--color-bg3);padding:6px 14px;font-size:11px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;">Fecha @nf</div>
+                    @foreach (var p in parts) {
+                        bool lg = p.GolesLocal > p.GolesVisitante;
+                        <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
+                            <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                                <span style="font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
+                                @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                            </div>
+                            <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">@p.GolesLocal - @p.GolesVisitante</div>
+                            <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                                @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                <span style="font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -273,11 +203,52 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="det-grid">
             <div>
                 <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Posiciones Finales</h3>
-                @{ TablaPos(Model.ResultadosPrimeraC); }
+                <div class="tabla-wrapper">
+                    <table class="tabla-posiciones">
+                        <thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>V</th><th>D</th><th>DG</th><th>PTS</th></tr></thead>
+                        <tbody>
+                            @foreach (var r in Model.ResultadosPrimeraC) {
+                                <tr class="@(r.Campeon?"zona-campeon":r.Descendio?"zona-descenso":r.Ascendio?"zona-ascenso":"")" style="cursor:pointer;" onclick="window.location='/Equipos/Detalle/@r.EquipoId'">
+                                    <td class="col-pos">@r.Posicion</td>
+                                    <td class="col-equipo">
+                                        @if (!string.IsNullOrEmpty(r.FlagCode)) { <img src="https://flagcdn.com/20x15/@(r.FlagCode).png" class="flag-img" alt="" onerror="this.style.display='none'" /> }
+                                        @r.NombreEquipo
+                                        @if (r.Campeon)   { <span style="font-size:11px;">🏆</span> }
+                                        @if (r.Ascendio)  { <span style="font-size:11px;color:var(--color-green);">⬆</span> }
+                                        @if (r.Descendio) { <span style="font-size:11px;color:var(--color-red);">⬇</span> }
+                                    </td>
+                                    <td class="col-num">@r.PartidosJugados</td>
+                                    <td class="col-num" style="color:var(--color-green);">@r.Ganados</td>
+                                    <td class="col-num" style="color:var(--color-red);">@r.Perdidos</td>
+                                    <td class="col-num">@(r.GolesFavor-r.GolesContra>=0?"+":"")@(r.GolesFavor-r.GolesContra)</td>
+                                    <td class="col-pts" style="color:var(--color-gold);font-weight:700;">@r.Puntos</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div>
                 <h3 style="font-family:var(--font-heading);font-size:12px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin-bottom:12px;">Resultados</h3>
-                @{ ResultadosFechas(fechasPrimeraC, partidosPrimeraC); }
+                @foreach (var (nf, parts) in fechasPrimeraC) {
+                    <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+                        <div style="background:var(--color-bg3);padding:6px 14px;font-size:11px;letter-spacing:1px;color:var(--color-muted);text-transform:uppercase;">Fecha @nf</div>
+                        @foreach (var p in parts) {
+                            bool lg = p.GolesLocal > p.GolesVisitante;
+                            <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
+                                <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                                    <span style="font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
+                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                </div>
+                                <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">@p.GolesLocal - @p.GolesVisitante</div>
+                                <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                    <span style="font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -286,21 +257,130 @@
 <!-- COPAS -->
 @if (tieneCopas) {
     <div id="tab-copas-content" style="display:none;">
+
+        @* ── COPA ARGENTINA ── *@
         @if (partidosCopa.Any()) {
             <div style="margin-bottom:36px;">
+                @if (campCopa != null) {
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.3);border-radius:10px;padding:12px 18px;">
+                        <span style="font-size:28px;">🥇</span>
+                        <div>
+                            <div style="font-size:11px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;">Copa Argentina — Campeón</div>
+                            <div style="font-size:16px;font-weight:700;color:var(--color-text);">@campCopa.NombreEquipo</div>
+                        </div>
+                    </div>
+                }
                 @if (copaConRondas) {
-                    @{ BracketCopa("Copa Argentina", partidosCopa, campCopa); }
+                    <div style="overflow-x:auto;padding-bottom:16px;">
+                        <div style="display:flex;gap:0;align-items:flex-start;min-width:max-content;">
+                            @foreach (var ronda in rondasCopa) {
+                                bool esFinal = ronda.Key.Contains("Final") && !ronda.Key.Contains("Semi") && !ronda.Key.Contains("Cuarto");
+                                <div style="min-width:200px;flex-shrink:0;">
+                                    <div style="background:var(--color-bg3);border-bottom:1px solid var(--color-border);padding:8px 12px;margin-right:16px;">
+                                        <span style="font-family:var(--font-heading);font-size:10px;letter-spacing:2px;color:@(esFinal?"var(--color-gold)":"var(--color-muted)");text-transform:uppercase;">@(esFinal?"⭐ ":"")@ronda.Key</span>
+                                    </div>
+                                    <div style="padding:10px 16px 10px 0;display:flex;flex-direction:column;gap:8px;">
+                                        @foreach (var p in ronda) {
+                                            bool lg = p.GolesLocal > p.GolesVisitante;
+                                            <div style="background:@(esFinal?"rgba(240,192,64,0.06)":"var(--color-bg2)");border:1px solid @(esFinal?"var(--color-gold)":"var(--color-border)");border-radius:8px;overflow:hidden;width:184px;">
+                                                <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--color-border);@(lg?"background:rgba(240,192,64,0.08);":"")">
+                                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/14x10/@(p.FlagLocal).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
+                                                    <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
+                                                    <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesLocal</span>
+                                                </div>
+                                                <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;@(!lg?"background:rgba(240,192,64,0.08);":"")">
+                                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/14x10/@(p.FlagVisitante).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
+                                                    <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
+                                                    <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(!lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesVisitante</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 } else {
-                    @{ ListaCopa("Copa Argentina", "🥇", partidosCopa, campCopa); }
+                    <p style="font-size:12px;color:var(--color-muted);margin-bottom:12px;font-style:italic;">📋 Datos sin información de ronda.</p>
+                    @foreach (var p in partidosCopa) {
+                        bool lg = p.GolesLocal > p.GolesVisitante;
+                        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:6px;">
+                            <div style="display:flex;align-items:center;padding:10px 14px;gap:8px;font-size:13px;">
+                                <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                    <span style="font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
+                                </div>
+                                <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:3px 12px;min-width:58px;text-align:center;">@p.GolesLocal - @p.GolesVisitante</div>
+                                <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                    <span style="font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 }
             </div>
         }
+
+        @* ── SUPERCOPA ── *@
         @if (partidosSupercopa.Any()) {
             <div>
+                @if (campSupercopa != null) {
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;background:rgba(58,130,200,0.08);border:1px solid rgba(58,130,200,0.3);border-radius:10px;padding:12px 18px;">
+                        <span style="font-size:28px;">⭐</span>
+                        <div>
+                            <div style="font-size:11px;letter-spacing:2px;color:#3a82c8;text-transform:uppercase;">Supercopa Argentina — Campeón</div>
+                            <div style="font-size:16px;font-weight:700;color:var(--color-text);">@campSupercopa.NombreEquipo</div>
+                        </div>
+                    </div>
+                }
                 @if (supercopaConRondas) {
-                    @{ BracketCopa("Supercopa Argentina", partidosSupercopa, campSupercopa); }
+                    <div style="overflow-x:auto;padding-bottom:16px;">
+                        <div style="display:flex;gap:0;align-items:flex-start;min-width:max-content;">
+                            @foreach (var ronda in rondasSupercopa) {
+                                bool esFinal = ronda.Key.Contains("Final") && !ronda.Key.Contains("Semi");
+                                <div style="min-width:200px;flex-shrink:0;">
+                                    <div style="background:var(--color-bg3);border-bottom:1px solid var(--color-border);padding:8px 12px;margin-right:16px;">
+                                        <span style="font-family:var(--font-heading);font-size:10px;letter-spacing:2px;color:@(esFinal?"var(--color-gold)":"var(--color-muted)");text-transform:uppercase;">@(esFinal?"⭐ ":"")@ronda.Key</span>
+                                    </div>
+                                    <div style="padding:10px 16px 10px 0;display:flex;flex-direction:column;gap:8px;">
+                                        @foreach (var p in ronda) {
+                                            bool lg = p.GolesLocal > p.GolesVisitante;
+                                            <div style="background:@(esFinal?"rgba(240,192,64,0.06)":"var(--color-bg2)");border:1px solid @(esFinal?"var(--color-gold)":"var(--color-border)");border-radius:8px;overflow:hidden;width:184px;">
+                                                <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--color-border);@(lg?"background:rgba(240,192,64,0.08);":"")">
+                                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/14x10/@(p.FlagLocal).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
+                                                    <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
+                                                    <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesLocal</span>
+                                                </div>
+                                                <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;@(!lg?"background:rgba(240,192,64,0.08);":"")">
+                                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/14x10/@(p.FlagVisitante).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
+                                                    <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
+                                                    <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(!lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesVisitante</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 } else {
-                    @{ ListaCopa("Supercopa Argentina", "⭐", partidosSupercopa, campSupercopa); }
+                    @foreach (var p in partidosSupercopa) {
+                        bool lg = p.GolesLocal > p.GolesVisitante;
+                        <div style="background:var(--color-bg2);border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:6px;">
+                            <div style="display:flex;align-items:center;padding:10px 14px;gap:8px;font-size:13px;">
+                                <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                    <span style="font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
+                                </div>
+                                <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:3px 12px;min-width:58px;text-align:center;">@p.GolesLocal - @p.GolesVisitante</div>
+                                <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                    <span style="font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 }
             </div>
         }
@@ -314,7 +394,20 @@
         @foreach (var grupo in partidosEspeciales.GroupBy(p => p.Torneo).OrderBy(g => g.Key)) {
             <div style="background:var(--color-bg2);border:1px solid rgba(255,200,0,0.3);border-radius:8px;overflow:hidden;margin-bottom:8px;">
                 <div style="background:rgba(255,200,0,0.08);padding:6px 14px;font-size:11px;letter-spacing:1px;color:var(--color-gold);text-transform:uppercase;">@grupo.Key</div>
-                @foreach (var p in grupo) { @{ FilaPartido(p); } }
+                @foreach (var p in grupo) {
+                    bool lg = p.GolesLocal > p.GolesVisitante;
+                    <div style="display:flex;align-items:center;padding:8px 14px;gap:8px;border-top:1px solid var(--color-border);font-size:13px;">
+                        <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                            <span style="font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
+                            @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                        </div>
+                        <div style="font-family:var(--font-heading);font-size:16px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:2px 12px;min-width:55px;text-align:center;">@p.GolesLocal - @p.GolesVisitante</div>
+                        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                            @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                            <span style="font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
+                        </div>
+                    </div>
+                }
             </div>
         }
     </div>

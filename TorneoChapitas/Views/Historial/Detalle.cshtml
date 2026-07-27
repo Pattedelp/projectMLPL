@@ -293,9 +293,9 @@
                     <h3 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin:0;">Copa Argentina</h3>
                 </div>
                 @if (copaConRondas) {
-                    @{ BracketCopa("Copa Argentina", partidosCopa, campCopa); }
+                    BracketCopa("Copa Argentina", partidosCopa, campCopa);
                 } else {
-                    @{ ListaCopa("Copa Argentina", "🥇", partidosCopa, campCopa); }
+                    ListaCopa("Copa Argentina", "🥇", partidosCopa, campCopa);
                 }
             </div>
         }
@@ -306,9 +306,9 @@
                     <h3 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin:0;">Supercopa Argentina</h3>
                 </div>
                 @if (supercopaConRondas) {
-                    @{ BracketCopa("Supercopa Argentina", partidosSupercopa, campSupercopa); }
+                    BracketCopa("Supercopa Argentina", partidosSupercopa, campSupercopa);
                 } else {
-                    @{ ListaCopa("Supercopa Argentina", "⭐", partidosSupercopa, campSupercopa); }
+                    ListaCopa("Supercopa Argentina", "⭐", partidosSupercopa, campSupercopa);
                 }
             </div>
         }

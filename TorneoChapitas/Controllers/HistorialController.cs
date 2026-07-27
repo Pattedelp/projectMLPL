@@ -43,6 +43,15 @@ namespace TorneoAmigos.Controllers
             ViewBag.PartidosEspeciales = _repo.GetPartidosHistorico(temporada.Nombre, 0)
                 .Where(p => p.Torneo != "Copa Argentina" && p.Torneo != "Supercopa Argentina")
                 .ToList();
+
+                var partidos0 = _repo.GetPartidosHistorico(temporada.Nombre, 0);
+ViewBag.PartidosCopa      = partidos0.Where(p => p.Torneo == "Copa Argentina").ToList();
+ViewBag.PartidosSupercopa = partidos0.Where(p => p.Torneo == "Supercopa Argentina").ToList();
+
+var palmares = _repo.GetPalmares();
+var titulosTemp = palmares.Equipos.SelectMany(e => e.Titulos)
+    .Where(t => t.TemporadaNombre == temporada.Nombre).ToList();
+ViewBag.TitulosTemporada = titulosTemp;
             return View(vm);
         }
     }

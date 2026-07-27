@@ -1,12 +1,20 @@
 @model TemporadaDetalleViewModel
 @{
     ViewBag.Title = Model.Temporada.Nombre;
-    var partidosPrimera  = ViewBag.PartidosPrimera  as List<HistoricoPartido> ?? new();
-    var partidosNacional = ViewBag.PartidosNacional as List<HistoricoPartido> ?? new();
-    var partidosPrimeraC = ViewBag.PartidosPrimeraC as List<HistoricoPartido> ?? new();
+    var partidosPrimera    = ViewBag.PartidosPrimera    as List<HistoricoPartido> ?? new();
+    var partidosNacional   = ViewBag.PartidosNacional   as List<HistoricoPartido> ?? new();
+    var partidosPrimeraC   = ViewBag.PartidosPrimeraC   as List<HistoricoPartido> ?? new();
     var partidosEspeciales = ViewBag.PartidosEspeciales as List<HistoricoPartido> ?? new();
+    var partidosCopa       = ViewBag.PartidosCopa       as List<HistoricoPartido> ?? new();
+    var partidosSupercopa  = ViewBag.PartidosSupercopa  as List<HistoricoPartido> ?? new();
+    var titulosTemp        = ViewBag.TitulosTemporada   as List<Titulo>           ?? new();
+
     bool tienePrimeraC   = Model.ResultadosPrimeraC.Any() || partidosPrimeraC.Any();
     bool tieneEspeciales = partidosEspeciales.Any();
+    bool tieneCopas      = partidosCopa.Any() || partidosSupercopa.Any();
+
+    var campCopa      = titulosTemp.FirstOrDefault(t => t.TipoTitulo == "campeon_copa");
+    var campSupercopa = titulosTemp.FirstOrDefault(t => t.TipoTitulo == "campeon_supercopa");
 
     List<(int Fecha, List<HistoricoPartido> Partidos)> AgruparPorFecha(List<HistoricoPartido> partidos, int equiposPorFecha) {
         var result = new List<(int, List<HistoricoPartido>)>();
@@ -17,9 +25,8 @@
                 result.Add((g.Key, g.ToList()));
         } else {
             int fechaNum = 1;
-            for (int i = 0; i < partidos.Count; i += equiposPorFecha) {
+            for (int i = 0; i < partidos.Count; i += equiposPorFecha)
                 result.Add((fechaNum++, partidos.Skip(i).Take(equiposPorFecha).ToList()));
-            }
         }
         return result;
     }
@@ -27,15 +34,14 @@
     int eqPrimera  = Model.ResultadosPrimera.Count;
     int eqNacional = Model.ResultadosNacionalB.Count;
     int eqC        = Model.ResultadosPrimeraC.Count;
-    int ppfPrimera  = eqPrimera  > 0 ? eqPrimera / 2  : 5;
+    int ppfPrimera  = eqPrimera  > 0 ? eqPrimera  / 2 : 5;
     int ppfNacional = eqNacional > 0 ? eqNacional / 2 : 5;
-    int ppfC        = eqC        > 0 ? eqC / 2        : 3;
+    int ppfC        = eqC        > 0 ? eqC        / 2 : 3;
 
     var fechasPrimera  = AgruparPorFecha(partidosPrimera.Where(p => p.Torneo == "Liga").ToList(), ppfPrimera);
     var fechasNacional = AgruparPorFecha(partidosNacional.Where(p => p.Torneo == "Liga").ToList(), ppfNacional);
     var fechasPrimeraC = AgruparPorFecha(partidosPrimeraC.Where(p => p.Torneo == "Liga").ToList(), ppfC);
 }
-
 <div class="page-hero">
     <div class="page-hero-icon">📅</div>
     <div class="page-hero-text">
@@ -43,11 +49,9 @@
         <p>@Model.Temporada.FechaInicio?.ToString("MMM yyyy") — @Model.Temporada.FechaFin?.ToString("MMM yyyy")</p>
     </div>
 </div>
-
 <a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin-bottom:20px;">
     ← Volver al historial
 </a>
-
 <!-- TABS -->
 <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
     <button onclick="showTab('primera')"  id="tab-primera"  class="tab-btn active">🏆 Primera División</button>
@@ -55,6 +59,10 @@
     @if (tienePrimeraC)
     {
         <button onclick="showTab('primerac')" id="tab-primerac" class="tab-btn">🏟️ Primera C</button>
+    }
+    @if (tieneCopas)
+    {
+        <button onclick="showTab('copas')" id="tab-copas" class="tab-btn">🏅 Copas</button>
     }
     @if (tieneEspeciales)
     {
@@ -126,7 +134,7 @@
         PartidosEspeciales(todosPartidos);
     }
 
-void PartidosEspeciales(List<HistoricoPartido> partidos) {
+    void PartidosEspeciales(List<HistoricoPartido> partidos) {
         var grupos = partidos.Where(p => p.Torneo != "Liga").GroupBy(p => p.Torneo).OrderBy(g => g.Key).ToList();
         foreach (var grupo in grupos) {
             <div style="background:var(--color-bg2);border:1px solid rgba(255,200,0,0.3);border-radius:8px;overflow:hidden;margin-bottom:8px;">
@@ -153,6 +161,82 @@ void PartidosEspeciales(List<HistoricoPartido> partidos) {
                 }
             </div>
         }
+    }
+
+    void SeccionCopa(string titulo, string icono, List<HistoricoPartido> partidos, Titulo? campeon) {
+        if (!partidos.Any()) return;
+        <div style="margin-bottom:32px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--color-border);">
+                <span style="font-size:24px;">@icono</span>
+                <div>
+                    <h3 style="font-family:var(--font-heading);font-size:15px;letter-spacing:2px;color:var(--color-gold);text-transform:uppercase;margin:0;">@titulo</h3>
+                    @if (campeon != null)
+                    {
+                        <div style="font-size:13px;color:var(--color-muted);margin-top:2px;">
+                            Campeón: <strong style="color:var(--color-text);">@campeon.NombreEquipo</strong>
+                        </div>
+                    }
+                </div>
+            </div>
+            @{
+                // Agrupar por ronda (Torneo dentro de copa)
+                var rondas = partidos
+                    .GroupBy(p => p.Torneo)
+                    .OrderBy(g => {
+                        // Ordenar rondas de menor a mayor
+                        var n = g.Key;
+                        if (n.Contains("Fase Previa 1")) return 1;
+                        if (n.Contains("Fase Previa 2")) return 2;
+                        if (n.Contains("Octavos"))       return 3;
+                        if (n.Contains("Cuartos"))       return 4;
+                        if (n.Contains("Semifinal"))     return 5;
+                        if (n.Contains("Final"))         return 6;
+                        return 10;
+                    });
+                foreach (var ronda in rondas) {
+                    <div style="margin-bottom:12px;">
+                        <div style="font-size:11px;letter-spacing:2px;color:var(--color-muted);text-transform:uppercase;margin-bottom:8px;padding:4px 0;">
+                            @ronda.Key
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:6px;">
+                            @foreach (var p in ronda) {
+                                bool lg = p.GolesLocal > p.GolesVisitante;
+                                bool esFinal = ronda.Key.Contains("Final");
+                                <div style="background:@(esFinal ? "rgba(240,192,64,0.06)" : "var(--color-bg2)");border:1px solid @(esFinal ? "var(--color-gold)" : "var(--color-border)");border-radius:8px;overflow:hidden;">
+                                    <div style="display:flex;align-items:center;padding:10px 16px;gap:10px;font-size:13px;">
+                                        <div style="flex:1;text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                                            @if (!string.IsNullOrEmpty(p.FlagLocal))
+                                            { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                            <span style="font-weight:@(lg ? "700" : "400");color:@(lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreLocal</span>
+                                        </div>
+                                        <div style="font-family:var(--font-heading);font-size:17px;font-weight:700;background:var(--color-bg3);border-radius:6px;padding:3px 14px;min-width:60px;text-align:center;color:@(esFinal ? "var(--color-gold)" : "var(--color-text)");">
+                                            @p.GolesLocal - @p.GolesVisitante
+                                        </div>
+                                        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+                                            @if (!string.IsNullOrEmpty(p.FlagVisitante))
+                                            { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;" alt="" onerror="this.style.display='none'" /> }
+                                            <span style="font-weight:@(!lg ? "700" : "400");color:@(!lg ? "var(--color-text)" : "var(--color-muted)");">@p.NombreVisitante</span>
+                                        </div>
+                                    </div>
+                                    @if (esFinal && lg)
+                                    {
+                                        <div style="background:rgba(240,192,64,0.1);padding:4px 16px;font-size:11px;color:var(--color-gold);letter-spacing:1px;text-align:center;">
+                                            🏆 CAMPEÓN: @p.NombreLocal
+                                        </div>
+                                    }
+                                    else if (esFinal && !lg)
+                                    {
+                                        <div style="background:rgba(240,192,64,0.1);padding:4px 16px;font-size:11px;color:var(--color-gold);letter-spacing:1px;text-align:center;">
+                                            🏆 CAMPEÓN: @p.NombreVisitante
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
     }
 }
 
@@ -201,6 +285,20 @@ void PartidosEspeciales(List<HistoricoPartido> partidos) {
     </div>
 }
 
+<!-- COPAS -->
+@if (tieneCopas)
+{
+    <div id="tab-copas-content" style="display:none;">
+        @{ SeccionCopa("Copa Argentina", "🥇", partidosCopa, campCopa); }
+        @{ SeccionCopa("Supercopa Argentina", "⭐", partidosSupercopa, campSupercopa); }
+        @if (!partidosCopa.Any() && !partidosSupercopa.Any())
+        {
+            <p style="color:var(--color-muted);font-size:13px;">No hay datos de copas para esta temporada.</p>
+        }
+    </div>
+}
+
+<!-- ESPECIALES -->
 @if (tieneEspeciales)
 {
     <div id="tab-especiales-content" style="display:none;">
@@ -214,19 +312,15 @@ void PartidosEspeciales(List<HistoricoPartido> partidos) {
 .tab-btn.active { background:var(--color-gold);color:var(--color-bg);border-color:var(--color-gold); }
 @@media (max-width:700px) { .det-grid { grid-template-columns: 1fr !important; } }
 </style>
-
 @section Scripts {
 <script>
 function showTab(tab) {
-    document.getElementById('tab-primera-content').style.display   = tab === 'primera'    ? 'block' : 'none';
-    document.getElementById('tab-nacional-content').style.display  = tab === 'nacional'   ? 'block' : 'none';
-    const tabC = document.getElementById('tab-primerac-content');
-    if (tabC) tabC.style.display = tab === 'primerac' ? 'block' : 'none';
-    const tabE = document.getElementById('tab-especiales-content');
-    if (tabE) tabE.style.display = tab === 'especiales' ? 'block' : 'none';
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    const btn = document.getElementById('tab-' + tab);
-    if (btn) btn.classList.add('active');
+    ['primera','nacional','primerac','copas','especiales'].forEach(t => {
+        const el = document.getElementById('tab-' + t + '-content');
+        if (el) el.style.display = t === tab ? 'block' : 'none';
+        const btn = document.getElementById('tab-' + t);
+        if (btn) btn.classList.toggle('active', t === tab);
+    });
 }
 </script>
 }

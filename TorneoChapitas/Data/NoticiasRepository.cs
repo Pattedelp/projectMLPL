@@ -314,7 +314,7 @@ namespace TorneoAmigos.Data
                 File           = new CloudinaryDotNet.FileDescription(archivo.FileName, stream),
                 Folder         = "torneo-chapitas",
                 Transformation = new CloudinaryDotNet.Transformation()
-                                    .Width(900).Height(500).Crop("fill").Quality("auto")
+                                        .Width(1200).Crop("limit").Quality("auto")
             };
 
             var result = await cloudinary.UploadAsync(uploadParams);

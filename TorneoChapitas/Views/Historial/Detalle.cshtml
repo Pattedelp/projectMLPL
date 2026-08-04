@@ -284,12 +284,12 @@
                                             bool lg = p.GolesLocal > p.GolesVisitante;
                                             <div style="background:@(esFinal?"rgba(240,192,64,0.06)":"var(--color-bg2)");border:1px solid @(esFinal?"var(--color-gold)":"var(--color-border)");border-radius:8px;overflow:hidden;width:184px;">
                                                 <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--color-border);@(lg?"background:rgba(240,192,64,0.08);":"")">
-                                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/14x10/@(p.FlagLocal).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
+                                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
                                                     <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
                                                     <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesLocal</span>
                                                 </div>
                                                 <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;@(!lg?"background:rgba(240,192,64,0.08);":"")">
-                                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/14x10/@(p.FlagVisitante).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
+                                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
                                                     <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
                                                     <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(!lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesVisitante</span>
                                                 </div>
@@ -348,12 +348,12 @@
                                             bool lg = p.GolesLocal > p.GolesVisitante;
                                             <div style="background:@(esFinal?"rgba(240,192,64,0.06)":"var(--color-bg2)");border:1px solid @(esFinal?"var(--color-gold)":"var(--color-border)");border-radius:8px;overflow:hidden;width:184px;">
                                                 <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--color-border);@(lg?"background:rgba(240,192,64,0.08);":"")">
-                                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/14x10/@(p.FlagLocal).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
+                                                    @if (!string.IsNullOrEmpty(p.FlagLocal)) { <img src="https://flagcdn.com/16x12/@(p.FlagLocal).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
                                                     <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(lg?"700":"400");color:@(lg?"var(--color-text)":"var(--color-muted)");">@p.NombreLocal</span>
                                                     <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesLocal</span>
                                                 </div>
                                                 <div style="display:flex;align-items:center;gap:6px;padding:7px 10px;@(!lg?"background:rgba(240,192,64,0.08);":"")">
-                                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/14x10/@(p.FlagVisitante).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
+                                                    @if (!string.IsNullOrEmpty(p.FlagVisitante)) { <img src="https://flagcdn.com/16x12/@(p.FlagVisitante).png" style="border-radius:1px;flex-shrink:0;" alt="" onerror="this.style.display='none'" /> }
                                                     <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:@(!lg?"700":"400");color:@(!lg?"var(--color-text)":"var(--color-muted)");">@p.NombreVisitante</span>
                                                     <span style="font-family:var(--font-heading);font-size:13px;font-weight:700;color:@(!lg?"var(--color-gold)":"var(--color-muted)");flex-shrink:0;">@p.GolesVisitante</span>
                                                 </div>

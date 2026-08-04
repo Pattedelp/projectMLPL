@@ -1883,11 +1883,13 @@ if (esFP0 || esFP1)
             // Cargar campeones por tipo
             foreach (var trofeo in lista)
             {
-                using var cmd = new NpgsqlCommand(@"
-                    SELECT p.id, p.nombre_equipo, COALESCE(p.equipo_id,0), p.tipo_titulo, p.nombre_titulo, p.temporada_id, p.temporada_nombre
-                    FROM palmares p
-                    LEFT JOIN temporadas t ON p.temporada_id = t.id
-                    WHERE p.tipo_titulo = @T
+using var cmd = new NpgsqlCommand(@"
+    SELECT p.id, p.nombre_equipo, COALESCE(p.equipo_id,0), p.tipo_titulo, p.nombre_titulo, p.temporada_id, p.temporada_nombre,
+           COALESCE(e.pais_code, '')
+    FROM palmares p
+    LEFT JOIN temporadas t ON p.temporada_id = t.id
+    LEFT JOIN equipos e ON p.equipo_id = e.id
+    WHERE p.tipo_titulo = @T
                     ORDER BY
                         CASE WHEN REGEXP_REPLACE(p.temporada_nombre, '[^0-9]', '', 'g') = '' THEN NULL
                              ELSE CAST(REGEXP_REPLACE(p.temporada_nombre, '[^0-9]', '', 'g') AS INTEGER)
@@ -1902,9 +1904,7 @@ if (esFP0 || esFP1)
                     {
                         Id              = r.GetInt32(0),
                         NombreEquipo    = nombre,
-                        FlagCode        = BanderaMap.GetCode(nombre),
-                        EquipoId        = r.GetInt32(2),
-                        TipoTitulo      = r.GetString(3),
+                        FlagCode = !string.IsNullOrEmpty(r.GetString(7)) ? r.GetString(7) : BanderaMap.GetCode(nombre),                        TipoTitulo      = r.GetString(3),
                         NombreTitulo    = r.GetString(4),
                         TemporadaId     = r.IsDBNull(5) ? null : r.GetInt32(5),
                         TemporadaNombre = r.GetString(6)

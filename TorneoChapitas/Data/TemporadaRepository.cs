@@ -784,12 +784,25 @@ using (var cmdMigrarCopas = new NpgsqlCommand(@"
             // Vuelta: mismos partidos pero con local/visitante invertidos
             if (idaYVuelta)
             {
-                int partidoIdx = 0;
-                for (int fecha = numFechasIda; fecha < numFechas; fecha++)
+                // Reconstruir cuántos partidos reales hubo en cada fecha de ida
+                var partidosPorFecha = new List<int>();
+                var listaTemp = new List<int>(lista);
+                for (int fecha = 0; fecha < numFechasIda; fecha++)
                 {
-                    int fechaId = fechaIds[fecha];
-                    int partidosPorFecha = n / 2;
-                    for (int i = 0; i < partidosPorFecha && partidoIdx < partidosIda.Count; i++, partidoIdx++)
+                    int cantReal = 0;
+                    for (int i = 0; i < n / 2; i++)
+                        if (listaTemp[i] != -1 && listaTemp[n - 1 - i] != -1)
+                            cantReal++;
+                    partidosPorFecha.Add(cantReal);
+                    var ultimo2 = listaTemp[listaTemp.Count - 1];
+                    listaTemp.RemoveAt(listaTemp.Count - 1);
+                    listaTemp.Insert(1, ultimo2);
+                }
+                int partidoIdx = 0;
+                for (int fecha = 0; fecha < numFechasIda; fecha++)
+                {
+                    int fechaId = fechaIds[numFechasIda + fecha];
+                    for (int i = 0; i < partidosPorFecha[fecha] && partidoIdx < partidosIda.Count; i++, partidoIdx++)
                     {
                         var (local, visitante) = partidosIda[partidoIdx];
                         using var cmd = new NpgsqlCommand(@"
@@ -797,8 +810,8 @@ using (var cmdMigrarCopas = new NpgsqlCommand(@"
                             VALUES (@F, @D, @L, @V, false)", conn, tx);
                         cmd.Parameters.AddWithValue("@F", fechaId);
                         cmd.Parameters.AddWithValue("@D", divisionId);
-                        cmd.Parameters.AddWithValue("@L", visitante); // invertido
-                        cmd.Parameters.AddWithValue("@V", local);     // invertido
+                        cmd.Parameters.AddWithValue("@L", visitante);
+                        cmd.Parameters.AddWithValue("@V", local);
                         cmd.ExecuteNonQuery();
                     }
                 }

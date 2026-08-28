@@ -57,14 +57,18 @@ namespace TorneoAmigos.Controllers
             return Redirect(url);
         }
 
-        public IActionResult Detalle(int id)
-        {
-            ViewBag.ActivePage = "noticias";
-            var noticia = _repo.GetNoticiaById(id);
-            if (noticia == null) return NotFound();
-            ViewBag.Comentarios = _comentarios.GetComentarios(id);
-            return View(noticia);
-        }
+public IActionResult Detalle(int id)
+{
+    ViewBag.ActivePage = "noticias";
+    var noticia = _repo.GetNoticiaById(id);
+    if (noticia == null) return NotFound();
+    ViewBag.Comentarios = _comentarios.GetComentarios(id);
+    ViewBag.OgTitle = noticia.Titulo;
+    ViewBag.OgDescription = noticia.Autor + " · " + noticia.CreatedAt.ToString("dd 'de' MMMM 'de' yyyy");
+    ViewBag.OgImage = "https://torneochapitas.up.railway.app/Noticias/Imagen/" + noticia.Id;
+    ViewBag.OgUrl = "https://torneochapitas.up.railway.app/Noticias/Detalle/" + noticia.Id;
+    return View(noticia);
+}
 
         [HttpPost]
         public IActionResult AgregarComentario(int id, string autor, string? paisFlag, string contenido)

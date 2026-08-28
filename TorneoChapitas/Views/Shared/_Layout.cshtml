@@ -17,11 +17,13 @@
     <link rel="icon" href="~/favicon.ico" type="image/x-icon" />
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="~/img/apple-touch-icon.png" />
-    <meta property="og:title" content="@ViewBag.Title - Torneo Chapitas" />
-    <meta property="og:description" content="Torneo Chapitas - AAC" />
-    <meta property="og:image" content="https://torneochapitas.up.railway.app/img/og-image.jpg" />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="og:title" content="@(ViewBag.OgTitle ?? ViewBag.Title + " - Torneo Chapitas")" />
+<meta property="og:description" content="@(ViewBag.OgDescription ?? "Torneo Chapitas - AAC")" />
+<meta property="og:image" content="@(ViewBag.OgImage ?? "https://torneochapitas.up.railway.app/img/og-image.jpg")" />
+<meta property="og:url" content="@(ViewBag.OgUrl ?? "https://torneochapitas.up.railway.app")" />
+<meta property="og:type" content="article" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="@(ViewBag.OgImage ?? "https://torneochapitas.up.railway.app/img/og-image.jpg")" />
     <link rel="stylesheet" href="~/css/torneo.css" />
     <style>
         .zona-descenso-c { border-left: 3px solid #7c3aed; background: rgba(124,58,237,0.06); }

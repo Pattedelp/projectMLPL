@@ -15,6 +15,17 @@
     {"tr","🇹🇷"},{"ng","🇳🇬"},{"mx","🇲🇽"}, {"cn","🇨🇳"}
     };
 }
+@section Head {
+    <meta property="og:title" content="@Model.Titulo - Torneo Chapitas" />
+    <meta property="og:description" content="@Model.Autor · @Model.CreatedAt.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-AR"))" />
+    @if (!string.IsNullOrEmpty(Model.ImagenUrl)) {
+        <meta property="og:image" content="https://torneochapitas.up.railway.app/Noticias/Imagen/@Model.Id" />
+        <meta name="twitter:image" content="https://torneochapitas.up.railway.app/Noticias/Imagen/@Model.Id" />
+    }
+    <meta property="og:url" content="https://torneochapitas.up.railway.app/Noticias/Detalle/@Model.Id" />
+    <meta property="og:type" content="article" />
+    <meta name="twitter:card" content="summary_large_image" />
+}
 
 <div style="max-width:760px;margin:0 auto;">
     <a asp-action="Index" style="display:inline-block;color:var(--color-muted);font-size:13px;margin:24px 0 20px;">

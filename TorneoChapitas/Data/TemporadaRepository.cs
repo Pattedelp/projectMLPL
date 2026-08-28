@@ -632,7 +632,7 @@ using (var cmdMigrarCopas = new NpgsqlCommand(@"
                     cmd.Parameters.AddWithValue("@N", eq.nombre);
                     int nuevoId = Convert.ToInt32(cmd.ExecuteScalar());
                     if (eq.divisionId == 1) equiposPrimera.Add(nuevoId);
-                    else equiposB.Add(nuevoId);
+                    else if (eq.divisionId == 2) equiposB.Add(nuevoId);                    
                 }
 
                 // Actualizar divisiones de equipos (ascensos/descensos)
@@ -642,7 +642,10 @@ using (var cmdMigrarCopas = new NpgsqlCommand(@"
                     EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 2, activo = true WHERE id = @Id", id);
 
                 // Desactivar equipos que no participan
-                EjecutarUpdateLista(conn, tx, equiposPrimera.Concat(equiposB).ToList());
+                var idsC = (equiposC != null && equiposC.Any())
+                    ? equiposC
+                    : GetEquiposIdsByDivision(3, conn);
+                EjecutarUpdateLista(conn, tx, equiposPrimera.Concat(equiposB).Concat(idsC).ToList());
 
                 // Borrar fixture anterior
                 BorrarFixture(conn, tx);
@@ -651,11 +654,8 @@ using (var cmdMigrarCopas = new NpgsqlCommand(@"
                 GenerarFixture(conn, tx, 1, equiposPrimera);
                 GenerarFixture(conn, tx, 2, equiposB);
                 // Primera C: usar lista pasada o buscar los de división 3
-                var idsC = (equiposC != null && equiposC.Any())
-                    ? equiposC
-                    : GetEquiposIdsByDivision(3, conn);
                 if (idsC.Any())
-                    GenerarFixture(conn, tx, 3, idsC, PrimeraCIdaVuelta());
+                   GenerarFixture(conn, tx, 3, idsC, PrimeraCIdaVuelta());
 
                 tx.Commit();
                 return tempId;

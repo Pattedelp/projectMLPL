@@ -402,9 +402,9 @@ using (var cmdMigrarCopas = new NpgsqlCommand(@"
 }
 
                 // Guardar resultados Primera División
-                GuardarResultados(conn, tx, temporadaId, 1, tablaPrimera);
+                GuardarResultados(conn, tx, temporadaId, 1, tablaPrimera, sinDescensos);
                 // Guardar resultados Primera Nacional
-                GuardarResultados(conn, tx, temporadaId, 2, tablaB);
+                GuardarResultados(conn, tx, temporadaId, 2, tablaB, sinDescensos);
                 // Marcar temporada como finalizada
                 using var cmd = new NpgsqlCommand(
                     "UPDATE temporadas SET finalizada = true, activa = false, fecha_fin = NOW() WHERE id = @Id", conn, tx);
@@ -476,8 +476,8 @@ using (var cmdMigrarCopas = new NpgsqlCommand(@"
                         using var rB = cmdB.ExecuteReader();
                         while (rB.Read()) tablaB2.Add(new PosicionViewModel { EquipoId = rB.GetInt32(0) });
                     }
-                    var db1 = cierre?.DescensoB1Id ?? (tablaB2.Count >= 2 ? tablaB2[tablaB2.Count - 2].EquipoId : 0);
-                    var db2 = cierre?.DescensoB2Id ?? (tablaB2.Count >= 1 ? tablaB2[tablaB2.Count - 1].EquipoId : 0);
+                    var db1 = cierre?.DescensoB1Id ?? 0;
+                    var db2 = cierre?.DescensoB2Id ?? 0;
                     if (db1 > 0)
                     {
                         EjecutarUpdate(conn, tx, "UPDATE equipos SET divisionid = 3 WHERE id = @Id", db1);
@@ -563,8 +563,7 @@ using (var cmdMigrarCopas = new NpgsqlCommand(@"
             {
                 var f = tabla[i];
                 bool campeon   = divisionId == 1 && i == 0;
-                bool descendio = (!sinDescensos && divisionId == 1 && i >= totalEquipos - 2)
-                              || (divisionId == 2 && PrimeraCActiva() && i >= totalEquipos - 2);
+                bool descendio = !sinDescensos && divisionId == 1 && i >= totalEquipos - 2;
                 bool ascendio  = divisionId == 2 && i < 2;
 
                 using var cmd = new NpgsqlCommand(@"

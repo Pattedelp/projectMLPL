@@ -5,13 +5,14 @@
     var esPrimeraC = divId == 3;
     var controller = esPrimera ? "PrimeraDivision" : esPrimeraC ? "PrimeraC" : "NacionalB";
     var icono = esPrimera ? "🏆" : esPrimeraC ? "🏟️" : "🥈";
+    var fantasmaSrc = esPrimera ? Url.Content("~/img/fantasma-b.png") : null;
 }
 <div class="division-widget">
     <div class="widget-header">
         <span class="widget-title">@icono @Model.Division?.Nombre</span>
         <a asp-controller="@controller" asp-action="Posiciones" class="widget-link">Ver completa →</a>
     </div>
-    <div class="tabla-wrapper">
+    <div class="tabla-wrapper" data-fantasma-b="@fantasmaSrc">
         <table class="tabla-posiciones">
             <thead>
                 <tr><th>#</th><th>Equipo</th><th>PJ</th><th>DIF</th><th>PTS</th><th></th></tr>

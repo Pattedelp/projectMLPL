@@ -431,6 +431,7 @@ namespace TorneoAmigos.Data
             bool tienePromocion = tempActiva?.TienePromocion  ?? false;
             int posPromPrimera  = tempActiva?.PosPromocionPrimera ?? 8;
             int posPromB        = tempActiva?.PosPromocionB       ?? 3;
+            bool hayPrimeraC    = _tempRepo?.PrimeraCActiva() == true;
 
             for (int i = 0; i < ordenada.Count; i++)
             {
@@ -461,7 +462,7 @@ namespace TorneoAmigos.Data
                         ordenada[i].Zona = "ascenso";
                     else if (pos1 >= 3 && pos1 <= 6)  // reducido: 3° al 6°
                         ordenada[i].Zona = "promocion-b";
-                    else if (pos1 > ordenada.Count - 2)  // últimos 2 descienden a C
+                    else if (hayPrimeraC && pos1 > ordenada.Count - 2)  // últimos 2 descienden a C (solo si hay Primera C)
                         ordenada[i].Zona = "descenso";
                     else
                         ordenada[i].Zona = "";
